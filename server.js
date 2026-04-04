@@ -88,6 +88,47 @@ app.post('/api/scrape', (req, res) => {
   runScrape();
 });
 
+// ── Dynamics ──
+async function buildDynamicsResponse() {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const r = await pool.query(
+    `SELECT data FROM bids
+     WHERE (data->>'scrapedAt') IS NULL
+        OR (data->>'scrapedAt')::timestamp >= $1::timestamp
+     ORDER BY created_at DESC`,
+    [cutoff]
+  );
+  const activeBids = r.rows.map(row => row.data);
+  const seen = new Set();
+  const primeContractors = activeBids
+    .map(b => b.agency)
+    .filter(a => a && a !== 'Unknown' && !seen.has(a) && seen.add(a));
+  return {
+    activeBids,
+    primeContractors,
+    lastUpdated: new Date().toISOString(),
+    totalBids: activeBids.length,
+    totalContractors: primeContractors.length
+  };
+}
+
+app.get('/dynamics', async (req, res) => {
+  try {
+    res.json(await buildDynamicsResponse());
+  } catch (e) {
+    res.status(500).json({ error: e.message, activeBids: [], primeContractors: [], totalBids: 0, totalContractors: 0 });
+  }
+});
+
+app.post('/dynamics', async (req, res) => {
+  try {
+    await runScrape();
+    res.json(await buildDynamicsResponse());
+  } catch (e) {
+    res.status(500).json({ error: e.message, activeBids: [], primeContractors: [], totalBids: 0, totalContractors: 0 });
+  }
+});
+
 app.post('/api/bids', async (req, res) => {
   const bid = { id: 'manual-' + Date.now(), source: 'manual', addedAt: new Date().toISOString(), ...req.body };
   await addBid(bid);
