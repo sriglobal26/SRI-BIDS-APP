@@ -31,7 +31,7 @@ app.post('/api/scrape', (req, res) => {
 
 async function runScrape() {
   try {
-    const { runAllScrapers } = require('./run');
+    const { runAllScrapers } = require('./run.js');
     const scraped = await runAllScrapers();
     const manuals = bids.filter(b => b.source === 'manual');
     const seen = new Set();
