@@ -631,9 +631,9 @@ www.srigl.com</textarea>
   <div class="mft"><button class="btn2" onclick="closeM('m-ap')">Cancel</button><button class="btn1" onclick="saveAP()">Add Prime</button></div>
 </div></div>
 
+<script src="/primes.js"></script>
 <script>
-let PRIMES = []; // loaded from /primes.js
-
+// PRIMES is declared and populated by /primes.js (loaded above)
 
 let BIDS=[], bidState={}, sentLog=[], cPrime=null, curF='all', curS='';
 const SN={closing:'Closing Soon',active:'Active',prebid:'Pre-Bid',pending:'Award Pending'};
@@ -986,7 +986,48 @@ function confirmImport(){
   setTimeout(()=>alert('Import complete!\n\n'+added+' contacts added.'),200);
 }
 
+// ── Fetch /dynamics: active bids + prime contractors from live scrape ──
+async function fetchDynamics(){
+  try{
+    const res = await fetch('/dynamics');
+    if(!res.ok) return;
+    const data = await res.json();
+
+    // Merge activeBids into BIDS — add any scraped bids not already present
+    const existingIds = new Set(BIDS.map(b=>b.id));
+    const newBids = (data.activeBids||[]).filter(b=>!existingIds.has(b.id));
+    if(newBids.length){
+      newBids.forEach(b=>{
+        BIDS.push(b);
+        bidState[b.id]=isNonDesign(b)?'deleted':'active';
+      });
+      renderAll();populateCampSelect();
+    }
+
+    // Merge primeContractors (agencies from live bids) into PRIMES
+    // Only add agencies that aren't already represented in PRIMES
+    const existingNames = new Set(PRIMES.map(p=>p.name.toLowerCase().replace(/[^a-z0-9]/g,'')));
+    let added=false;
+    (data.primeContractors||[]).forEach(agency=>{
+      const key=agency.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(!existingNames.has(key)){
+        existingNames.add(key);
+        PRIMES.push({id:'dyn-'+key,name:agency,city:'Texas',contacts:[]});
+        added=true;
+      }
+    });
+    if(added) renderPrimes();
+
+    // Update stats display
+    if(data.lastUpdated) document.getElementById('last-pull-time').textContent=new Date(data.lastUpdated).toLocaleString();
+    if(data.totalBids) setStatus('done', data.totalBids+' bids loaded');
+  }catch(e){
+    console.warn('fetchDynamics:', e.message);
+  }
+}
+
 fetchBids();
+fetchDynamics();
 </script>
 </body>
 </html>
