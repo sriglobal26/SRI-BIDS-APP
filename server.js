@@ -171,8 +171,8 @@ async function runScrape() {
 
 require('node-cron').schedule('0 7 * * *', runScrape);
 
-// Auto-delete bids older than 30 days — runs daily at 8 AM
-require('node-cron').schedule('0 8 * * *', async () => {
+// Auto-delete bids older than 30 days — runs daily at 8 PM
+require('node-cron').schedule('0 20 * * *', async () => {
   try {
     const r = await pool.query(
       "DELETE FROM bids WHERE (data->>'scrapedAt')::timestamp < NOW() - INTERVAL '30 days' AND data->>'source' != 'manual'"
