@@ -1,28 +1,76 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Use /tmp for storage on Railway (writable)
-const DATA_FILE = '/tmp/bids.json';
+// ── Database setup ──
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-function readBids() {
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bids (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  console.log('[DB] Ready');
+}
+
+async function readBids() {
+  const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
+  return {
+    bids: r.rows.map(r => r.data),
+    lastUpdated: new Date().toISOString()
+  };
+}
+
+async function saveBids(bids) {
+  const client = await pool.connect();
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    await client.query('BEGIN');
+    await client.query('DELETE FROM bids WHERE data->>\'source\' != \'manual\'');
+    for (const bid of bids) {
+      await client.query(
+        'INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data=$2',
+        [bid.id, JSON.stringify(bid)]
+      );
     }
-  } catch(e) {}
-  return { bids: [], lastUpdated: null };
+    await client.query('COMMIT');
+  } catch(e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
-function writeBids(data) {
-  try { fs.writeFileSync(DATA_FILE, JSON.stringify(data)); } catch(e) {}
+async function addBid(bid) {
+  await pool.query(
+    'INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data=$2',
+    [bid.id, JSON.stringify(bid)]
+  );
 }
 
+async function deleteBid(id) {
+  await pool.query('DELETE FROM bids WHERE id=$1', [id]);
+}
+
+async function updateBid(id, updates) {
+  await pool.query(
+    'UPDATE bids SET data = data || $1 WHERE id=$2',
+    [JSON.stringify(updates), id]
+  );
+}
+
+// ── Routes ──
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.get('/primes.js', (req, res) => {
@@ -30,51 +78,51 @@ app.get('/primes.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'primes.js'));
 });
 
-app.get('/api/bids', (req, res) => res.json(readBids()));
+app.get('/api/bids', async (req, res) => {
+  try { res.json(await readBids()); }
+  catch(e) { res.json({ bids: [], lastUpdated: null, error: e.message }); }
+});
 
 app.post('/api/scrape', (req, res) => {
   res.json({ status: 'started' });
   runScrape();
 });
 
-app.post('/api/bids', (req, res) => {
-  const data = readBids();
-  const bid = { id: 'manual-' + Date.now(), source: 'manual', ...req.body };
-  data.bids.unshift(bid);
-  data.lastUpdated = new Date().toISOString();
-  writeBids(data);
+app.post('/api/bids', async (req, res) => {
+  const bid = { id: 'manual-' + Date.now(), source: 'manual', addedAt: new Date().toISOString(), ...req.body };
+  await addBid(bid);
   res.json({ success: true, bid });
 });
 
-app.delete('/api/bids/:id', (req, res) => {
-  const data = readBids();
-  data.bids = data.bids.filter(b => b.id !== req.params.id);
-  writeBids(data);
+app.delete('/api/bids/:id', async (req, res) => {
+  await deleteBid(req.params.id);
   res.json({ success: true });
 });
 
-app.patch('/api/bids/:id', (req, res) => {
-  const data = readBids();
-  const i = data.bids.findIndex(b => b.id === req.params.id);
-  if (i >= 0) data.bids[i] = { ...data.bids[i], ...req.body };
-  writeBids(data);
+app.patch('/api/bids/:id', async (req, res) => {
+  await updateBid(req.params.id, req.body);
   res.json({ success: true });
 });
 
+// ── Scraper ──
 async function runScrape() {
   try {
     console.log('[Scraper] Starting...');
     const { runAllScrapers } = require('./run.js');
     const scraped = await runAllScrapers();
-    const data = readBids();
-    const manuals = data.bids.filter(b => b.source === 'manual');
+
+    // Get existing manual bids from DB
+    const existing = await readBids();
+    const manuals = existing.bids.filter(b => b.source === 'manual');
+
     const seen = new Set();
     const merged = [...scraped, ...manuals].filter(b => {
       const k = (b.name + b.agency).toLowerCase().replace(/\s+/g,'');
       return seen.has(k) ? false : seen.add(k);
     });
-    writeBids({ bids: merged, lastUpdated: new Date().toISOString() });
-    console.log('[Scraper] Done:', merged.length, 'bids saved');
+
+    await saveBids(merged);
+    console.log('[Scraper] Done:', merged.length, 'bids saved to DB');
   } catch(e) {
     console.error('[Scraper] Error:', e.message);
   }
@@ -82,8 +130,26 @@ async function runScrape() {
 
 require('node-cron').schedule('0 7 * * *', runScrape);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('SRI Global Bids — Port:', PORT);
-  // Auto-scrape on startup after 10s
-  setTimeout(runScrape, 10000);
+// Auto-delete bids older than 30 days — runs daily at 8 AM
+require('node-cron').schedule('0 8 * * *', async () => {
+  try {
+    const r = await pool.query(
+      "DELETE FROM bids WHERE (data->>'scrapedAt')::timestamp < NOW() - INTERVAL '30 days' AND data->>'source' != 'manual'"
+    );
+    console.log('[Cleanup] Deleted', r.rowCount, 'bids older than 30 days');
+  } catch(e) {
+    console.error('[Cleanup] Error:', e.message);
+  }
+});
+
+// ── Start ──
+initDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('SRI Global Bids — Port:', PORT);
+    setTimeout(runScrape, 10000);
+  });
+}).catch(err => {
+  console.error('DB init failed:', err.message);
+  // Start anyway without DB
+  app.listen(PORT, '0.0.0.0', () => console.log('Running without DB — Port:', PORT));
 });
