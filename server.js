@@ -44,4 +44,4 @@ async function runScrape() {
 }
 
 require('node-cron').schedule('0 7 * * *', runScrape);
-app.listen(PORT, '0.0.0.0', () => console.log('Port:', PORT));
+app.listen(PORT, '0.0.0.0', () => { console.log('Port:', PORT); runScrape(); });
