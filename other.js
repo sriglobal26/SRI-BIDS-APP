@@ -228,4 +228,31 @@ async function scrapeTXESBD() {
 }
 
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function cleanDate(str) {
+  if (!str) return '';
+  const match = str.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4}/i);
+  return match ? match[0] : str.replace(/due|close|date|:/gi, '').trim().slice(0, 30);
+}
+
+function detectStatus(due = '') {
+  try {
+    const d = new Date(due);
+    const diff = (d - Date.now()) / 86400000;
+    if (isNaN(diff)) return 'active';
+    if (diff <= 7) return 'closing';
+    return diff <= 30 ? 'active' : 'prebid';
+  } catch { return 'active'; }
+}
+
+function detectRegion(city = '') {
+  const c = city.toLowerCase();
+  if (['houston','pearland','baytown','pasadena','katy','sugar land','league city','conroe','galveston'].some(h => c.includes(h))) return 'houston';
+  if (['dallas','plano','fort worth','arlington','denton'].some(h => c.includes(h))) return 'dfw';
+  if (c.includes('austin')) return 'austin';
+  if (c.includes('san antonio')) return 'sa';
+  return 'statewide';
+}
+
 module.exports = { scrapeH2bid, scrapeTXESBD };
