@@ -1,3 +1,8 @@
+// Polyfill browser globals missing in Node 18 (required by axios 1.x)
+if (typeof File === 'undefined') global.File = class File {};
+if (typeof Blob === 'undefined') global.Blob = class Blob {};
+if (typeof FormData === 'undefined') global.FormData = class FormData {};
+
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');

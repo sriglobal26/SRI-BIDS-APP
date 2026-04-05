@@ -1,7 +1,7 @@
 {
   "name": "sri-bids-app",
   "version": "2.0.0",
-  "description": "SRI Global — Texas Water/WW E&I Bids Dashboard with live scraping",
+  "description": "SRI Global — Texas Water/WW E&I Bids Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "axios": "^1.6.7",
+    "axios": "0.27.2",
     "cheerio": "^1.0.0-rc.12",
     "node-cron": "^3.0.3",
     "pg": "^8.11.3"
