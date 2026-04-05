@@ -8,28 +8,30 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ─── DATABASE ────────────────────────────────────────────────
-// Use DATABASE_PUBLIC_URL first (avoids Railway internal IPv6 issues)
-const dbUrl = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
+// Use internal Railway URL (free, no egress fees)
+// SSL disabled for internal Railway connections
+const dbUrl = process.env.DATABASE_URL;
 
-// Parse connection string into explicit fields — more reliable than connectionString alone
 let poolConfig;
 try {
   const u = new URL(dbUrl);
   poolConfig = {
     host: u.hostname,
     port: parseInt(u.port) || 5432,
-    user: u.username,
-    password: u.password,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
     database: u.pathname.replace('/', ''),
-    ssl: { rejectUnauthorized: false },
+    ssl: false,
     connectionTimeoutMillis: 15000,
     idleTimeoutMillis: 30000,
     max: 10
   };
+  console.log('[DB] Connecting to:', u.hostname + ':' + (u.port || 5432));
 } catch(e) {
+  console.error('[DB] URL parse error:', e.message);
   poolConfig = {
     connectionString: dbUrl,
-    ssl: { rejectUnauthorized: false }
+    ssl: false
   };
 }
 
