@@ -17,10 +17,10 @@ async function scrapeHoustonPW() {
   const seen = new Set();
 
   const urls = [
-    'https://purchasing.houstontx.gov/biddetail.aspx',
-    'https://purchasing.houstontx.gov/Bids.aspx',
-    'https://www.houstontx.gov/controller/purchasing/bids.html',
-    'https://purchasing.houstontx.gov/BidsSearch.aspx?Department=Houston+Public+Works',
+    'https://purchasing.houstontx.gov/bids.html',
+    'https://purchasing.houstontx.gov/bid_download.aspx',
+    'https://www.beaconbid.com/solicitations/city-of-houston/open',
+    'https://www.houstontx.gov/obo/current_contracting_opportunities.html',
   ];
 
   for (const url of urls) {
