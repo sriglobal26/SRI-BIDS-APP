@@ -11,16 +11,17 @@ async function scrapeH2bid() {
 
   // H2bid search API endpoints — try JSON first, fallback to HTML
   const searches = [
-    { kw: 'electrical instrumentation water', label: 'E&I Water' },
-    { kw: 'SCADA water Texas',                label: 'SCADA TX' },
-    { kw: 'wastewater electrical',            label: 'WW Electrical' },
-    { kw: 'pump station instrumentation',     label: 'Pump Station' },
+    { kw: 'Engineering Services', label: 'Engineering Services' },
+    { kw: 'electrical water',     label: 'Electrical Water' },
+    { kw: 'scada water',          label: 'SCADA Water' },
+    { kw: 'wastewater',           label: 'Wastewater' },
   ];
+  // H2bid — Texas/USA only via state filter
 
   for (const { kw, label } of searches) {
     try {
       // Try JSON API endpoint first
-      const apiUrl = `https://h2bid.com/api/bids/search?keyword=${encodeURIComponent(kw)}&state=TX&format=json`;
+      const apiUrl = `https://h2bid.com/api/bids/search?keyword=${encodeURIComponent(kw)}&state=TX&country=US&format=json`;
       let handled = false;
 
       try {
@@ -59,8 +60,8 @@ async function scrapeH2bid() {
       // HTML fallback
       if (!handled) {
         const htmlUrls = [
-          `https://h2bid.com/Bids/BidsSearchPreview?keyword=${encodeURIComponent(kw)}&state=TX`,
-          `https://h2bid.com/bids?q=${encodeURIComponent(kw)}&state=TX`,
+          `https://h2bid.com/Bids/BidsSearchPreview?keyword=${encodeURIComponent(kw)}&state=TX&country=US`,
+          `https://h2bid.com/bids?q=${encodeURIComponent(kw)}&state=TX&country=US`,
         ];
 
         for (const url of htmlUrls) {

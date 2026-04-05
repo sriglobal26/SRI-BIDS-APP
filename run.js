@@ -1,8 +1,11 @@
 async function runAllScrapers() {
   console.log('[Scrapers] Running all sources...');
 
+  const { scrapeEnviroBidNet } = require('./envirobidnet.js');
+
   const scraperDefs = [
-    { name: 'CivCast',        file: './civcast.js',   fn: 'scrapeCivCast' },
+    { name: 'CivCast',        file: './civcast.js',      fn: 'scrapeCivCast' },
+    { name: 'EnviroBidNet',   file: './envirobidnet.js', fn: 'scrapeEnviroBidNet' },
     { name: 'H2bid',          file: './other.js',     fn: 'scrapeH2bid' },
     { name: 'TX ESBD',        file: './other.js',     fn: 'scrapeTXESBD' },
     { name: 'Austin Water',   file: './austinwater.js', fn: 'scrapeAustinWater' },

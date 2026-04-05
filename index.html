@@ -52,7 +52,7 @@ h1 span{color:var(--cyan)}h1 span.ora{color:var(--orange)}
 .si{width:100%;background:var(--card);border:1px solid rgba(255,255,255,.08);color:var(--white);font-family:var(--mono);font-size:10px;padding:6px 8px 6px 26px;border-radius:2px;outline:none;transition:border-color .2s}
 .si:focus{border-color:var(--cyan)}.si::placeholder{color:var(--gray)}
 /* TABLE */
-.tw{overflow-x:auto;border-radius:4px;border:1px solid rgba(255,255,255,.06);margin-bottom:28px}
+.tw{overflow-x:auto;overflow-y:auto;max-height:600px;border-radius:4px;border:1px solid rgba(255,255,255,.06);margin-bottom:28px}.tw thead tr{position:sticky;top:0;z-index:10}
 table{width:100%;border-collapse:collapse;font-size:11.5px}
 thead tr{background:rgba(26,74,138,.55);border-bottom:1px solid rgba(0,200,212,.2)}
 thead th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);padding:11px 12px;text-align:left;white-space:nowrap}
@@ -508,13 +508,21 @@ Best regards,
     <div class="stat"><div class="n" style="color:var(--yellow)">$1.04B</div><div class="l">TWDB HB500<br>Pipeline</div></div>
   </div>
   <!-- Source quick-links -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-    <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">Pull from:</span>
-    <a href="https://www.civcastusa.com/bids?keywords=electrical+instrumentation+water&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ CivCast — TX E&I</a>
-    <a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all?state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ EnviroBidNet — SCADA TX</a>
-    <a href="https://h2bid.com/Bids/BidsSearchPreview?keyword=electrical+instrumentation&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ H2bid — TX Water</a>
-    <a href="https://www.txsmartbuy.gov/esbd" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ TX ESBD</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+    <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">View Bids On:</span>
+    <button onclick="toggleSrc('civcast')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">CivCast ▾</button>
+    <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
+    <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
+    <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
+  </div>
+  <!-- Source results panels -->
+  <div id="src-panel" style="display:none;background:var(--card);border:1px solid rgba(0,200,212,.2);border-radius:4px;margin-bottom:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06)">
+      <span id="src-panel-title" style="font-family:var(--mono);font-size:11px;color:var(--cyan)"></span>
+      <button onclick="closeSrc()" style="background:transparent;border:none;color:var(--gray);cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <iframe id="src-iframe" style="width:100%;height:520px;border:none;background:#fff" src=""></iframe>
   </div>
 
   <div class="sec">Open Bids</div>
@@ -525,6 +533,7 @@ Best regards,
     <button class="fb" onclick="filt('active',this)">🟢 Active</button>
     <button class="fb" onclick="filt('prebid',this)">🟡 Pre-Bid</button>
     <button class="fb" onclick="filt('houston',this)">📍 Houston</button>
+    <button class="fb" onclick="filt('texas',this)">🤠 Texas</button>
     <div class="sw"><input class="si" type="text" placeholder="Search bids…" oninput="srch(this.value)"></div>
     <span id="bids-result-count" style="font-family:var(--mono);font-size:10px;color:var(--yellow);white-space:nowrap"></span>
   </div>
@@ -881,15 +890,43 @@ function updStats(){
 }
 function filt(f,btn){curF=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyF();}
 function srch(q){curS=q.toLowerCase().trim();applyF();}
+function isReallyClosing(b){
+  // Only show in Closing Soon if due date is real and in the future (within 14 days)
+  try{
+    const d=new Date(b.due);
+    if(isNaN(d.getTime())) return false;
+    const diff=(d-Date.now())/86400000;
+    return diff>=0 && diff<=14;
+  }catch{return false;}
+}
+
+function checkExpired(){
+  // Move past-due unselected bids to deleted
+  BIDS.forEach(b=>{
+    if(bidState[b.id]!=='active') return;
+    try{
+      const d=new Date(b.due);
+      if(isNaN(d.getTime())) return;
+      if((d-Date.now())<0) bidState[b.id]='deleted';
+    }catch{}
+  });
+}
+
 function applyF(){
+  checkExpired();
   const active=BIDS.filter(b=>bidState[b.id]==='active');
   const filtered=active.filter(b=>{
-    const mf=curF==='all'||b.status===curF||(curF==='houston'&&b.region==='houston');
+    let mf=false;
+    if(curF==='all') mf=true;
+    else if(curF==='closing') mf=isReallyClosing(b);
+    else if(curF==='active') mf=b.status==='active'||b.status==='closing';
+    else if(curF==='prebid') mf=b.status==='prebid';
+    else if(curF==='houston') mf=b.region==='houston';
+    else if(curF==='texas') mf=['austin','sa','dfw','statewide'].includes(b.region);
     const ms=!curS||[b.name,b.agency,b.city,b.scope,b.due,b.value,b.region].join(' ').toLowerCase().includes(curS);
     return mf&&ms;
   });
   document.getElementById('bids-body').innerHTML=filtered.map(b=>row(b,'active')).join('');
-  // Show count
   const lbl=document.getElementById('bids-result-count');
   if(lbl) lbl.textContent=curS||curF!=='all'?`${filtered.length} of ${active.length} bids`:'';
 }
@@ -1438,6 +1475,33 @@ async function fetchPrimes(){
   }catch(e){
     console.warn('[Primes] Using hardcoded list');
   }
+}
+
+
+// ─── SOURCE PANELS ────────────────────────────────────────────
+const SRC_CONFIG = {
+  civcast:      { label: 'CivCast — Engineering Services TX', url: 'https://www.civcastusa.com/bids?keywords=engineering+services&state=TX&timeInfo=0' },
+  envirobidnet: { label: 'EnviroBidNet — Login to view bids', url: 'https://envirobidnet.com/login' },
+  h2bid:        { label: 'H2bid — Water/WW Engineering TX', url: 'https://h2bid.com/Bids/BidsSearchPreview?keyword=engineering+services&state=TX' },
+  txesbd:       { label: 'TX ESBD — NIGP 913/920/956', url: 'https://www.txsmartbuy.gov/esbd?keywords=water+electrical' }
+};
+let curSrc = null;
+function toggleSrc(key){
+  const panel = document.getElementById('src-panel');
+  const iframe = document.getElementById('src-iframe');
+  const title = document.getElementById('src-panel-title');
+  if(curSrc === key){ closeSrc(); return; }
+  curSrc = key;
+  const cfg = SRC_CONFIG[key];
+  title.textContent = cfg.label;
+  iframe.src = cfg.url;
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function closeSrc(){
+  curSrc = null;
+  document.getElementById('src-panel').style.display = 'none';
+  document.getElementById('src-iframe').src = '';
 }
 
 // ═════════════════════════════════════

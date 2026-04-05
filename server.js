@@ -251,11 +251,20 @@ async function runScrape() {
 
 // ─── CRON ─────────────────────────────────────────────────────
 require('node-cron').schedule('0 23 * * *', () => runScrape());  // Daily 6 PM EST
-require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 AM
+require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 AM EST
   try {
-    const r = await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' != 'Manual'");
-    console.log('[Cleanup]', r.rowCount, 'old bids removed');
-  } catch(e) {}
+    // Remove scraped bids older than 60 days
+    const r1 = await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' != 'Manual'");
+    console.log('[Cleanup] Old bids removed:', r1.rowCount);
+
+    // Remove deleted/expired bids every 15 days
+    const r2 = await pool.query(`
+      DELETE FROM bids 
+      WHERE data->>'userState' = 'deleted'
+      AND updated_at < NOW() - INTERVAL '15 days'
+    `);
+    console.log('[Cleanup] Deleted bids purged:', r2.rowCount);
+  } catch(e) { console.error('[Cleanup]', e.message); }
 });
 
 // ─── START ────────────────────────────────────────────────────
