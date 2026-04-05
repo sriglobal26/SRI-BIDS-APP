@@ -717,13 +717,18 @@ const BIDS=[
 
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
+// Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
 const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
+const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works'];
 let bidState={};
 BIDS.forEach(b=>{
-  const isNonDesign = NON_DESIGN_KEYWORDS.some(kw =>
-    b.name.toLowerCase().includes(kw) ||
-    b.scope.toLowerCase().includes(kw)
-  ) || b.status === 'pending';
+  const srcExempt = EXEMPT_SOURCES.some(s => (b.source||'').toLowerCase().includes(s));
+  const isNonDesign = !srcExempt && (
+    NON_DESIGN_KEYWORDS.some(kw =>
+      b.name.toLowerCase().includes(kw) ||
+      b.scope.toLowerCase().includes(kw)
+    ) || b.status === 'pending'
+  );
   bidState[b.id] = isNonDesign ? 'deleted' : 'active';
 });
 
