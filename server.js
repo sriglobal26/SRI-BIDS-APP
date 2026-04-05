@@ -43,6 +43,7 @@ try {
 const pool = new Pool(poolConfig);
 
 async function initDB() {
+  // Create tables if not exist
   await pool.query(`
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
@@ -61,6 +62,10 @@ async function initDB() {
       message TEXT
     )
   `);
+  // Migration — add updated_at if missing (old deployments)
+  await pool.query(`
+    ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+  `).catch(() => {});
   console.log('[DB] Ready');
 
   // Seed known bids if DB is empty
