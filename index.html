@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SRI Global | Texas Water E&I Bids 2026</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>SRI Global - Live E&I Bids</title>
 <style>
+
 :root{--navy:#0A1628;--navy2:#112240;--blue:#1A4A8A;--sky:#2980D9;--cyan:#00C8D4;--white:#F0F4F8;--gray:#8B9BAD;--line:rgba(0,200,212,.15);--green:#00D68F;--orange:#FF8C42;--yellow:#FFD166;--red:#EF476F;--purple:#9B7FEA;--card:rgba(17,34,64,.8);--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--display:'Syne',sans-serif}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--navy);color:var(--white);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
@@ -309,6 +309,22 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
 }
 
 @media(max-width:400px){.hide-xs{display:none}.stat{min-width:calc(50% - 4px)}.plg{grid-template-columns:1fr}.tab-btn{padding:11px 10px;font-size:9px}h1{font-size:20px}}
+
+.source-badge{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.source-badge.civcast{background:rgba(0,200,212,.15);color:var(--cyan);border:1px solid rgba(0,200,212,.3)}
+.source-badge.envirobidnet{background:rgba(0,214,143,.15);color:var(--green);border:1px solid rgba(0,214,143,.3)}
+.source-badge.h2bid{background:rgba(255,209,102,.15);color:var(--yellow);border:1px solid rgba(255,209,102,.3)}
+.source-badge.txesbd{background:rgba(41,128,217,.15);color:var(--sky);border:1px solid rgba(41,128,217,.3)}
+.source-badge.manual{background:rgba(255,140,66,.15);color:var(--orange);border:1px solid rgba(255,140,66,.3)}
+.scrape-bar{background:var(--card);border:1px solid rgba(0,200,212,.15);border-radius:4px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.scrape-status{font-family:var(--mono);font-size:10px;color:var(--gray)}
+.scrape-status.running{color:var(--yellow);animation:pulse 1.2s infinite}
+.scrape-status.done{color:var(--green)}.scrape-status.error{color:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.last-pull{font-family:var(--mono);font-size:10px;color:var(--gray);margin-left:auto;white-space:nowrap}
+.source-pill{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9px;padding:4px 10px;border-radius:2px;border:1px solid rgba(0,200,212,.2);color:var(--cyan);background:rgba(0,200,212,.06);text-decoration:none;transition:all .18s}
+.source-pill:hover{background:rgba(0,200,212,.15)}
+
 </style>
 </head>
 <body>
@@ -316,56 +332,41 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
 
 <div class="topbar">
   <div class="logo">SRI <span>Global</span></div>
-  <div class="topbar-r" style="text-align:right"><strong>Texas Water/WW — E&I Bids</strong><br><span class="hide-xs">Houston, TX · Updated <span id="last-updated"></span></span></div>
+  <div class="topbar-r" style="text-align:right;font-size:11px"><strong>Live Water E&amp;I Bids</strong><br><span class="hide-xs" style="font-size:9px">Auto-pulls CivCast &middot; EnviroBidNet &middot; H2bid &middot; TX ESBD</span></div>
 </div>
 
 <div class="tab-nav">
-  <button class="tab-btn sri-tab active" onclick="switchTab('sri',this)">⬡ SRI Global</button>
-  <button class="tab-btn" onclick="switchTab('bids',this)">Active Bids <span class="tbadge g" id="badge-bids">2</span></button>
+  <button class="tab-btn sri-tab active" onclick="switchTab('sri',this)">&#x2B21; SRI Global</button>
+  <button class="tab-btn" onclick="switchTab('bids',this)">Active Bids <span class="tbadge g" id="badge-bids">0</span></button>
   <button class="tab-btn" onclick="switchTab('selected',this)">Selected <span class="tbadge p" id="badge-sel">0</span></button>
   <button class="tab-btn" onclick="switchTab('deleted',this)">Deleted <span class="tbadge gr" id="badge-del">0</span></button>
   <button class="tab-btn" onclick="switchTab('primes',this)">Prime Contractors</button>
   <button class="tab-btn" onclick="switchTab('agencies',this)">Agencies</button>
-  <button class="tab-btn" onclick="switchTab('platforms',this)">Platforms</button>
 </div>
 
 <div class="wrap">
 
-<!-- ══════════════════════════════════════
-     TAB: SRI GLOBAL
-══════════════════════════════════════ -->
+<!-- SRI TAB -->
 <div class="tab-pane active" id="tab-sri">
-
   <div class="ph">
     <div>
       <h1>SRI <span class="ora">Global</span></h1>
-      <p class="subtitle">Houston, TX · Electrical &amp; Instrumentation Engineering Design · Water / Wastewater<br>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--orange)" id="sri-prime-count">64 Firms · 107 Contacts</span> imported from SRI Global Primes List</p>
+      <p class="subtitle">Houston, TX &middot; Electrical &amp; Instrumentation Engineering &middot; Water/Wastewater<br>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--orange)">Live Dashboard &mdash; 4 bid sources, auto-pulled daily at 7 AM</span></p>
     </div>
-    <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, Texas<br>Electrical & Instrumentation Engineering<br><span style="color:var(--cyan)">Water / Wastewater</span></div>
+    <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, Texas<br>E&amp;I Engineering<br><span style="color:var(--cyan)">Water / Wastewater</span></div>
   </div>
 
-  <!-- ── Section 1: Prime Contacts Directory ── -->
-  <div class="sec ora" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>Prime Contractors Directory — Contacts &amp; Communication</span>
-    <span class="sri-dir-count" style="font-family:var(--mono);font-size:10px;color:var(--gray);font-weight:400;text-transform:none;letter-spacing:0"></span>
-  </div>
-  <div style="margin-bottom:16px">
-    <input class="si" style="max-width:300px" type="text" placeholder="Search firms, contacts, email…" oninput="filterSRIDir(this.value)" id="sri-dir-search">
-  </div>
+  <div class="sec ora">Prime Contractors Directory</div>
+  <div style="margin-bottom:16px"><input class="si" style="max-width:300px" type="text" placeholder="Search firms, contacts..." oninput="filterSRIDir(this.value)"></div>
   <div class="pdir-grid" id="sri-pdir"></div>
 
-  <!-- ── Section 2: Email Templates ── -->
-  <div class="sec ora">Email Templates — Sub-Consultant Outreach Sequence</div>
-  <p style="font-size:11px;color:var(--gray);margin-bottom:14px;line-height:1.7">Three-email sequence used for closing bids. Edit subjects and body text below — all auto-send campaigns use these templates. Use <code style="background:rgba(0,200,212,.1);color:var(--cyan);padding:1px 5px;border-radius:2px">[PRIME]</code>, <code style="background:rgba(0,200,212,.1);color:var(--cyan);padding:1px 5px;border-radius:2px">[CONTACT]</code>, <code style="background:rgba(0,200,212,.1);color:var(--cyan);padding:1px 5px;border-radius:2px">[PROJECT]</code> as placeholders.</p>
-
+  <div class="sec ora">Email Template &mdash; Sub-Consultant Outreach</div>
   <div class="tpl-grid">
     <div class="tpl-card">
-      <div class="tpl-header">
-        <div class="tpl-label"><span class="tpl-num t1">1</span>Initial Outreach</div>
-        <div class="tpl-timing">📅 Send Immediately</div>
-      </div>
-      <div class="tpl-subj-wrap"><div class="tpl-subj-lbl">Subject Line</div><input class="tpl-subj" id="tpl1-subj" value="Teaming | WTP RFQs – SRI Global (MBE)"></div>
+      <div class="tpl-header"><div class="tpl-label"><span class="tpl-num t1">1</span>Outreach Email</div><div class="tpl-timing">Send to Selected Firms</div></div>
+      <div class="tpl-subj-wrap"><div class="tpl-subj-lbl">Subject</div>
+      <input class="tpl-subj" id="tpl1-subj" value="Teaming | WTP RFQs - SRI Global (MBE)"></div>
       <textarea class="tpl-body" id="tpl1-body">Good morning [CONTACT],
 
 Hope you are doing well!
@@ -386,191 +387,124 @@ SRI Global Inc.
 817-501-4855
 www.srigl.com</textarea>
     </div>
-
-    <div class="tpl-card">
-      <div class="tpl-header">
-        <div class="tpl-label"><span class="tpl-num t2">2</span>Follow-Up</div>
-        <div class="tpl-timing">📅 Send ~7 Days Later</div>
-      </div>
-      <div class="tpl-subj-wrap"><div class="tpl-subj-lbl">Subject Line</div><input class="tpl-subj" id="tpl2-subj" value="Follow-Up: SRI Global E&I Engineering for [PROJECT]"></div>
-      <textarea class="tpl-body" id="tpl2-body">Dear [CONTACT],
-
-I wanted to follow up on my earlier message regarding SRI Global's interest in providing Electrical & Instrumentation Engineering services for [PROJECT].
-
-We have recent experience on similar Texas water/wastewater projects and can mobilize quickly to meet your bid schedule. Our team is ready to support [PRIME] with a complete E&I design scope.
-
-If you've already selected your E&I sub-consultant, no worries — we would welcome the opportunity to team with you on future projects as well.
-
-Please don't hesitate to reach out with any questions.
-
-Best regards,
-[Your Name] | SRI Global | Houston, TX
-[Your Email] | [Your Phone]</textarea>
-    </div>
-
-    <div class="tpl-card">
-      <div class="tpl-header">
-        <div class="tpl-label"><span class="tpl-num t3">3</span>Final Reminder</div>
-        <div class="tpl-timing">📅 Send ~3 Days Before Due</div>
-      </div>
-      <div class="tpl-subj-wrap"><div class="tpl-subj-lbl">Subject Line</div><input class="tpl-subj" id="tpl3-subj" value="Final: SRI Global Ready to Support [PROJECT] — Bid Closing Soon"></div>
-      <textarea class="tpl-body" id="tpl3-body">Dear [CONTACT],
-
-This is a final note to confirm SRI Global's availability and interest in supporting [PRIME] on the E&I engineering design scope for [PROJECT], which is closing soon.
-
-We can provide a rapid-turnaround proposal and have the capacity to meet your schedule. If there is any information we can provide to assist your bid, please let us know immediately.
-
-We look forward to the opportunity to work with [PRIME] on this project.
-
-Best regards,
-[Your Name] | SRI Global | Houston, TX
-[Your Email] | [Your Phone]</textarea>
-    </div>
   </div>
 
-  <!-- ── Section 3: Campaign — Select Firms & Send ── -->
-  <div class="sec ora">Sub-Consultant Request — Select Firms &amp; Send</div>
-
-  <!-- Step 1: Pick a Bid -->
+  <div class="sec ora">Sub-Consultant Request &mdash; Select Firms &amp; Send</div>
   <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:18px;margin-bottom:16px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Step 1 — Choose Bid / RFQ to Reference</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <select class="fsel" id="camp-bid-select" onchange="loadCampaign()" style="flex:1;min-width:220px">
-        <option value="">— Select a bid —</option>
-      </select>
-      <span id="camp-bid-info" style="font-family:var(--mono);font-size:10px;color:var(--gray)"></span>
-    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Step 1 &mdash; Choose Bid</div>
+    <select class="fsel" id="camp-bid-select" onchange="loadCampaign()" style="min-width:280px"><option value="">Select a bid...</option></select>
+    <span id="camp-bid-info" style="font-family:var(--mono);font-size:10px;color:var(--gray);margin-left:12px"></span>
   </div>
-
-  <!-- Step 2: Select Firms -->
-  <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:18px;margin-bottom:16px" id="firm-selector-wrap">
+  <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:18px;margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em">Step 2 — Select Firms to Contact</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em">Step 2 &mdash; Select Firms</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <input class="si" style="max-width:200px" type="text" placeholder="Filter firms…" oninput="filterFirmSelector(this.value)">
-        <button class="fb" onclick="selectAllFirms(true)" style="font-size:9px;padding:5px 10px">☑ All</button>
-        <button class="fb" onclick="selectAllFirms(false)" style="font-size:9px;padding:5px 10px">☐ None</button>
+        <input class="si" style="max-width:180px" type="text" placeholder="Filter firms..." oninput="filterFirmSelector(this.value)">
+        <button class="fb" onclick="selectAllFirms(true)" style="font-size:9px;padding:5px 10px">All</button>
+        <button class="fb" onclick="selectAllFirms(false)" style="font-size:9px;padding:5px 10px">None</button>
         <span id="firm-sel-count" style="font-family:var(--mono);font-size:10px;color:var(--yellow)">0 selected</span>
       </div>
     </div>
-    <div id="firm-selector-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;max-height:380px;overflow-y:auto;padding-right:4px"></div>
+    <div id="firm-selector-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;max-height:360px;overflow-y:auto"></div>
   </div>
-
-  <!-- Step 3: Preview & Send -->
   <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:18px;margin-bottom:16px">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Step 3 — Send Sub-Consultant Request to Selected Firms</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Step 3 &mdash; Send</div>
     <div style="background:rgba(0,200,212,.04);border:1px solid rgba(0,200,212,.12);border-radius:3px;padding:12px;margin-bottom:14px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--gray);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Email Preview (auto-fills firm name, contact, and RFQ list)</div>
-      <div id="camp-preview" style="font-family:var(--sans);font-size:11px;color:#C8D8E8;line-height:1.8;white-space:pre-wrap;max-height:220px;overflow-y:auto"></div>
+      <div id="camp-preview" style="font-family:var(--sans);font-size:11px;color:#C8D8E8;line-height:1.8;white-space:pre-wrap;max-height:220px;overflow-y:auto">Select firms above to preview email.</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button class="btn-launch" id="btn-send-selected" onclick="sendToSelected()" disabled>📤 Send to Selected Firms</button>
+      <button class="btn-launch" id="btn-send-selected" onclick="sendToSelected()" disabled>Send to Selected Firms</button>
       <span id="send-progress" style="font-family:var(--mono);font-size:10px;color:var(--gray)"></span>
     </div>
   </div>
-
-  <!-- Sent Log -->
   <div id="sent-log-wrap" style="display:none">
-    <div class="sec ora" style="margin-top:8px">Sent Log</div>
-    <div class="tw">
-      <table>
-        <thead><tr><th>Firm</th><th>Contact</th><th>Email</th><th>Bid / RFQ</th><th>Time</th><th>Action</th></tr></thead>
-        <tbody id="sent-log-body"></tbody>
-      </table>
-    </div>
+    <div class="sec ora">Sent Log</div>
+    <div class="tw"><table><thead><tr><th>Firm</th><th>Contact</th><th>Email</th><th>Bid</th><th>Time</th></tr></thead><tbody id="sent-log-body"></tbody></table></div>
   </div>
+</div>
 
-  <div class="empty" id="camp-empty">
-    <div class="empty-ico">📋</div>
-    <div class="empty-txt">Select a bid above to get started</div>
-  </div>
-
-</div><!-- end tab-sri -->
-
-<!-- ══ TAB: ACTIVE BIDS ══ -->
+<!-- BIDS TAB -->
 <div class="tab-pane" id="tab-bids">
   <div class="ph">
     <div>
       <div class="badge">// Electrical &amp; Instrumentation Engineering</div>
-      <h1>Active E&amp;I <span>Bids — Texas</span></h1>
-      <p class="subtitle">Electrical &amp; Instrumentation · SCADA · Power Systems · Instrumentation</p>
-      <div style="margin-top:10px;font-family:var(--mono);font-size:10px;background:rgba(0,200,212,.07);border:1px solid rgba(0,200,212,.2);border-left:3px solid var(--cyan);padding:8px 12px;border-radius:2px;color:#A8D8E8;line-height:1.7">
-        ⚙️ <strong style="color:var(--cyan)">SRI Global Scope Filter Active</strong> — Engineering Design bids only.<br>
-        Install / Construction / Overhaul / Award Pending bids auto-moved to <strong style="color:var(--gray)">Deleted</strong> tab. Restore anytime.
-      </div>
+      <h1>Active E&amp;I <span>Bids &mdash; Texas</span></h1>
+      <p class="subtitle">Live: CivCast &middot; EnviroBidNet &middot; H2bid &middot; TX ESBD &middot; Daily 7 AM</p>
     </div>
-    <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, Texas<br>Electrical & Instrumentation Engineering<br><span style="color:var(--cyan)">Water / Wastewater</span></div>
+    <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, TX<br>E&amp;I Engineering<br><span style="color:var(--cyan)">Water/WW</span></div>
   </div>
   <div class="stats">
-    <div class="stat"><div class="n" id="sn-act">12</div><div class="l">Open<br>Bids</div></div>
-    <div class="stat"><div class="n" style="color:var(--red)" id="sn-cl">2</div><div class="l">Closing<br>This Week</div></div>
-    <div class="stat"><div class="n" style="color:var(--purple)" id="sn-sel">0</div><div class="l">Selected<br>Bids</div></div>
-    <div class="stat"><div class="n" style="color:var(--yellow)">$1.04B</div><div class="l">TWDB HB500<br>Pipeline</div></div>
+    <div class="stat"><div class="n" id="sn-act">0</div><div class="l">Active<br>Bids</div></div>
+    <div class="stat"><div class="n" style="color:var(--red)" id="sn-cl">0</div><div class="l">Closing<br>Soon</div></div>
+    <div class="stat"><div class="n" style="color:var(--purple)" id="sn-sel">0</div><div class="l">Selected</div></div>
+    <div class="stat"><div class="n" style="color:var(--yellow)">4</div><div class="l">Live<br>Sources</div></div>
   </div>
-  <!-- Source quick-links -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-    <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">Pull from:</span>
-    <a href="https://www.civcastusa.com/bids?keywords=electrical+instrumentation+water&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ CivCast — TX E&I</a>
-    <a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all?state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ EnviroBidNet — SCADA TX</a>
-    <a href="https://h2bid.com/Bids/BidsSearchPreview?keyword=electrical+instrumentation&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ H2bid — TX Water</a>
-    <a href="https://www.txsmartbuy.gov/esbd" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ TX ESBD</a>
-    <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
+  <div class="scrape-bar">
+    <button class="btn1" style="font-size:10px;padding:7px 16px" onclick="triggerScrape()" id="scrape-btn">⟳ Refresh Bids Now</button>
+    <span class="scrape-status" id="scrape-status">Loading...</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center" id="source-status-row">
+      <span class="source-pill" id="src-civcast" title="CivCast">CivCast</span>
+      <span class="source-pill" id="src-envirobidnet" title="EnviroBidNet">EnviroBidNet</span>
+      <span class="source-pill" id="src-h2bid" title="H2bid">H2bid</span>
+      <span class="source-pill" id="src-txesbd" title="TX ESBD">TX ESBD</span>
+    </div>
+    <span class="last-pull" style="margin-left:auto">Last pull: <span id="last-pull-time">—</span></span>
+    <button class="btn1" style="font-size:10px;padding:7px 14px;background:var(--orange)" onclick="openM('m-addbid')">+ Add Manually</button>
   </div>
-
-  <div class="sec">Open Bids</div>
+  <div class="sec">Open Bids &mdash; Engineering Design</div>
   <div class="fbar">
     <span class="fl">Filter:</span>
     <button class="fb active" onclick="filt('all',this)">All</button>
-    <button class="fb" onclick="filt('closing',this)">🔴 Closing Soon</button>
-    <button class="fb" onclick="filt('active',this)">🟢 Active</button>
-    <button class="fb" onclick="filt('prebid',this)">🟡 Pre-Bid</button>
-    <button class="fb" onclick="filt('houston',this)">📍 Houston</button>
-    <div class="sw"><input class="si" type="text" placeholder="Search bids…" oninput="srch(this.value)"></div>
+    <button class="fb" onclick="filt('closing',this)">Closing</button>
+    <button class="fb" onclick="filt('active',this)">Active</button>
+    <button class="fb" onclick="filt('prebid',this)">Pre-Bid</button>
+    <button class="fb" onclick="filt('houston',this)">Houston</button>
+    <div class="sw"><input class="si" type="text" placeholder="Search bids..." oninput="srch(this.value)"></div>
     <span id="bids-result-count" style="font-family:var(--mono);font-size:10px;color:var(--yellow);white-space:nowrap"></span>
   </div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="bids-body"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Source</th><th>Project / Bid Name</th><th>Agency</th><th>City</th><th>Scope</th><th>RFQ Link</th><th>Due</th><th>Status</th><th>Action</th></tr></thead><tbody id="bids-body"></tbody></table></div>
 </div>
 
-<!-- ══ TAB: SELECTED ══ -->
+<!-- SELECTED -->
 <div class="tab-pane" id="tab-selected">
-  <div class="sec" style="margin-top:8px">Selected Bids — Pursuing</div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="sel-body"></tbody></table></div>
-  <div class="empty" id="sel-mt"><div class="empty-ico">📋</div><div class="empty-txt">No bids selected yet</div></div>
+  <div class="sec" style="margin-top:8px">Selected Bids</div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Source</th><th>Project</th><th>Agency</th><th>City</th><th>RFQ Link</th><th>Due</th><th>Status</th><th>Action</th></tr></thead><tbody id="sel-body"></tbody></table></div>
+  <div class="empty" id="sel-mt"><div class="empty-ico">&#x1F4CB;</div><div class="empty-txt">No bids selected yet</div></div>
 </div>
 
-<!-- ══ TAB: DELETED ══ -->
+<!-- DELETED -->
 <div class="tab-pane" id="tab-deleted">
   <div class="sec" style="margin-top:8px">Deleted / Not Pursuing</div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="del-body"></tbody></table></div>
-  <div class="empty" id="del-mt"><div class="empty-ico">🗑️</div><div class="empty-txt">No deleted bids</div></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Source</th><th>Project</th><th>Agency</th><th>City</th><th>RFQ Link</th><th>Due</th><th>Status</th><th>Action</th></tr></thead><tbody id="del-body"></tbody></table></div>
+  <div class="empty" id="del-mt"><div class="empty-ico">&#x1F5D1;</div><div class="empty-txt">No deleted bids</div></div>
 </div>
 
-<!-- ══ TAB: PRIMES ══ -->
+<!-- PRIMES -->
 <div class="tab-pane" id="tab-primes">
   <div class="ph">
     <div>
-      <div class="badge">// Prime Directory — 64 Firms · 107 Contacts · From SRI Global Excel Import</div>
+      <div class="badge">// 64 Firms &middot; 107 Contacts</div>
       <h1>Prime <span>Contractors</span></h1>
-      <p class="subtitle">Texas Water/WW Engineering Firms — E&I Sub-Consultant Outreach Directory</p>
+      <p class="subtitle">Texas Water/WW Engineering Firms &mdash; E&amp;I Sub-Consultant Outreach</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input class="si" style="max-width:220px;min-width:180px" type="text" placeholder="Search firms or contacts…" oninput="searchPrimes(this.value)" id="prime-search">
+      <input class="si" style="max-width:220px" type="text" placeholder="Search firms..." oninput="searchPrimes(this.value)">
       <button class="pb co" style="padding:9px 16px;font-size:10px" onclick="openAP()">+ Add Prime</button>
-      <label style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:9px 16px;border-radius:3px;border:1px solid rgba(0,214,143,.35);color:var(--green);background:rgba(0,214,143,.07);cursor:pointer;white-space:nowrap;transition:all .2s" title="Upload Excel with columns: Company, Name, Title, Email, Phone">
-        ⬆ Import Excel
+      <label style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:9px 16px;border-radius:3px;border:1px solid rgba(0,214,143,.35);color:var(--green);background:rgba(0,214,143,.07);cursor:pointer;white-space:nowrap" title="Columns: Company, Name, Title, Email, Phone">
+        Import Excel / CSV
         <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
       </label>
-      <a href="data:text/csv;charset=utf-8,Company,Contact Name,Title/Role,Email,Phone%0AJacobs Engineering,Tim Lyons PE,Project Manager,tlyons@jacobs.com,469-941-8912%0AStantec,Betty Leite PE,Senior PM,betty.leite@stantec.com,713-587-5700" download="sri_contacts_template.csv" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:9px 16px;border-radius:3px;border:1px solid rgba(255,255,255,.12);color:var(--gray);background:transparent;text-decoration:none;white-space:nowrap">⬇ Template</a>
+      <a href="data:text/csv;charset=utf-8,Company,Contact Name,Title/Role,Email,Phone%0AJacobs Engineering,Tim Lyons PE,Project Manager,tlyons@jacobs.com,469-941-8912" download="sri_contacts_template.csv" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:9px 16px;border-radius:3px;border:1px solid rgba(255,255,255,.12);color:var(--gray);background:transparent;text-decoration:none;white-space:nowrap">Template CSV</a>
     </div>
   </div>
   <div class="sec" id="primes-count-label">All Firms</div>
   <div class="prg" id="primes-grid"></div>
 </div>
 
-<!-- ══ TAB: AGENCIES ══ -->
+<!-- AGENCIES -->
 <div class="tab-pane" id="tab-agencies">
   <div class="sec" style="margin-top:8px">Greater Houston Region</div>
-  <div class="agg">
+<div class="agg">
     <div class="agc" style="border-left-color:var(--orange)"><div class="rl h">Houston Core</div><div class="agn">Houston Public Works</div><div class="aga">City of Houston</div><div class="agd">Largest water/WW system in Texas. Multiple WWTP, lift station & pump station E&I sub-packages year-round.</div><div class="agei">⚡ WWTP SCADA, lift station electrical, force main controls</div><a href="https://purchasing.houstontx.gov" target="_blank" class="agl">purchasing.houstontx.gov</a></div>
     <div class="agc" style="border-left-color:#4ECDC4"><div class="rl h">S. Houston</div><div class="agn">City of Pearland</div><div class="aga">Brazoria County</div><div class="agd">Major SWTP project active — CMAR with E&I engineering sub-packages for site power, SCADA architecture & instrumentation.</div><div class="agei">⚡ SWTP E&I design, SCADA, lift station controls</div><a href="https://www.pearlandtx.gov/departments/engineering-and-public-works" target="_blank" class="agl">pearlandtx.gov — Eng & PW</a></div>
     <div class="agc" style="border-left-color:#63BFFF"><div class="rl h">SE Houston</div><div class="agn">City of Pasadena</div><div class="aga">Harris County</div><div class="agd">Industrial corridor city. Active CIP with lift station, pump station & WWTP E&I engineering.</div><div class="agei">⚡ Lift station E&I design, pump station controls, WWTP electrical</div><a href="https://www.ci.pasadena.tx.us/procurement" target="_blank" class="agl">ci.pasadena.tx.us/procurement</a></div>
@@ -599,43 +533,58 @@ Best regards,
 </div>
 
 <!-- ══ TAB: PLATFORMS ══ -->
-<div class="tab-pane" id="tab-platforms">
-  <div class="sec" style="margin-top:8px">Bid Platforms &amp; Portals</div>
-  <div class="plg">
-    <div class="plc"><div class="pln">H2bid</div><div class="plt">Largest water/WW utility bid database nationally. Best for E&I keyword searches by state.</div><div class="plks"><span class="kw">SCADA</span><span class="kw">instrumentation</span><span class="kw">generator</span><span class="kw">controls</span></div><a href="https://h2bid.com" target="_blank" class="pll">h2bid.com</a></div>
-    <div class="plc"><div class="pln">CivCast USA</div><div class="plt">Texas-focused civil/construction bid platform. Heavy GC and sub presence; free to browse.</div><div class="plks"><span class="kw">electrical water TX</span><span class="kw">instrumentation</span></div><a href="https://civcastusa.com" target="_blank" class="pll">civcastusa.com</a></div>
-    <div class="plc"><div class="pln">TX ESBD</div><div class="plt">Official Texas Electronic State Business Daily. All state & local bids required to post here. NIGP codes: 913, 920, 956.</div><div class="plks"><span class="kw">NIGP 913</span><span class="kw">920</span><span class="kw">956</span></div><a href="https://www.txsmartbuy.gov/esbd" target="_blank" class="pll">txsmartbuy.gov/esbd</a></div>
-    <div class="plc"><div class="pln">TRA Procureware</div><div class="plt">Trinity River Authority's own portal. Register for TRA bid alerts — DFW generator and SCADA work.</div><div class="plks"><span class="kw">TRA</span><span class="kw">generator</span><span class="kw">SCADA</span></div><a href="https://tra.procureware.com/Bids" target="_blank" class="pll">tra.procureware.com/Bids</a></div>
-    <div class="plc"><div class="pln">EnviroBidNet</div><div class="plt">Specialized environmental & SCADA bid aggregator. Dedicated SCADA & Environmental Technology category.</div><div class="plks"><span class="kw">SCADA</span><span class="kw">environmental tech</span></div><a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all" target="_blank" class="pll">envirobidnet.com — SCADA</a></div>
-    <div class="plc"><div class="pln">BidNet Direct TX</div><div class="plt">Texas local government procurement network. Real-time keyword-matched notifications including Houston-area MUDs.</div><div class="plks"><span class="kw">water E&I</span><span class="kw">MUD bids</span></div><a href="https://www.bidnetdirect.com/texas" target="_blank" class="pll">bidnetdirect.com/texas</a></div>
-    <div class="plc"><div class="pln">TexasBids.net</div><div class="plt">Aggregates construction & government solicitations from Texas agencies including smaller Houston-area municipalities.</div><div class="plks"><span class="kw">water electrical</span><span class="kw">TX statewide</span></div><a href="https://texasbids.net" target="_blank" class="pll">texasbids.net</a></div>
-  </div>
-  <div class="sec">Strategy &amp; Pro Tips</div>
-  <div class="tipg">
-    <div class="tipc"><div class="tico">⚡</div><div><div class="titl">Register Directly with Agencies</div><div class="tibd">Register on SAWS, Austin Water, Houston Public Works, NTMWD, and TRA portals for direct E&I solicitation emails.</div></div></div>
-    <div class="tipc"><div class="tico">🏗️</div><div><div class="titl">Track Prime GC Sub-Bid Packages</div><div class="tibd">Most E&I engineering work is sub'd under a GC. Monitor Matous, Eagle Contracting, RAVA, and Felix Construction for E&I design sub-packages.</div></div></div>
-    <div class="tipc"><div class="tico">💰</div><div><div class="titl">$1.038B TWDB HB500 Grant Wave</div><div class="tibd">Texas HB500 distributes $1.038B through Aug 2027. Every recipient will need E&I engineering design — a surge of downstream bids is expected statewide.</div></div></div>
-    <div class="tipc"><div class="tico">📡</div><div><div class="titl">SCADA Upgrade Wave 2025–2027</div><div class="tibd">Multiple Texas utilities upgrading aging SCADA due to cybersecurity mandates. Pure engineering design scope — ideal for SRI Global.</div></div></div>
-    <div class="tipc"><div class="tico">🔍</div><div><div class="titl">NIGP Codes for E&I Filtering</div><div class="tibd">Use NIGP codes on ESBD: 913 (Electrical), 920 (Instrumentation), 956 (SCADA/Controls). Combine with keyword searches for best results.</div></div></div>
-    <div class="tipc"><div class="tico">🏘️</div><div><div class="titl">Harris County MUDs — High Frequency</div><div class="tibd">100+ independent MUDs in Harris County each bid separately. H2bid and CivCast post new MUD E&I engineering bids weekly.</div></div></div>
-  </div>
 </div>
 
-<footer>
-  <p>SRI Global · Houston, TX · Texas Water/WW E&I Bids Index · <strong><strong id="footer-date"></strong></strong></p>
-  <p>Engineering Design Only · Electrical · Instrumentation · SCADA · Controls · Power Systems</p>
-</footer>
+</div><!-- wrap -->
 
+<!-- MODAL: Add Bid -->
+<div class="mbg" id="m-addbid"><div class="modal" style="max-width:600px">
+  <div class="mhd"><div><div class="mtit">Add Bid Manually</div><div class="msub">Paste from CivCast, EnviroBidNet, H2bid, TX ESBD</div></div><button class="mcl" onclick="closeM('m-addbid')">X</button></div>
+  <div class="mbd">
+    <div class="fr"><div class="fg"><label class="fl2">Project / Bid Name *</label><input class="fi" id="nb-name" placeholder="Lift Station E&I Design"></div>
+    <div class="fg"><label class="fl2">Agency *</label><input class="fi" id="nb-agency" placeholder="City of Houston"></div></div>
+    <div class="fr"><div class="fg"><label class="fl2">City</label><input class="fi" id="nb-city" placeholder="Houston, TX"></div>
+    <div class="fg"><label class="fl2">Due Date</label><input class="fi" id="nb-due" placeholder="Apr 30, 2026"></div></div>
+    <div class="fg"><label class="fl2">E&I Scope</label><input class="fi" id="nb-scope" placeholder="SCADA, instrumentation, power systems..."></div>
+    <div class="fr"><div class="fg"><label class="fl2">RFQ URL</label><input class="fi" id="nb-url" placeholder="https://..."></div>
+    <div class="fg"><label class="fl2">Est. Value</label><input class="fi" id="nb-value" placeholder="TBD"></div></div>
+    <div class="fr">
+      <div class="fg"><label class="fl2">Status</label><select class="fi" id="nb-status"><option value="active">Active</option><option value="closing">Closing Soon</option><option value="prebid">Pre-Bid</option></select></div>
+      <div class="fg"><label class="fl2">Source</label><select class="fi" id="nb-source"><option value="manual">Manual Entry</option><option value="CivCast">CivCast</option><option value="EnviroBidNet">EnviroBidNet</option><option value="H2bid">H2bid</option><option value="TX ESBD">TX ESBD</option></select></div>
+    </div>
+  </div>
+  <div class="mft"><button class="btn2" onclick="closeM('m-addbid')">Cancel</button><button class="btn1" onclick="saveManualBid()">Add Bid</button></div>
+</div></div>
 
-</div><!-- end wrap -->
-
-<!-- ══ MODALS ══ -->
-
-<!-- ══ MODAL: Import Excel ══ -->
-<div class="mbg" id="m-import"><div class="modal" style="max-width:640px">
+<!-- MODAL: Email Prime -->
+<div class="mbg" id="m-email"><div class="modal" style="max-width:560px">
   <div class="mhd">
-    <div><div class="mtit">Import Contacts from Excel</div><div class="msub">Preview — confirm before saving</div></div>
-    <button class="mcl" onclick="closeM('m-import')">✕</button>
+    <div><div class="mtit">Send Email</div><div class="msub" id="me-prime-name">Prime</div></div>
+    <button class="mcl" onclick="closeM('m-email')">X</button>
+  </div>
+  <div class="mbd">
+    <div class="fg"><label class="fl2">To — Select Contact</label>
+      <select class="fsel" style="width:100%" id="e-to" onchange="updEmailPrev()"></select>
+    </div>
+    <div class="fg" style="margin-top:10px"><label class="fl2">Subject</label>
+      <input class="fi" id="e-subj" style="font-size:11px">
+    </div>
+    <div class="fg" style="margin-top:10px"><label class="fl2">Email Body Preview</label>
+      <div id="e-prev" style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:3px;padding:12px;font-size:11px;color:#C8D8E8;line-height:1.8;white-space:pre-wrap;max-height:260px;overflow-y:auto;margin-top:4px;font-family:var(--sans)"></div>
+    </div>
+  </div>
+  <div class="mft">
+    <button class="btn2" onclick="closeM('m-email')">Cancel</button>
+    <button class="btn1" onclick="sendDirectEmail()">Open in Email Client</button>
+  </div>
+</div></div>
+
+
+<!-- MODAL: Import Excel -->
+<div class="mbg" id="m-import"><div class="modal" style="max-width:660px">
+  <div class="mhd">
+    <div><div class="mtit">Import Contacts from Excel / CSV</div><div class="msub">Preview matches — confirm before saving</div></div>
+    <button class="mcl" onclick="closeM('m-import')">X</button>
   </div>
   <div class="mbd">
     <div id="import-summary" style="font-family:var(--mono);font-size:11px;color:var(--gray);margin-bottom:12px"></div>
@@ -643,7 +592,7 @@ Best regards,
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead><tr style="background:rgba(26,74,138,.6);position:sticky;top:0">
           <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Company Match</th>
-          <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Contact Name</th>
+          <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Name</th>
           <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Title</th>
           <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Email</th>
           <th style="padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--cyan);text-align:left">Phone</th>
@@ -653,199 +602,157 @@ Best regards,
       </table>
     </div>
     <div style="margin-top:12px;font-family:var(--mono);font-size:10px;color:var(--gray)">
-      ⚠ Contacts with <span style="color:var(--yellow)">No Match</span> will create a new Prime firm. Duplicates (same email) are skipped.
+      Contacts with No Match will create a new Prime firm. Duplicates (same email) are skipped.
     </div>
   </div>
-  <div class="mft">
-    <button class="btn2" onclick="closeM('m-import')">Cancel</button>
-    <button class="btn1" onclick="confirmImport()" id="import-confirm-btn">Import All</button>
-  </div>
+  <div class="mft"><button class="btn2" onclick="closeM('m-import')">Cancel</button><button class="btn1" id="import-confirm-btn" onclick="confirmImport()">Import</button></div>
 </div></div>
 
-
+<!-- MODAL: Add Contact -->
 <div class="mbg" id="m-contact"><div class="modal">
-  <div class="mhd"><div><div class="mtit">Add Contact</div><div class="msub" id="mc-prime">Prime</div></div><button class="mcl" onclick="closeM('m-contact')">✕</button></div>
+  <div class="mhd"><div><div class="mtit">Add Contact</div><div class="msub" id="mc-prime"></div></div><button class="mcl" onclick="closeM('m-contact')">X</button></div>
   <div class="mbd">
-    <div class="fr"><div class="fg"><label class="fl2">First Name</label><input class="fi" id="c-fn" placeholder="John"></div><div class="fg"><label class="fl2">Last Name</label><input class="fi" id="c-ln" placeholder="Smith"></div></div>
-    <div class="fg"><label class="fl2">Title / Role</label><input class="fi" id="c-ro" placeholder="Project Manager, Estimator…"></div>
-    <div class="fr"><div class="fg"><label class="fl2">Email</label><input class="fi" id="c-em" type="email" placeholder="john@contractor.com"></div><div class="fg"><label class="fl2">Phone</label><input class="fi" id="c-ph" placeholder="(713) 555-0100"></div></div>
+    <div class="fr"><div class="fg"><label class="fl2">Full Name *</label><input class="fi" id="c-fn" placeholder="John Smith, PE"></div>
+    <div class="fg"><label class="fl2">Title</label><input class="fi" id="c-ln" placeholder="Project Manager"></div></div>
+    <div class="fr"><div class="fg"><label class="fl2">Email</label><input class="fi" id="c-em" type="email" placeholder="john@firm.com"></div>
+    <div class="fg"><label class="fl2">Phone</label><input class="fi" id="c-ph" placeholder="713-000-0000"></div></div>
+    <div class="fg"><label class="fl2">Role</label><input class="fi" id="c-ro" placeholder="Water Group / BD"></div>
   </div>
   <div class="mft"><button class="btn2" onclick="closeM('m-contact')">Cancel</button><button class="btn1" onclick="saveCont()">Add Contact</button></div>
 </div></div>
 
-<div class="mbg" id="m-email"><div class="modal">
-  <div class="mhd"><div><div class="mtit">Send Email</div><div class="msub" id="me-prime">Prime</div></div><button class="mcl" onclick="closeM('m-email')">✕</button></div>
-  <div class="mbd">
-    <div class="fg"><label class="fl2">To — Select Contact</label><select class="fsel" style="width:100%" id="e-to" onchange="updPrev()"></select></div>
-    <div class="fg" style="margin-top:10px"><label class="fl2">Subject</label><input class="fi" id="e-subj-override" style="font-size:11px"></div>
-    <div class="fg" style="margin-top:10px"><label class="fl2">Email Body (from template — auto-filled)</label>
-      <div id="e-prev" style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:3px;padding:12px;font-size:11px;color:#C8D8E8;line-height:1.8;white-space:pre-wrap;max-height:260px;overflow-y:auto;margin-top:4px"></div>
-    </div>
-  </div>
-  <div class="mft"><button class="btn2" onclick="closeM('m-email')">Cancel</button><button class="btn1" onclick="sendEm()">Open in Email Client</button></div>
-</div></div>
-
+<!-- MODAL: Add Prime -->
 <div class="mbg" id="m-ap"><div class="modal">
-  <div class="mhd"><div><div class="mtit">Add Prime Contractor</div><div class="msub">Texas Water / WW GC</div></div><button class="mcl" onclick="closeM('m-ap')">✕</button></div>
+  <div class="mhd"><div><div class="mtit">Add Prime Contractor</div></div><button class="mcl" onclick="closeM('m-ap')">X</button></div>
   <div class="mbd">
-    <div class="fg"><label class="fl2">Company Name</label><input class="fi" id="ap-n" placeholder="Contractor LLC"></div>
-    <div class="fr"><div class="fg"><label class="fl2">City / HQ</label><input class="fi" id="ap-c" placeholder="Houston, TX"></div><div class="fg"><label class="fl2">Website</label><input class="fi" id="ap-w" placeholder="https://…"></div></div>
-    <div class="fg"><label class="fl2">Description</label><textarea class="fta" id="ap-d" placeholder="Brief description…"></textarea></div>
-    <div class="fg"><label class="fl2">E&I / Water Scope</label><input class="fi" id="ap-s" placeholder="Lift stations, WWTP, SCADA…"></div>
+    <div class="fr"><div class="fg"><label class="fl2">Company Name *</label><input class="fi" id="ap-n" placeholder="Firm Name"></div>
+    <div class="fg"><label class="fl2">City</label><input class="fi" id="ap-c" placeholder="Houston, TX"></div></div>
   </div>
   <div class="mft"><button class="btn2" onclick="closeM('m-ap')">Cancel</button><button class="btn1" onclick="saveAP()">Add Prime</button></div>
 </div></div>
 
 <script>
-// ═════════════════════════════════════
-// DATA
-// ═════════════════════════════════════
-const BIDS=[
-  {id:1,num:'01',name:'Water & Wastewater Facilities IDIQ',agency:'City of Austin – Austin Water',city:'Austin',scope:'IDIQ task-order contract; E&I engineering design work assignments at multiple water & wastewater facilities',due:'Mar 26, 2026',value:'IDIQ / TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:2,num:'02',name:'Overhaul Washwater Return Vertical Turbine Pump',agency:'City of Austin – Austin Water',city:'Austin',scope:'Comprehensive overhaul of vertical turbine pump; electrical motor, controls & instrumentation components',due:'Mar 26, 2026',value:'TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:3,num:'03',name:'TCWSP Murphy Drive Pump Station – Generator Improvements',agency:'Trinity River Authority (TRA)',city:'DFW Region',scope:'Two 3,000kW generators, MV switchgear, paralleling switchgear, underground duct banks; full SCADA integration design',due:'Active – TBD',value:'TBD',status:'active',region:'dfw',url:'https://tra.procureware.com/Bids'},
-  {id:4,num:'04',name:'Muddy Creek WWTP – Emergency Power & PLC Replacement',agency:'City of Fort Worth',city:'Fort Worth',scope:'480V / 1,500kW generators, ATS, PLC replacements, odor control electrical improvements',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:5,num:'05',name:'Plano Spring Creek Lift Station No. 2 Improvements',agency:'City of Fort Worth / Plano',city:'Fort Worth / Plano',scope:'Electrical & control equipment, AFDs for 4 pumps, 60 MGD capacity; decommission LS No. 1 electrical',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:6,num:'06',name:'Ten Mile Creek – DAF & Electrical / Instrumentation Improvements',agency:'City of Dallas',city:'Dallas',scope:'Decommission DAF tanks; electrical & instrumentation improvements; RAS/WAS & thickener electrical upgrades',due:'TBD 2026',value:'~$17,400,000',status:'active',region:'dfw',url:'https://dallascityhall.com/departments/procurement/Pages/current_bids_proposals.aspx'},
-  {id:7,num:'07',name:'Bandera Lift Station Rehabilitation – E&I Package',agency:'Harris County WCID No. 36',city:'Houston (Harris Co.)',scope:'SCADA & network panels, VFD, ATS, instrumentation & control devices, conduit, wire; SCADA programming',due:'TBD 2026',value:'~$2,206,436',status:'active',region:'houston',url:'https://www.harriscountywcid36.com/'},
-  {id:8,num:'08',name:'Lift Station – New Electrical Equipment & Pumps',agency:'Harris County UD No. 6',city:'Houston (Harris Co.)',scope:'Install new electrical equipment on elevated platform, new pumps; backup generator; controls and panel upgrades',due:'In Progress – Fall 2026',value:'TBD',status:'active',region:'houston',url:'https://www.harriscountyud6.org/'},
-  {id:9,num:'09',name:'Medio Creek WRC – Standby Generator Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Standby generator replacement at wastewater reclamation facility; electrical and controls integration',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:10,num:'10',name:'Bitters Pump Station Upgrades & Tank Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Electrical, automation & controls upgrades; pump station improvements; tank replacement with full E&I scope',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:11,num:'11',name:'Surface Water Treatment Plant – E&I & SCADA Engineering Design',agency:'City of Pearland',city:'Pearland (S. Houston)',scope:'Main site power & distribution system design; SCADA system architecture; instrumentation engineering for treatment trains, pump station, ground storage tanks',due:'CMAR GMP – Mid-2026',value:'Part of ~$71.4M pkg',status:'prebid',region:'houston',url:'https://www.pearlandtx.gov/departments/engineering-and-public-works/projects-division/project-updates/surface-water-treatment-plant'},
-  {id:12,num:'12',name:'City of Strawn – WTP SCADA & Electrical Engineering Design',agency:'City of Strawn (TWDB HB500)',city:'Strawn (W. Texas)',scope:'Open-source SCADA system design, alternate power supply engineering, electrical design for microfilter replacement; TWDB grant funded',due:'TBD – Post-funding',value:'~$1,085,000',status:'prebid',region:'statewide',url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp'},
-];
+let PRIMES = []; // loaded from /primes.js
 
-// SRI Global = Engineering Design only.
-// Auto-move install / construction / overhaul / award pending bids to Deleted.
-const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
-let bidState={};
-BIDS.forEach(b=>{
-  const isNonDesign = NON_DESIGN_KEYWORDS.some(kw =>
-    b.name.toLowerCase().includes(kw) ||
-    b.scope.toLowerCase().includes(kw)
-  ) || b.status === 'pending';
-  bidState[b.id] = isNonDesign ? 'deleted' : 'active';
-});
 
-// ── 78 firms · 107 contacts imported from SRI_Global_Waste_water_Primes_List.xlsx ──
-let PRIMES = [
-  {id:"p1",name:"5 Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Liz Parent",ro:"P.E., CFM",em:"liz@5engineering.com",ph:"832-800-3483"},{fn:"Jennie Almerico",ro:"P.E., VP Water & Wastewater Services",em:"Jennie@5engineering.com",ph:"832-610-4314"}]},
-  {id:"p2",name:"AECOM",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Wendy Lundeen",ro:"P.E., Project Manager",em:"wendy.lundeen@aecom.com",ph:"713-267-2853"},{fn:"Palge Cronin",ro:"PE, Project Engineer",em:"palge.cronin@aecom.com",ph:"972-735-3076"},{fn:"Vishakha Kaushik",ro:"Project Engineer",em:"vishakha.kaushik@aecom.com",ph:"281-675-1906"}]},
-  {id:"p3",name:"AEI Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"J.T. (Tom) Matkin",ro:"P.E., Vice President",em:"tmatkin@aeiengineering.com",ph:"281-350-7027"}]},
-  {id:"p4",name:"Alan Plummer Associates",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Adrian Dongell",ro:"P.E., Project Manager II",em:"adongell@apaienv.com",ph:"214-631-6100"},{fn:"Alan R. Tucker",ro:"P.E., Principal",em:"atuker@apaienv.com",ph:"817-806-1780"},{fn:"Jesse Guerra",ro:"Project Manager (San Antonio)",em:"jguerra@plummer.com",ph:"210-210-1278"}]},
-  {id:"p5",name:"Amani Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mahesh B. Dutta",ro:"P.E., CFM, Executive VP",em:"mdutta@amaniengineering.com",ph:"713-270-5700"}]},
-  {id:"p6",name:"Arcadis Design and Consultancy",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Anna Stehouwer",ro:"PE, Project Water Engineer",em:"Anna.Stehouwer@arcadis.com",ph:"713-453-4767"},{fn:"Wendell Barnes",ro:"PE",em:"Wendell.barnes@arcadis.com",ph:"713-453-4767"}]},
-  {id:"p7",name:"AVILES Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Shou Ting HU",ro:"M.S., P.E., President",em:"sthu@avilesengineering.com",ph:"713-895-7645"}]},
-  {id:"p8",name:"BGE Inc.",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Matt Froehlich",ro:"PE, Senior Project Manager",em:"mfroehlich@bgeinc.com",ph:"281-579-0340"}]},
-  {id:"p9",name:"Binkley & Barfield",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Chris Campbell",ro:"PE, Managing Director — Public Infrastructure",em:"clc@binkleybarfield.com",ph:"713-869-3433"},{fn:"Steven F. Albert",ro:"PE, CFM, Vice President",em:"salbert@binkleybarfield.com",ph:"281-772-5877"},{fn:"Jeremy Austin",ro:"PE, Project Manager",em:"jaustin@binkleybarfield.com",ph:"713-869-3433"}]},
-  {id:"p10",name:"Black & Veatch",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"John D'Antoni",ro:"P.E., Regional Asset Management Leader",em:"DantonijM@bv.com",ph:"713-255-3344"},{fn:"David A. Timmermann",ro:"P.E., Associate Vice President",em:"TimmermannDA@bv.com",ph:"469-513-3220"}]},
-  {id:"p11",name:"Burgess & Niple",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Amanda E. Frazier",ro:"EIT, Graduate Engineer",em:"amanda.frazier@burgessniple.com",ph:"432-689-8909"}]},
-  {id:"p12",name:"CDM Smith",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Bryan Craig",ro:"Senior Project Manager",em:"craigba@cdmsmith.com",ph:"214-346-2843"},{fn:"Gerald S. Furrier",ro:"PE, BCEE, Associate",em:"furriergS@cdmsmith.com",ph:"713-423-7337"}]},
-  {id:"p13",name:"CobbFendley",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Kelsey L. Woody",ro:"Marketing & Communications Coordinator",em:"kwoody@cobbfendley.com",ph:"713-462-3242"}]},
-  {id:"p14",name:"STV, Inc",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"S. Christopher Schmid",ro:"PE, Associate",em:"cschmid@cpyi.com",ph:"214-638-0500"}]},
-  {id:"p15",name:"Dannenbaum Engineering Corporation",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Douglas Harris",ro:"P.E., Senior Project Manager",em:"Doug.Harris@dannenbaum.com",ph:"713-527-6428"},{fn:"Selena Stewart",ro:"PR / Corporate Development",em:"selena.stewart@dannenbaum.com",ph:"713-527-6457"},{fn:"Carl D. McConnell",ro:"P.E., PMP, Deputy Manager Public Works",em:"carl.mcconnell@dannenbaum.com",ph:"713-527-6384"}]},
-  {id:"p16",name:"Dunaway Associates",city:"Texas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jason Kelliher",ro:"PE, Discipline Lead",em:"jkelliher@dunawayassociates.com",ph:"432-848-4397"}]},
-  {id:"p17",name:"Dunham Engineering",city:"College Station, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jimmy Dunham",ro:"P.E., Vice President",em:"jim@dunhamengineering.com",ph:"979-690-6555"}]},
-  {id:"p18",name:"EA Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mark Dellape",ro:"Project Manager",em:"mdelape@eaest.com",ph:"410-584-7000"}]},
-  {id:"p19",name:"EJES Inc.",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Kamal Rasheed",ro:"PE, VP Gulf Regional Services",em:"krasheed@ejesinc.com",ph:"504-218-7103"},{fn:"Aaron B. Hargrove",ro:"PE, Technical Design Manager",em:"ahargrove@ejesinc.com",ph:"281-272-1612"}]},
-  {id:"p20",name:"FCM Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Frank Mbachu",ro:"President",em:"",ph:"713-706-4412"},{fn:"Gregory Johnson",ro:"Engineer",em:"gjohnson@fcm-engineers.com",ph:"713-706-4412"}]},
-  {id:"p21",name:"Freese and Nichols",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Robert Jenkins",ro:"PMP, Project Manager",em:"Rob.Jenkins@freese.com",ph:"210-884-0139"}]},
-  {id:"p22",name:"Garver",city:"Fort Worth, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Paul Banschbach",ro:"PE, Water Infrastructure Team Leader",em:"PMBanschbach@GarverUSA.com",ph:"682-747-5396"}]},
-  {id:"p23",name:"HALFF Associates",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jayson D. Melcher",ro:"PE, Operations Manager",em:"jmelcher@halff.com",ph:"972-761-1642"}]},
-  {id:"p24",name:"Hatch",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Craig Shrader",ro:"Project Manager",em:"craig.shrader@hatch.com",ph:"713-467-9961"}]},
-  {id:"p25",name:"HDR Engineering",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Heather Lindner",ro:"PE, CFM, Water/Wastewater Engineer",em:"heather.lindner@hdrinc.com",ph:"210-841-2800"}]},
-  {id:"p26",name:"HRGreen",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Michael Halde",ro:"PE, Vice President / WW Practice Leader",em:"mhalde@hrgreen.com",ph:"713-338-8015"},{fn:"Rebekkah C. Sandt",ro:"PE, Project Manager",em:"rsandt@hrgreen.com",ph:"713-338-8013"},{fn:"Eric Hall",ro:"PE, Regional Director — Water",em:"ehall@hrgreen.com",ph:"713-338-8022"},{fn:"Ayobamidele Bello",ro:"Engineer",em:"",ph:"713-338-8026"}]},
-  {id:"p27",name:"HVJ Associates",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sanjeev Sanjeevan",ro:"PE, Project Manager",em:"ssanjeevan@hvj.com",ph:"281-933-7388"}]},
-  {id:"p28",name:"ICMC Group",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sanjeet Shrestha",ro:"P.E., Project Engineer",em:"sanjeet@icmcgroup.net",ph:"713-681-5757"}]},
-  {id:"p29",name:"IDCUS",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Naddem Abbasi",ro:"P.E., Civil Engineering Manager",em:"naddem@idcus.com",ph:"713-541-5591"}]},
-  {id:"p30",name:"Intrusa Inc. Consulting Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mauricio Pinto",ro:"SE, PE, PMP, President",em:"mrpinto@intrusaengineers.com",ph:"713-482-7066"}]},
-  {id:"p31",name:"Jacobs Engineering",city:"Dallas / Fort Worth / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Tim Lyons",ro:"P.E., Project Manager",em:"Timothy.Lyons@jacobs.com",ph:"469-941-8912"},{fn:"Douglas L. Smith",ro:"P.E., Principal Project Manager",em:"doug.l.smith@jacobs.com",ph:"817-304-5502"},{fn:"Michael E. Lucchesi",ro:"P.E., Vice President",em:"michael.lucchesi@jacobs.com",ph:"832-351-7312"},{fn:"Ken C. Hall",ro:"PE, Senior Project Manager",em:"ken.hall@jacobs.com",ph:"817-735-6000"},{fn:"Michael Ancell",ro:"P.E., Water Resources Sr. PM",em:"michael.ancell@jacobs.com",ph:"915-206-2165"}]},
-  {id:"p32",name:"KCI Technologies",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Lomes Petty",ro:"TX Utility Services, SUE Practice Leader",em:"lomes.petty@kci.com",ph:"832-975-1560"},{fn:"John Mudd",ro:"PE, Associate Project Manager",em:"john.mudd@kci.com",ph:"281-323-9398"},{fn:"Jared M. Jones",ro:"Sr. Project Manager",em:"jared.jones@kci.com",ph:"832-975-1523"}]},
-  {id:"p33",name:"Kimley-Horn",city:"Dallas / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"M. Anthony Samarripas",ro:"P.E.",em:"anthony.samarripas@kimley-horn.com",ph:"972-770-1314"},{fn:"Connie Curtis",ro:"P.E.",em:"connie.curtis@kimley-horn.com",ph:"281-920-6578"}]},
-  {id:"p34",name:"KIT Professionals",city:"Houston / Dallas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sunil Kommineni",ro:"PhD, PE, BCEE, Vice President",em:"skommineni@kitprofs.com",ph:"713-783-8700"},{fn:"Bharath Ramalingam",ro:"PE, Project Manager",em:"bramalingam@kitprofs.com",ph:"972-456-9650"},{fn:"William G. Pembroke",ro:"PE, Project Director North Texas",em:"bpembroke@kitprofs.com",ph:"972-456-9650"},{fn:"Frank L. Stephens",ro:"PE, Senior Project Manager",em:"fstephens@kitprofs.com",ph:"713-783-8700"}]},
-  {id:"p35",name:"LAN (Lockwood Andrews & Newnam)",city:"Houston / Austin",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Stephen A. Gilbreath",ro:"PE, Business Group Director",em:"SAGilbreath@lan-inc.com",ph:"713-266-6900"},{fn:"Hunter B. Hanson",ro:"EIT, Hydraulic Engineer",em:"HBHanson@lan-inc.com",ph:"512-338-4212"}]},
-  {id:"p36",name:"MBCO Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Brock Crenek",ro:"P.E., ENV SP, Sr. Vice President",em:"brock.crenek@mbcoengineering.com",ph:"281-760-1656"}]},
-  {id:"p37",name:"Michael Baker International",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mohamed Bagha",ro:"PE, Senior Project Manager",em:"mbagha@mbakerintl.com",ph:"713-954-5344"}]},
-  {id:"p38",name:"Neel-Schaffer",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Charles 'Sonny' Smoak Jr.",ro:"P.E., Senior VP / Houston Office Manager",em:"sonny.smoak@neel-schaffer.com",ph:"713-783-7117"}]},
-  {id:"p39",name:"Nedu Engineering Services",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Nkemdi I. Ohalete",ro:"P.E., Principal",em:"nkemdi@neduengineers.com",ph:"713-268-1666"},{fn:"Roshan Adhikari",ro:"EIT, Graduate Engineer",em:"staff@neduengineers.com",ph:"713-268-1666"}]},
-  {id:"p40",name:"Omega Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Santiago Castaneda",ro:"PE, Executive Vice President",em:"scastaneda@omegaengineers.com",ph:"281-221-8989"}]},
-  {id:"p41",name:"Othon Inc. Consulting",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"John J. Sakolosky",ro:"PE, Chief Municipal Engineer",em:"jsakolosky@othon.com",ph:"713-975-8555"}]},
-  {id:"p42",name:"Pacheco Koch",city:"Dallas / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Thelma Flores Box",ro:"PE, Associate Principal",em:"tbox@pkce.com",ph:"972-235-3031"},{fn:"Chris Jones",ro:"Principal Engineer (Houston Infrastructure)",em:"",ph:"281-883-0103"}]},
-  {id:"p43",name:"Pape-Dawson Engineers",city:"San Antonio / Austin",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Lee Niles",ro:"P.E., Design Leader",em:"lniles@pape-dawson.com",ph:"210-375-9000"}]},
-  {id:"p44",name:"Parsons Water and Infrastructure",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Eugene Max Han",ro:"Sr. Subcontract Administrator",em:"",ph:"713-871-7000"}]},
-  {id:"p45",name:"PGAL",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Coatas Georghiou",ro:"PE, Principal",em:"cgeorghiou@pgal.com",ph:"713-968-9351"}]},
-  {id:"p46",name:"Progressive Civil Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mohammad Irfan",ro:"P.E., PTOE, President & Principal Engineer",em:"Mirfan@pcehouston.com",ph:"281-206-7494"}]},
-  {id:"p47",name:"Root 3 Power",city:"Spring, TX",web:'',desc:'Power Systems Engineering — E&I Sub-Consultant Opportunity.',scope:'Power Systems Engineering Design, MV/LV, Water/WW Electrical',contacts:[{fn:"Matt Proctor",ro:"P.E., Power Systems Consultant & Managing Partner",em:"matt.proctor@root3power.com",ph:"346-225-3210"}]},
-  {id:"p48",name:"S&B Infrastructure",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Chantal Fullerton",ro:"Marketing / Proposal Manager",em:"cdfullerton@sbinfra.com",ph:"713-845-5401"}]},
-  {id:"p49",name:"Specific Energy",city:"Georgetown, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Michael Blake",ro:"Project Manager",em:"michael.blake@specificenergy.com",ph:"512-930-9415"}]},
-  {id:"p50",name:"Stanley Consultants",city:"Austin, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jesse Cabrera",ro:"Project Manager",em:"CabreraJesse@stanleygroup.com",ph:"512-427-3616"},{fn:"Steve Holton",ro:"Project Manager",em:"holtonsteve@stanleygroup.com",ph:"512-427-3654"}]},
-  {id:"p51",name:"Stantec",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jarah Parke",ro:"PE, PMP, CFM, Project Manager",em:"jarah.parke@stantec.com",ph:"702-821-4332"},{fn:"Betty Leite",ro:"PE, CFM, PMP, Senior Project Manager",em:"betty.leite@stantec.com",ph:"713-587-5700"},{fn:"John Keane",ro:"Project Manager",em:"john.keane@stantec.com",ph:"713-403-1609"}]},
-  {id:"p52",name:"Sowells Construction Management",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater CM&I, Engineering Design Support',contacts:[{fn:"Jerry D. Sowells",ro:"M.S., CCM, Principal",em:"jsowells@scmandi.com",ph:"832-731-7290"}]},
-  {id:"p53",name:"Technikos",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Ora Gibson",ro:"Managing Owner",em:"ogibson@technikosllc.com",ph:"281-414-2855"}]},
-  {id:"p54",name:"Tetra Tech",city:"Houston / San Antonio / Dallas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Leslie Turner",ro:"P.E., BCEE, PMP, Operations Manager",em:"leslie.turner@tetratech.com",ph:"832-251-5167"},{fn:"Mandi Siebels",ro:"PE, Water and Wastewater",em:"mandi.siebels@tetratech.com",ph:"832-251-5185"},{fn:"Donald Burger",ro:"P.E., Senior Engineer (San Antonio)",em:"don.burger@tetratech.com",ph:"210-299-7909"},{fn:"Robert Ivanovic",ro:"PMP, National Electrical I&C SCADA Manager",em:"robert.ivanovic@tetratech.com",ph:"702-241-4949"},{fn:"Mia R. Welch",ro:"PE, North Texas Regional Manager",em:"mia.welch@tetratech.com",ph:"214-231-4805"}]},
-  {id:"p55",name:"Tran Systems",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Aadit Kapadia",ro:"Project Manager",em:"askapadia@transystems.com",ph:"713-807-4436"}]},
-  {id:"p56",name:"Trigone Associates",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Regina Cassanova",ro:"Project Manager",em:"rcassanova@trigonassociates.com",ph:"504-585-5767"},{fn:"Greg Kolenovsky",ro:"New Orleans Office",em:"gkolenovsky@trigonassociates.com",ph:""}]},
-  {id:"p57",name:"V&A Consulting Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jose Villalobos",ro:"PE, Founding Principal & CMO",em:"Jvillalobos@vaengineering.com",ph:"510-903-6600"}]},
-  {id:"p58",name:"WRA Engineers",city:"Baltimore, MD",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Dennis J. Hasson",ro:"PE, BCEE, Partner",em:"dhasson@wrallp.com",ph:"443-286-7476"}]},
-  {id:"p59",name:"Zarinkelk Engineering Services",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Giti Zarinkelk",ro:"P.E., F.SAME, President",em:"giti.zarinkelk@zarinkelk.com",ph:"832-242-2426"},{fn:"Michael J. Bagstad",ro:"P.E., Project Manager",em:"mike.bagstad@zarinkelk.com",ph:"832-242-2426"},{fn:"Hossein Zandi",ro:"P.E.",em:"hossein.zandi@zarinkelk.com",ph:"832-242-2426"}]},
-  {id:"p60",name:"EJES Inc. (Houston)",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Aaron B. Hargrove",ro:"PE, Technical Design Manager",em:"ahargrove@ejesinc.com",ph:"281-272-1612"}]},
-  {id:"p61",name:"Ing Garza Construction",city:"Laredo, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"David A. Garza",ro:"PE, PMP, CCM",em:"dgarza@inggarza.com",ph:"956-792-3597"}]},
-  {id:"p62",name:"Neera Engineering",city:"Texas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Prasad Namuduri",ro:"P.E.",em:"psnamuduri@gmail.com",ph:"832-641-5413"}]},
-  {id:"p63",name:"TSC Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Nelson B. Nuckles",ro:"P.E., Sr. Project Manager",em:"BarbNuckles@tscengineering.com",ph:"713-784-7777"}]},
-  {id:"p64",name:"Ardurra Group (formerly LNV)",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Byron G. Sanderfer",ro:"PE, CFM, Principal/VP",em:"BSANDERFER@LNVINC.COM",ph:"210-822-2232"}]},
-];
-
-let cPrime=null, ePrime=null;
-const SN={closing:'Closing Soon',active:'Active Bid',prebid:'Pre-Bid',pending:'Award Pending'};
+let BIDS=[], bidState={}, sentLog=[], cPrime=null, curF='all', curS='';
+const SN={closing:'Closing Soon',active:'Active',prebid:'Pre-Bid',pending:'Award Pending'};
 const SL={closing:'closing',active:'active',prebid:'prebid',pending:'pending'};
-let curF='all', curS='';
+const NON_DESIGN=['install','overhaul','construction','replacement','rehab'];
+function isNonDesign(b){return NON_DESIGN.some(k=>(b.name+' '+(b.scope||'')).toLowerCase().includes(k))||b.status==='pending';}
 
-// ═════════════════════════════════════
-// TABS
-// ═════════════════════════════════════
+async function fetchBids(){
+  try{
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 10000);
+    const res = await fetch('/api/bids', {signal: controller.signal});
+    clearTimeout(timeout);
+    const data = await res.json();
+
+    // Normalize bids to our display format
+    BIDS = (data.bids||[]).map((b,i) => ({
+      id: b.id || 'bid-'+i,
+      num: String(i+1).padStart(2,'0'),
+      name: b.name || b.title || b.bidName || 'Unnamed Bid',
+      agency: b.agency || b.owner || b.organization || 'Unknown Agency',
+      city: b.city || b.location || b.state || 'Texas',
+      scope: b.scope || b.description || 'E&I Engineering — See RFQ link',
+      due: b.due || b.dueDate || b.closingDate || 'See link',
+      value: b.value || b.estimatedValue || 'TBD',
+      status: b.status || 'active',
+      region: b.region || 'statewide',
+      url: b.url || b.link || b.bidUrl || '',
+      source: b.source || 'Unknown'
+    }));
+
+    bidState={};
+    BIDS.forEach(b=>{ bidState[b.id] = isNonDesign(b) ? 'deleted' : 'active'; });
+
+    if(data.lastUpdated){
+      document.getElementById('last-pull-time').textContent = new Date(data.lastUpdated).toLocaleString();
+    }
+    setStatus('done', 'Loaded ' + BIDS.length + ' bids');
+    renderAll();
+    populateCampSelect();
+  }catch(e){
+    console.warn('fetchBids:', e.message);
+    setStatus('error','Could not reach server');
+  }
+}
+
+async function triggerScrape(){
+  setStatus('running','Pulling from CivCast, EnviroBidNet, H2bid, TX ESBD...');
+  try{
+    await fetch('/api/scrape',{method:'POST'});
+    const prev=document.getElementById('last-pull-time').textContent;
+    let t=0;
+    const poll=setInterval(async()=>{
+      t++;await fetchBids();
+      const now=document.getElementById('last-pull-time').textContent;
+      if(now!==prev||t>24){clearInterval(poll);setStatus('done','Done - '+BIDS.length+' bids loaded');}
+    },5000);
+  }catch{setStatus('error','Scrape failed — check server logs');}
+}
+function setStatus(type,msg){const e=document.getElementById('scrape-status');e.className='scrape-status '+type;e.textContent=msg;}
+
+async function saveManualBid(){
+  const name=document.getElementById('nb-name').value.trim();
+  const agency=document.getElementById('nb-agency').value.trim();
+  if(!name||!agency){alert('Name and agency required.');return;}
+  const bid={name,agency,city:document.getElementById('nb-city').value.trim()||'Texas',due:document.getElementById('nb-due').value.trim()||'TBD',scope:document.getElementById('nb-scope').value.trim()||'E&I Engineering Design',url:document.getElementById('nb-url').value.trim(),value:document.getElementById('nb-value').value.trim()||'TBD',status:document.getElementById('nb-status').value,source:document.getElementById('nb-source').value,region:'statewide'};
+  try{
+    const r=await fetch('/api/bids',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bid)});
+    const d=await r.json();BIDS.unshift(d.bid);bidState[d.bid.id]=isNonDesign(d.bid)?'deleted':'active';
+    renderAll();closeM('m-addbid');
+    ['nb-name','nb-agency','nb-city','nb-due','nb-scope','nb-url','nb-value'].forEach(i=>document.getElementById(i).value='');
+  }catch{alert('Save failed — is server running?');}
+}
+
 function switchTab(id,btn){
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
-  if(id==='primes'){ setTimeout(renderPrimes,0); }
-  if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();},0); }
+  // Defer heavy renders so tab switch feels instant
+  if(id==='primes'){ setTimeout(renderPrimes, 0); }
+  if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();}, 0); }
 }
 
-// ═════════════════════════════════════
-// BID TABLE
-// ═════════════════════════════════════
+function sourceBadge(src){const k=(src||'manual').toLowerCase().replace(/[^a-z]/g,'').slice(0,10);return '<span class="source-badge '+k+'">'+(src||'Manual')+'</span>';}
+
 function row(b,ctx){
+  const i=BIDS.indexOf(b)+1;
   const dcl=(b.status==='closing'&&ctx==='active')?' style="color:var(--red)"':'';
-  let acts='';
-  if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(${b.id},'selected')">✓ Select</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else if(ctx==='selected') acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button></div>`;
+  let acts=ctx==='active'?'<div class="ag"><button class="ab sel" onclick="mark(''+b.id+'','selected')">Select</button><button class="ab del" onclick="mark(''+b.id+'','deleted')">Delete</button></div>':
+    ctx==='selected'?'<div class="ag"><button class="ab rst" onclick="mark(''+b.id+'','active')">Restore</button><button class="ab del" onclick="mark(''+b.id+'','deleted')">Delete</button></div>':
+    '<div class="ag"><button class="ab rst" onclick="mark(''+b.id+'','active')">Restore</button></div>';
   const stCl=ctx==='selected'?'selected':ctx==='deleted'?'deleted':(SL[b.status]||'active');
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
-  const urlCell = b.url
-    ? `<td class="tu"><a href="${b.url}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px;display:block;margin-bottom:4px" title="${b.url}">↗ View RFQ</a><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--gray);padding:2px 6px;border-radius:2px;cursor:pointer">✎ Edit</button></td>`
-    : `<td class="tu"><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(0,200,212,.25);background:rgba(0,200,212,.06);color:var(--cyan);padding:3px 8px;border-radius:2px;cursor:pointer">+ Add Link</button></td>`;
-  return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
-    <td class="tn">${b.num}</td><td class="tp">${b.name}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
-    <td class="ts">${b.scope}</td>${urlCell}<td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
-    <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
-  </tr>`;
+  const url=b.url?'<a href="'+b.url+'" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px">View RFQ</a>':'<span style="color:var(--gray);font-size:10px">-</span>';
+  return '<tr data-status="'+b.status+'" data-region="'+(b.region||'statewide')+'" data-search="'+[b.name,b.agency,b.city,b.scope,b.due,b.source].join(' ').toLowerCase()+'">'
+    +'<td class="tn">'+String(i).padStart(2,'0')+'</td>'
+    +'<td style="white-space:nowrap">'+sourceBadge(b.source)+'</td>'
+    +'<td class="tp">'+b.name+'</td><td class="ta">'+b.agency+'</td><td class="tc">'+(b.city||'TX')+'</td>'
+    +'<td class="ts">'+(b.scope||'-')+'</td><td class="tu">'+url+'</td>'
+    +'<td class="td"'+dcl+'>'+(b.due||'TBD')+'</td>'
+    +'<td><span class="st '+stCl+'">'+stNm+'</span></td><td>'+acts+'</td></tr>';
 }
 
 function renderAll(){
-  document.getElementById('bids-body').innerHTML=BIDS.filter(b=>bidState[b.id]==='active').map(b=>row(b,'active')).join('');
+  const act=BIDS.filter(b=>bidState[b.id]==='active');
+  document.getElementById('bids-body').innerHTML=act.map(b=>row(b,'active')).join('');
   const sel=BIDS.filter(b=>bidState[b.id]==='selected');
   document.getElementById('sel-body').innerHTML=sel.map(b=>row(b,'selected')).join('');
   document.getElementById('sel-mt').style.display=sel.length?'none':'block';
   const del=BIDS.filter(b=>bidState[b.id]==='deleted');
   document.getElementById('del-body').innerHTML=del.map(b=>row(b,'deleted')).join('');
   document.getElementById('del-mt').style.display=del.length?'none':'block';
-  applyF(); updBadges(); updStats(); populateCampSelect();
+  applyF();updBadges();updStats();
 }
-
-function mark(id,state){bidState[id]=state;renderAll();}
-
+function mark(id,state){
+  bidState[id]=state;renderAll();
+  fetch('/api/bids/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({userState:state})}).catch(()=>{});
+}
 function updBadges(){
   document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active').length;
   document.getElementById('badge-sel').textContent=BIDS.filter(b=>bidState[b.id]==='selected').length;
@@ -859,548 +766,248 @@ function updStats(){
 function filt(f,btn){curF=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyF();}
 function srch(q){curS=q.toLowerCase().trim();applyF();}
 function applyF(){
-  const active=BIDS.filter(b=>bidState[b.id]==='active');
-  const filtered=active.filter(b=>{
-    const mf=curF==='all'||b.status===curF||(curF==='houston'&&b.region==='houston');
-    const ms=!curS||[b.name,b.agency,b.city,b.scope,b.due,b.value,b.region].join(' ').toLowerCase().includes(curS);
+  const act=BIDS.filter(b=>bidState[b.id]==='active');
+  const fil=act.filter(b=>{
+    const mf=curF==='all'||b.status===curF||(curF==='houston'&&(b.region||'')==='houston');
+    const ms=!curS||[b.name,b.agency,b.city,b.scope,b.due,b.source].join(' ').toLowerCase().includes(curS);
     return mf&&ms;
   });
-  document.getElementById('bids-body').innerHTML=filtered.map(b=>row(b,'active')).join('');
-  // Show count
+  document.getElementById('bids-body').innerHTML=fil.map(b=>row(b,'active')).join('');
   const lbl=document.getElementById('bids-result-count');
-  if(lbl) lbl.textContent=curS||curF!=='all'?`${filtered.length} of ${active.length} bids`:'';
+  if(lbl)lbl.textContent=(curS||curF!=='all')?fil.length+' of '+act.length+' bids':'';
 }
 
-// ═════════════════════════════════════
-// SRI GLOBAL TAB — PRIMES DIRECTORY
-// ═════════════════════════════════════
-function renderSRIDir(){
-  const totalContacts = PRIMES.reduce((t,p)=>t+p.contacts.length,0);
-  const container = document.getElementById('sri-pdir');
-  container.innerHTML = '';
-  const el = document.getElementById('sri-prime-count');
-  if(el) el.textContent = `${PRIMES.length} Firms · ${totalContacts} Contacts`;
-  // Chunked render -- 8 cards at a time so browser stays responsive
-  let i = 0;
-  function chunk(){
-    const frag = document.createDocumentFragment();
-    PRIMES.slice(i, i+8).forEach(p => {
-      const ctHtml = p.contacts.length===0
-        ? `<div class="no-contact-msg" style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.4);font-style:italic;padding:5px 0">No contacts yet</div>`
-        : p.contacts.map(c=>`
-            <div class="pdir-contact">
-              <div class="pdc-info">
-                <div class="pdc-name">${c.fn}</div>
-                <div class="pdc-role">${c.ro||''}</div>
-              </div>
-              <div class="pdc-links">
-                ${c.em?`<a class="pdc-em" href="mailto:${c.em}">&#x2709; ${c.em}</a>`:'<span style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.35)">No email</span>'}
-                ${c.ph?`<a class="pdc-ph" href="tel:${c.ph}">&#128222; ${c.ph}</a>`:''}
-              </div>
-            </div>`).join('');
-      const div = document.createElement('div');
-      div.className = 'pdir-card';
-      div.innerHTML = `
-        <div class="pdir-name">${p.name} <span style="font-family:var(--mono);font-size:9px;color:var(--gray);font-weight:400">(${p.contacts.length})</span></div>
-        <div class="pdir-loc">&#128205; ${p.city}</div>
-        <div class="pdir-contacts">${ctHtml}</div>`;
-      frag.appendChild(div);
-    });
-    container.appendChild(frag);
-    i += 8;
-    if(i < PRIMES.length) setTimeout(chunk, 20);
-    else populateCampSelect();
-  }
-  chunk();
-}
-
-function filterSRIDir(q){
-  const lq=q.toLowerCase();
-  document.querySelectorAll('#sri-pdir .pdir-card').forEach(card=>{
-    const txt=card.innerText.toLowerCase();
-    card.style.display=(!lq||txt.includes(lq))?'':'none';
-  });
-}
-
-// ═════════════════════════════════════
-// CAMPAIGN — BID SELECT & FIRM SELECTOR
-// ═════════════════════════════════════
-let sentLog = [];
-
-function populateCampSelect(){
-  const sel = document.getElementById('camp-bid-select');
-  if(!sel) return;
-  const all = BIDS.filter(b => bidState[b.id]==='active'||bidState[b.id]==='selected');
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">— Select a bid —</option>' +
-    all.map(b=>`<option value="${b.id}">${b.name} · ${b.due}</option>`).join('');
-  if(prev) sel.value = prev;
-  // buildFirmSelector only called when SRI tab is opened — not here
-}
-
-function loadCampaign(){
-  const v = document.getElementById('camp-bid-select').value;
-  const bid = v ? BIDS.find(b=>b.id===parseInt(v)) : null;
-  const info = document.getElementById('camp-bid-info');
-  if(info) info.textContent = bid ? `Agency: ${bid.agency} · Due: ${bid.due}` : '';
-  document.getElementById('camp-empty').style.display = bid ? 'none' : 'block';
-  updateCampPreview();
-}
-
-function buildFirmSelector(){
-  const grid = document.getElementById('firm-selector-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  let i = 0;
-  function chunk(){
-    const frag = document.createDocumentFragment();
-    PRIMES.slice(i, i+10).forEach(p => {
-      const hasContact = p.contacts.length > 0 && p.contacts.some(c=>c.em);
-      const ctList = p.contacts.filter(c=>c.em).map(c=>`<div style="font-family:var(--mono);font-size:9px;color:var(--gray);margin-top:2px">&#x2709; ${c.fn} — ${c.em}</div>`).join('');
-      const lbl = document.createElement('label');
-      lbl.className = 'firm-sel-label';
-      lbl.dataset.name = p.name.toLowerCase() + ' ' + p.city.toLowerCase();
-      lbl.style.cssText = `background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:3px;padding:9px 11px;cursor:${hasContact?'pointer':'default'};display:flex;gap:9px;align-items:flex-start;transition:background .15s;${hasContact?'':'opacity:.4'}`;
-      lbl.innerHTML = `<input type="checkbox" class="firm-chk" data-pid="${p.id}" ${!hasContact?'disabled':''} onchange="updFirmSelCount();updateCampPreview()" style="margin-top:3px;flex-shrink:0;accent-color:var(--cyan)">
-        <div>
-          <div style="font-size:12px;font-weight:500;color:var(--white)">${p.name}</div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--gray)">&#128205; ${p.city}</div>
-          ${ctList}
-          ${!hasContact?'<div style="font-family:var(--mono);font-size:9px;color:rgba(239,71,111,.5);margin-top:2px">No email — add in Primes tab</div>':''}
-        </div>`;
-      frag.appendChild(lbl);
-    });
-    grid.appendChild(frag);
-    i += 10;
-    if(i < PRIMES.length) setTimeout(chunk, 20);
-    else updFirmSelCount();
-  }
-  chunk();
-}
-
-function filterFirmSelector(q){
-  document.querySelectorAll('.firm-sel-label').forEach(l=>{
-    l.style.display = (!q || l.dataset.name.includes(q.toLowerCase())) ? '' : 'none';
-  });
-}
-
-function selectAllFirms(val){
-  document.querySelectorAll('.firm-chk:not(:disabled)').forEach(c=>{ c.checked=val; });
-  updFirmSelCount(); updateCampPreview();
-}
-
-function updFirmSelCount(){
-  const n = document.querySelectorAll('.firm-chk:checked').length;
-  const el = document.getElementById('firm-sel-count');
-  if(el) el.textContent = `${n} firm${n!==1?'s':''} selected`;
-  const btn = document.getElementById('btn-send-selected');
-  if(btn) btn.disabled = n===0 || !document.getElementById('camp-bid-select').value;
-}
-
-function buildRFQList(){
-  const activeBids = BIDS.filter(b=>bidState[b.id]==='active'||bidState[b.id]==='selected');
-  if(activeBids.length===0) return '  (No active bids)';
-  return activeBids.map((b,i)=>{
-    const urlLine = b.url ? `\n     Link: ${b.url}` : '';
-    return `  ${i+1}. ${b.name}\n     Agency: ${b.agency} | Due: ${b.due}${urlLine}`;
-  }).join('\n\n');
-}
-
-function buildEmailBody(prime, contact){
-  const tpl = document.getElementById('tpl1-body').value;
-  const rfqList = buildRFQList();
-  const bidSel = document.getElementById('camp-bid-select').value;
-  const bid = bidSel ? BIDS.find(b=>b.id===parseInt(bidSel)) : null;
-  return tpl
-    .replace(/\[CONTACT\]/g, contact ? contact.fn : '[Contact]')
-    .replace(/\[PRIME\]/g, prime.name)
-    .replace(/\[RFQ_LIST\]/g, rfqList)
-    .replace(/\[PROJECT\]/g, bid ? bid.name : '[Project]');
-}
-
-function updateCampPreview(){
-  const prev = document.getElementById('camp-preview');
-  if(!prev) return;
-  const checked = document.querySelectorAll('.firm-chk:checked');
-  if(checked.length===0){
-    prev.textContent = 'Select at least one firm above to preview the email.';
-    return;
-  }
-  const pid = checked[0].dataset.pid;
-  const p = PRIMES.find(x=>x.id===pid);
-  const ct = p.contacts.find(c=>c.em) || null;
-  prev.textContent = buildEmailBody(p, ct);
-}
-
-function sendToSelected(){
-  const checked = [...document.querySelectorAll('.firm-chk:checked')];
-  if(checked.length===0){ alert('Select at least one firm first.'); return; }
-  const bidId = document.getElementById('camp-bid-select').value;
-  if(!bidId){ alert('Select a bid / RFQ first.'); return; }
-  const bid = BIDS.find(b=>b.id===parseInt(bidId));
-  const subjTpl = document.getElementById('tpl1-subj').value;
-  let sent=0, skipped=0;
-  checked.forEach((chk, i)=>{
-    const p = PRIMES.find(x=>x.id===chk.dataset.pid);
-    const emailContacts = p.contacts.filter(c=>c.em);
-    if(emailContacts.length===0){ skipped++; return; }
-    const ct = emailContacts[0];
-    const subj = subjTpl.replace(/\[PROJECT\]/g,bid.name).replace(/\[PRIME\]/g,p.name).replace(/\[CONTACT\]/g,ct.fn).replace(/\[RFQ_LIST\]/g,'');
-    const body = buildEmailBody(p, ct);
-    setTimeout(()=>{ window.open(`mailto:${ct.em}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`,'_blank'); }, i*500);
-    sent++;
-    sentLog.push({ firm:p.name, contact:ct.fn, email:ct.em, bid:bid.name, time:new Date().toLocaleString() });
-  });
-  setTimeout(()=>{
-    const prog = document.getElementById('send-progress');
-    if(prog) prog.textContent = `✓ Opened ${sent} email${sent!==1?'s':''}${skipped?` · ${skipped} skipped (no email)`:''}`;
-    renderSentLog();
-    document.querySelectorAll('.firm-chk:checked').forEach(c=>c.checked=false);
-    updFirmSelCount();
-  }, sent*500+300);
-}
-
-function renderSentLog(){
-  if(sentLog.length===0) return;
-  document.getElementById('sent-log-wrap').style.display='block';
-  document.getElementById('sent-log-body').innerHTML = sentLog.slice().reverse().map((s,i)=>`
-    <tr>
-      <td class="tp" style="font-size:11px">${s.firm}</td>
-      <td style="font-size:11px">${s.contact}</td>
-      <td><a href="mailto:${s.email}" style="font-family:var(--mono);font-size:10px;color:var(--sky);text-decoration:none">${s.email}</a></td>
-      <td style="font-family:var(--mono);font-size:10px;color:#C8D8E8">${s.bid}</td>
-      <td style="font-family:var(--mono);font-size:10px;color:var(--gray)">${s.time}</td>
-      <td><button class="rb" style="border-color:rgba(239,71,111,.3);color:var(--red);background:rgba(239,71,111,.06);font-size:9px;padding:3px 7px" onclick="sentLog.splice(sentLog.length-1-${i},1);renderSentLog()">✕</button></td>
-    </tr>`).join('');
-}
-
-function launchCampaign(){}
-function renderCampaign(){}
-function updateSeqButtons(){}
-
-// ═════════════════════════════════════
-// PRIMES TAB
-// ═════════════════════════════════════
-let primeSearchQ = '';
-function searchPrimes(q){
-  primeSearchQ=q.toLowerCase();
-  renderPrimes();
-}
-
+let primeSearchQ='';
+function searchPrimes(q){primeSearchQ=q.toLowerCase();renderPrimes();}
 function renderPrimes(){
-  const filtered = primeSearchQ
-    ? PRIMES.filter(p=> p.name.toLowerCase().includes(primeSearchQ)
-        || p.city.toLowerCase().includes(primeSearchQ)
-        || p.contacts.some(c=>(c.fn+' '+c.ro+' '+c.em).toLowerCase().includes(primeSearchQ)))
-    : PRIMES;
-  const lbl = document.getElementById('primes-count-label');
-  if(lbl) lbl.textContent = primeSearchQ ? `${filtered.length} firms matching "${primeSearchQ}"` : `All Firms — ${PRIMES.length} companies · ${PRIMES.reduce((t,p)=>t+p.contacts.length,0)} contacts`;
-  const grid = document.getElementById('primes-grid');
+  const fil=primeSearchQ?PRIMES.filter(p=>p.name.toLowerCase().includes(primeSearchQ)||p.city.toLowerCase().includes(primeSearchQ)||p.contacts.some(c=>(c.fn+' '+c.em).toLowerCase().includes(primeSearchQ))):PRIMES;
+  const lbl=document.getElementById('primes-count-label');
+  if(lbl)lbl.textContent=primeSearchQ?fil.length+' firms matching "'+primeSearchQ+'"':'All Firms — '+PRIMES.length+' companies · '+PRIMES.reduce((t,p)=>t+p.contacts.length,0)+' contacts';
+  // Render in chunks of 10 so UI never freezes
+  const grid=document.getElementById('primes-grid');
   grid.innerHTML='';
   let i=0;
   function chunk(){
-    grid.innerHTML += filtered.slice(i,i+10).map(pc).join('');
+    const batch=fil.slice(i,i+10).map(pc).join('');
+    grid.innerHTML+=batch;
     i+=10;
-    if(i<filtered.length) setTimeout(chunk,0);
+    if(i<fil.length) setTimeout(chunk,0);
+    else renderSRIDir();
   }
   chunk();
 }
 function pc(p){
-  const cl=p.contacts.length===0
-    ?`<div class="nocont">No contacts — click "+ Add"</div>`
-    :p.contacts.map((c,i)=>`<div class="ci">
-      <div class="cii">
-        <div class="cin">${c.fn}</div>
-        <div class="cir">${c.ro||''}</div>
-        ${c.em?`<a class="cie" href="mailto:${c.em}" title="${c.em}">✉ ${c.em}</a>`:'<span style="font-size:10px;color:rgba(139,155,173,.3)">—</span>'}
-        ${c.ph?`<a href="tel:${c.ph}" style="font-family:var(--mono);font-size:10px;color:var(--green);text-decoration:none;display:block;margin-top:2px">📞 ${c.ph}</a>`:''}
-      </div>
-      <button class="cdl" onclick="delCont('${p.id}',${i})" title="Remove">×</button>
-    </div>`).join('');
-  return `<div class="prc" id="prime-${p.id}">
-    <div class="prh">
-      <div>
-        <div class="prn">${p.name}</div>
-        <div class="prl">📍 ${p.city}</div>
-      </div>
-      <div class="pra">
-        <button class="pb em" onclick="openEM('${p.id}')">✉ Email</button>
-        <button class="pb co" onclick="openCM('${p.id}')">+ Contact</button>
-      </div>
-    </div>
-    <div class="clist">
-      <div class="chdr">Contacts (${p.contacts.length}) <button class="cadd" onclick="openCM('${p.id}')">+ Add</button></div>
-      ${cl}
-    </div>
-  </div>`;
+  const cl=p.contacts.length===0?'<div class="nocont">No contacts</div>':
+    p.contacts.map((c,i)=>'<div class="ci"><div class="cii"><div class="cin">'+c.fn+'</div><div class="cir">'+(c.ro||'')+'</div>'
+      +(c.em?'<a class="cie" href="mailto:'+c.em+'">'+c.em+'</a>':'<span style="color:rgba(139,155,173,.3);font-size:10px">-</span>')
+      +(c.ph?'<a href="tel:'+c.ph+'" style="font-family:var(--mono);font-size:10px;color:var(--green);text-decoration:none;display:block;margin-top:2px">'+c.ph+'</a>':'')
+      +'</div><button class="cdl" onclick="delCont(''+p.id+'','+i+')">x</button></div>').join('');
+  return '<div class="prc" id="prime-'+p.id+'"><div class="prh"><div><div class="prn">'+p.name+'</div><div class="prl">'+p.city+'</div></div>'
+    +'<div class="pra"><button class="pb em" onclick="openEM(''+p.id+'')">Email</button><button class="pb co" onclick="openCM(''+p.id+'')">+ Contact</button></div></div>'
+    +'<div class="clist"><div class="chdr">Contacts ('+p.contacts.length+')<button class="cadd" onclick="openCM(''+p.id+'')">+ Add</button></div>'+cl+'</div></div>';
+}
+function renderSRIDir(){
+  const grid = document.getElementById('sri-pdir');
+  if(!grid) return;
+  grid.innerHTML = PRIMES.slice(0,20).map(p=>
+    '<div class="pdir-card"><div class="pdir-name">'+p.name+
+    ' <span style="font-family:var(--mono);font-size:9px;color:var(--gray)">('+p.contacts.length+')</span></div>'+
+    '<div class="pdir-loc">'+p.city+'</div></div>'
+  ).join('');
+  populateCampSelect();
 }
 
+function filterSRIDir(q){const lq=q.toLowerCase();document.querySelectorAll('#sri-pdir .pdir-card').forEach(c=>{c.style.display=(!lq||c.innerText.toLowerCase().includes(lq))?'':'none';});}
 function openCM(pid){cPrime=pid;const p=PRIMES.find(x=>x.id===pid);document.getElementById('mc-prime').textContent=p.name;['c-fn','c-ln','c-ro','c-em','c-ph'].forEach(i=>document.getElementById(i).value='');openM('m-contact');}
-function saveCont(){
-  const fn=document.getElementById('c-fn').value.trim();
-  const ln=document.getElementById('c-ln').value.trim();
-  const fullName=(fn+(ln?' '+ln:'')).trim();
-  if(!fullName){alert('Enter at least a first name.');return;}
-  PRIMES.find(x=>x.id===cPrime).contacts.push({fn:fullName,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});
-  renderPrimes();closeM('m-contact');
-}
-function delCont(pid,idx){if(!confirm('Remove this contact?'))return;PRIMES.find(x=>x.id===pid).contacts.splice(idx,1);renderPrimes();}
+function saveCont(){const fn=document.getElementById('c-fn').value.trim();if(!fn){alert('Name required');return;}PRIMES.find(x=>x.id===cPrime).contacts.push({fn,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});renderPrimes();closeM('m-contact');}
+function delCont(pid,idx){if(!confirm('Remove?'))return;PRIMES.find(x=>x.id===pid).contacts.splice(idx,1);renderPrimes();}
+function openAP(){['ap-n','ap-c'].forEach(i=>document.getElementById(i).value='');openM('m-ap');}
+function saveAP(){const n=document.getElementById('ap-n').value.trim();if(!n){alert('Name required');return;}PRIMES.push({id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',contacts:[]});renderPrimes();closeM('m-ap');}
+let emailPrimeId = null;
 
 function openEM(pid){
-  ePrime=pid;
-  const p=PRIMES.find(x=>x.id===pid);
-  document.getElementById('me-prime').textContent=p.name;
-  const sel=document.getElementById('e-to');
-  const withEmail=p.contacts.filter(c=>c.em);
-  sel.innerHTML=withEmail.length===0
-    ?'<option value="">No email contacts — add one first</option>'
-    :withEmail.map((c,i)=>`<option value="${i}">${c.fn}${c.ro?' — '+c.ro:''} · ${c.em}</option>`).join('');
-  updPrev();openM('m-email');
+  emailPrimeId = pid;
+  const p = PRIMES.find(x=>x.id===pid);
+  document.getElementById('me-prime-name').textContent = p.name;
+
+  // Populate contact dropdown
+  const sel = document.getElementById('e-to');
+  const contacts = p.contacts.filter(c=>c.em);
+  if(contacts.length===0){
+    sel.innerHTML = '<option value="">No email contacts — add one first</option>';
+  } else {
+    sel.innerHTML = contacts.map((c,i)=>
+      `<option value="${i}">${c.fn}${c.ro?' — '+c.ro:''} · ${c.em}</option>`
+    ).join('');
+  }
+
+  // Set subject from template
+  document.getElementById('e-subj').value =
+    document.getElementById('tpl1-subj').value.replace(/\[PRIME\]/g, p.name).replace(/\[CONTACT\]/g,'[Contact]').replace(/\[PROJECT\]/g,'[Project]');
+
+  updEmailPrev();
+  openM('m-email');
 }
-function updPrev(){
-  const p=PRIMES.find(x=>x.id===ePrime);if(!p)return;
-  const withEmail=p.contacts.filter(c=>c.em);
-  const si=document.getElementById('e-to').value;
-  const ct=(si!==''&&withEmail[parseInt(si)])?withEmail[parseInt(si)]:null;
-  const tpl=document.getElementById('tpl1-body').value;
-  const rfqList=buildRFQList();
-  const body=tpl
-    .replace(/\[CONTACT\]/g,ct?ct.fn:'[Contact]')
-    .replace(/\[PRIME\]/g,p.name)
-    .replace(/\[RFQ_LIST\]/g,rfqList)
-    .replace(/\[PROJECT\]/g,'[Project]');
-  document.getElementById('e-prev').textContent=body;
-  const subj=document.getElementById('tpl1-subj').value
-    .replace(/\[PRIME\]/g,p.name)
-    .replace(/\[CONTACT\]/g,ct?ct.fn:'[Contact]');
-  document.getElementById('e-subj-override').value=subj;
+
+function updEmailPrev(){
+  const pid = emailPrimeId;
+  const p = PRIMES.find(x=>x.id===pid);
+  if(!p) return;
+  const sel = document.getElementById('e-to');
+  const contacts = p.contacts.filter(c=>c.em);
+  const idx = parseInt(sel.value);
+  const ct = (!isNaN(idx) && contacts[idx]) ? contacts[idx] : null;
+
+  const tpl = document.getElementById('tpl1-body').value;
+  const rfqList = buildRFQList();
+  const body = tpl
+    .replace(/\[CONTACT\]/g, ct ? ct.fn : '[Contact]')
+    .replace(/\[PRIME\]/g, p.name)
+    .replace(/\[RFQ_LIST\]/g, rfqList)
+    .replace(/\[PROJECT\]/g, '[Project]');
+
+  document.getElementById('e-prev').textContent = body;
+
+  // Also update subject with real contact name
+  const subj = document.getElementById('tpl1-subj').value
+    .replace(/\[PRIME\]/g, p.name)
+    .replace(/\[CONTACT\]/g, ct ? ct.fn : '[Contact]')
+    .replace(/\[PROJECT\]/g, '[Project]');
+  document.getElementById('e-subj').value = subj;
 }
-function sendEm(){
-  const p=PRIMES.find(x=>x.id===ePrime);
-  const withEmail=p.contacts.filter(c=>c.em);
-  const si=document.getElementById('e-to').value;
-  const ct=(si!==''&&withEmail[parseInt(si)])?withEmail[parseInt(si)]:null;
-  if(!ct||!ct.em){alert('No contact with email selected.');return;}
-  const subj=document.getElementById('e-subj-override').value;
-  const body=document.getElementById('e-prev').textContent;
-  window.location.href=`mailto:${ct.em}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+
+function sendDirectEmail(){
+  const p = PRIMES.find(x=>x.id===emailPrimeId);
+  if(!p) return;
+  const sel = document.getElementById('e-to');
+  const contacts = p.contacts.filter(c=>c.em);
+  const idx = parseInt(sel.value);
+  const ct = (!isNaN(idx) && contacts[idx]) ? contacts[idx] : null;
+  if(!ct){ alert('No contact selected with an email address.'); return; }
+
+  const subj = document.getElementById('e-subj').value;
+  const body = document.getElementById('e-prev').textContent;
+
+  window.location.href = `mailto:${ct.em}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
   closeM('m-email');
 }
-function openAP(){['ap-n','ap-c','ap-w','ap-d','ap-s'].forEach(i=>document.getElementById(i).value='');openM('m-ap');}
-function saveAP(){
-  const n=document.getElementById('ap-n').value.trim();if(!n){alert('Name required.');return;}
-  PRIMES.push({id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',web:document.getElementById('ap-w').value.trim(),desc:document.getElementById('ap-d').value.trim()||'Custom prime contractor.',scope:document.getElementById('ap-s').value.trim()||'Water / WW E&I',contacts:[]});
-  renderPrimes();closeM('m-ap');
+
+function populateCampSelect(){const sel=document.getElementById('camp-bid-select');if(!sel)return;sel.innerHTML='<option value="">Select a bid...</option>'+BIDS.filter(b=>bidState[b.id]==='active'||bidState[b.id]==='selected').map(b=>'<option value="'+b.id+'">'+b.name+' - '+b.due+'</option>').join('');}
+function loadCampaign(){const v=document.getElementById('camp-bid-select').value;const bid=v?BIDS.find(b=>b.id===v):null;const info=document.getElementById('camp-bid-info');if(info)info.textContent=bid?'Agency: '+bid.agency+' - Due: '+bid.due:'';buildFirmSelector();updateCampPreview();}
+function buildFirmSelector(){
+  const grid=document.getElementById('firm-selector-grid');if(!grid)return;
+  grid.innerHTML=PRIMES.map(p=>{
+    const has=p.contacts.some(c=>c.em);
+    const cts=p.contacts.filter(c=>c.em).map(c=>'<div style="font-family:var(--mono);font-size:9px;color:var(--gray);margin-top:2px">'+c.fn+' - '+c.em+'</div>').join('');
+    return '<label style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:3px;padding:9px 11px;cursor:'+(has?'pointer':'default')+';display:flex;gap:9px;align-items:flex-start;'+(has?'':'opacity:.4')+'" class="firm-sel-label" data-name="'+p.name.toLowerCase()+' '+p.city.toLowerCase()+'">'
+      +'<input type="checkbox" class="firm-chk" data-pid="'+p.id+'" '+(has?'':'disabled')+' onchange="updFirmSelCount();updateCampPreview()" style="margin-top:3px;accent-color:var(--cyan)">'
+      +'<div><div style="font-size:12px;font-weight:500;color:var(--white)">'+p.name+'</div>'
+      +'<div style="font-family:var(--mono);font-size:9px;color:var(--gray)">'+p.city+'</div>'+cts
+      +(has?'':'<div style="font-family:var(--mono);font-size:9px;color:rgba(239,71,111,.5);margin-top:2px">No email</div>')+'</div></label>';
+  }).join('');
+  updFirmSelCount();
 }
+function filterFirmSelector(q){document.querySelectorAll('.firm-sel-label').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q.toLowerCase()))?'':'none';});}
+function selectAllFirms(v){document.querySelectorAll('.firm-chk:not(:disabled)').forEach(c=>c.checked=v);updFirmSelCount();updateCampPreview();}
+function updFirmSelCount(){const n=document.querySelectorAll('.firm-chk:checked').length;const el=document.getElementById('firm-sel-count');if(el)el.textContent=n+' firm'+(n!==1?'s':'')+' selected';const btn=document.getElementById('btn-send-selected');if(btn)btn.disabled=n===0||!document.getElementById('camp-bid-select').value;}
+function buildRFQList(){const act=BIDS.filter(b=>bidState[b.id]==='active'||bidState[b.id]==='selected');if(!act.length)return'  (No active bids)';return act.map((b,i)=>'  '+(i+1)+'. '+b.name+'
+     Agency: '+b.agency+' | Due: '+b.due+(b.url?'
+     Link: '+b.url:'')).join('
+
+');}
+function buildEmailBody(p,ct){const tpl=document.getElementById('tpl1-body').value;const v=document.getElementById('camp-bid-select').value;const bid=v?BIDS.find(b=>b.id===v):null;return tpl.replace(/\[CONTACT\]/g,ct?ct.fn:'[Contact]').replace(/\[PRIME\]/g,p.name).replace(/\[RFQ_LIST\]/g,buildRFQList()).replace(/\[PROJECT\]/g,bid?bid.name:'[Project]');}
+function updateCampPreview(){const prev=document.getElementById('camp-preview');if(!prev)return;const c=document.querySelectorAll('.firm-chk:checked');if(!c.length){prev.textContent='Select firms above to preview.';return;}const p=PRIMES.find(x=>x.id===c[0].dataset.pid);prev.textContent=buildEmailBody(p,p.contacts.find(x=>x.em)||null);}
+function sendToSelected(){
+  const checked=[...document.querySelectorAll('.firm-chk:checked')];
+  const v=document.getElementById('camp-bid-select').value;if(!v){alert('Select a bid first.');return;}
+  const bid=BIDS.find(b=>b.id===v);const subj=document.getElementById('tpl1-subj').value;let sent=0;
+  checked.forEach((chk,i)=>{const p=PRIMES.find(x=>x.id===chk.dataset.pid);const ct=p.contacts.find(c=>c.em);if(!ct)return;
+    const s=subj.replace(/\[PRIME\]/g,p.name).replace(/\[CONTACT\]/g,ct.fn).replace(/\[PROJECT\]/g,bid.name);
+    const b=buildEmailBody(p,ct);
+    setTimeout(()=>window.open('mailto:'+ct.em+'?subject='+encodeURIComponent(s)+'&body='+encodeURIComponent(b),'_blank'),i*500);
+    sent++;sentLog.push({firm:p.name,contact:ct.fn,email:ct.em,bid:bid.name,time:new Date().toLocaleString()});
+  });
+  setTimeout(()=>{document.getElementById('send-progress').textContent='Done - '+sent+' email'+(sent!==1?'s':'')+' opened';renderSentLog();document.querySelectorAll('.firm-chk:checked').forEach(c=>c.checked=false);updFirmSelCount();},sent*500+300);
+}
+function renderSentLog(){if(!sentLog.length)return;document.getElementById('sent-log-wrap').style.display='block';document.getElementById('sent-log-body').innerHTML=sentLog.slice().reverse().map(s=>'<tr><td class="tp">'+s.firm+'</td><td>'+s.contact+'</td><td><a href="mailto:'+s.email+'" style="font-family:var(--mono);font-size:10px;color:var(--sky);text-decoration:none">'+s.email+'</a></td><td style="font-family:var(--mono);font-size:10px">'+s.bid+'</td><td style="font-family:var(--mono);font-size:10px;color:var(--gray)">'+s.time+'</td></tr>').join('');}
 
 function openM(id){document.getElementById(id).classList.add('open');}
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
-// ═════════════════════════════════════
-// EDIT BID URL
-// ═════════════════════════════════════
-function editUrl(bidId){
-  const b = BIDS.find(x=>x.id===bidId);
-  const newUrl = prompt(`RFQ Link for:\n${b.name}\n\nPaste the official city/agency bid URL:`, b.url||'');
-  if(newUrl===null) return;
-  b.url = newUrl.trim();
-  renderAll();
-}
 
-
-// ═════════════════════════════════════
-// EXCEL / CSV IMPORT
-// ═════════════════════════════════════
+// ── EXCEL / CSV IMPORT ──
 let pendingImport = [];
 
-function importExcel(input) {
-  const file = input.files[0];
-  if (!file) return;
-  input.value = ''; // reset so same file can be re-uploaded
-
-  const ext = file.name.split('.').pop().toLowerCase();
-
-  if (ext === 'csv') {
-    const reader = new FileReader();
-    reader.onload = e => parseCSV(e.target.result);
-    reader.readAsText(file);
-  } else if (ext === 'xlsx' || ext === 'xls') {
-    const reader = new FileReader();
-    reader.onload = e => parseXLSX(e.target.result);
-    reader.readAsArrayBuffer(file);
-  } else {
-    alert('Please upload a .xlsx, .xls, or .csv file.');
-  }
+function importExcel(input){
+  const file=input.files[0];if(!file)return;input.value='';
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);}
+  else if(ext==='xlsx'||ext==='xls'){alert('For best results, save your Excel file as CSV first:\nFile > Save As > CSV (Comma delimited)\nThen re-upload the .csv file.');}
+  else{alert('Please upload a .csv or .xlsx file.');}
 }
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
-  if (lines.length < 2) { alert('CSV is empty.'); return; }
-
-  // Auto-detect column positions from header
-  const header = lines[0].map(h => h.toLowerCase());
-  const col = {
-    company: findCol(header, ['company','firm','entity','organization','prime']),
-    name:    findCol(header, ['contact name','name','contact','full name']),
-    title:   findCol(header, ['title','role','position','designation']),
-    email:   findCol(header, ['email','e-mail','mail']),
-    phone:   findCol(header, ['phone','mobile','cell','tel','p','c'])
-  };
-
-  const rows = lines.slice(1).filter(r => r.some(c => c)).map(r => ({
-    company: col.company >= 0 ? r[col.company] || '' : '',
-    name:    col.name    >= 0 ? r[col.name]    || '' : '',
-    title:   col.title   >= 0 ? r[col.title]   || '' : '',
-    email:   col.email   >= 0 ? r[col.email]   || '' : '',
-    phone:   col.phone   >= 0 ? r[col.phone]   || '' : ''
-  })).filter(r => r.name || r.email);
-
+function parseCSV(text){
+  const lines=text.trim().split('\n').map(l=>l.split(',').map(c=>c.trim().replace(/^"|"$/g,'')));
+  if(lines.length<2){alert('File is empty.');return;}
+  const header=lines[0].map(h=>h.toLowerCase());
+  function fc(candidates){return candidates.reduce((f,c)=>{if(f>=0)return f;const i=header.findIndex(h=>h.includes(c));return i;},-1);}
+  const col={company:fc(['company','firm','entity','organization','prime']),name:fc(['contact name','name','contact','full name']),title:fc(['title','role','position']),email:fc(['email','e-mail','mail']),phone:fc(['phone','mobile','cell','tel'])};
+  const rows=lines.slice(1).filter(r=>r.some(c=>c)).map(r=>({
+    company:col.company>=0?r[col.company]||'':'',name:col.name>=0?r[col.name]||'':'',
+    title:col.title>=0?r[col.title]||'':'',email:col.email>=0?r[col.email]||'':'',phone:col.phone>=0?r[col.phone]||'':''
+  })).filter(r=>r.name||r.email);
   showImportPreview(rows);
 }
 
-function parseXLSX(buffer) {
-  // Minimal XLSX parser — reads the shared strings and first sheet
-  // For full XLSX support SheetJS (xlsx.js) would be needed
-  // We'll prompt user to save as CSV if XLSX parsing fails
-  try {
-    // Try reading as text (works for some XLSX-like files)
-    const text = new TextDecoder('utf-8', {fatal: false}).decode(new Uint8Array(buffer));
-    if (text.includes('<sst') || text.includes('xl/sharedStrings')) {
-      alert('For best results, please save your Excel file as CSV (File → Save As → CSV) and re-upload. This gives the most reliable import.');
-      return;
-    }
-    parseCSV(text);
-  } catch(e) {
-    alert('Could not read XLSX. Please save as CSV and re-upload:\nFile → Save As → CSV (Comma delimited)');
-  }
+function findBestPrimeMatch(company){
+  if(!company)return null;
+  const q=company.toLowerCase().replace(/[^a-z0-9]/g,'');
+  return PRIMES.find(p=>p.name.toLowerCase().replace(/[^a-z0-9]/g,'')===q)||
+    PRIMES.find(p=>{const pn=p.name.toLowerCase().replace(/[^a-z0-9]/g,'');return q.includes(pn.slice(0,6))||pn.includes(q.slice(0,6));})||null;
 }
 
-function findCol(header, candidates) {
-  for (const c of candidates) {
-    const idx = header.findIndex(h => h.includes(c));
-    if (idx >= 0) return idx;
-  }
-  return -1;
-}
-
-function showImportPreview(rows) {
-  pendingImport = [];
-  const tbody = document.getElementById('import-preview-body');
-  let matched = 0, newFirms = 0, dupes = 0;
-
-  const rows_html = rows.map(r => {
-    // Match to existing prime
-    const matchedPrime = findBestPrimeMatch(r.company);
-
-    // Check for duplicate email
-    const isDupe = r.email && PRIMES.some(p =>
-      p.contacts.some(c => c.em && c.em.toLowerCase() === r.email.toLowerCase())
-    );
-
-    let statusBadge, statusColor;
-    if (isDupe) {
-      statusBadge = 'Duplicate';
-      statusColor = 'rgba(139,155,173,.5)';
-      dupes++;
-    } else if (matchedPrime) {
-      statusBadge = '✓ Match: ' + matchedPrime.name.slice(0, 22) + (matchedPrime.name.length > 22 ? '…' : '');
-      statusColor = 'var(--green)';
-      matched++;
-      pendingImport.push({ row: r, primeId: matchedPrime.id, isDupe: false });
-    } else {
-      statusBadge = '+ New Firm';
-      statusColor = 'var(--yellow)';
-      newFirms++;
-      pendingImport.push({ row: r, primeId: null, isDupe: false });
-    }
-
-    return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
-      <td style="padding:7px 10px;font-size:11px;color:var(--white)">${r.company || '<em style="color:var(--gray)">—</em>'}</td>
-      <td style="padding:7px 10px;font-size:11px;color:var(--white)">${r.name || '—'}</td>
-      <td style="padding:7px 10px;font-size:10px;color:var(--gray)">${r.title || '—'}</td>
-      <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;color:var(--sky)">${r.email || '—'}</td>
-      <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;color:var(--green)">${r.phone || '—'}</td>
-      <td style="padding:7px 10px;font-family:var(--mono);font-size:9px;color:${statusColor}">${statusBadge}</td>
+function showImportPreview(rows){
+  pendingImport=[];
+  let matched=0,newFirms=0,dupes=0;
+  const html=rows.map(r=>{
+    const mp=findBestPrimeMatch(r.company);
+    const isDupe=r.email&&PRIMES.some(p=>p.contacts.some(c=>c.em&&c.em.toLowerCase()===r.email.toLowerCase()));
+    let badge,color;
+    if(isDupe){badge='Duplicate';color='rgba(139,155,173,.5)';dupes++;}
+    else if(mp){badge='Match: '+mp.name.slice(0,20);color='var(--green)';matched++;pendingImport.push({row:r,primeId:mp.id});}
+    else{badge='+ New Firm';color='var(--yellow)';newFirms++;pendingImport.push({row:r,primeId:null});}
+    return`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+      <td style="padding:7px 10px;font-size:11px;color:var(--white)">${r.company||'—'}</td>
+      <td style="padding:7px 10px;font-size:11px">${r.name||'—'}</td>
+      <td style="padding:7px 10px;font-size:10px;color:var(--gray)">${r.title||'—'}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;color:var(--sky)">${r.email||'—'}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-size:10px;color:var(--green)">${r.phone||'—'}</td>
+      <td style="padding:7px 10px;font-family:var(--mono);font-size:9px;color:${color}">${badge}</td>
     </tr>`;
   }).join('');
-
-  tbody.innerHTML = rows_html;
-  document.getElementById('import-summary').innerHTML =
-    `<span style="color:var(--white)">${rows.length} rows found</span> &nbsp;·&nbsp; `+
-    `<span style="color:var(--green)">${matched} matched to existing firms</span> &nbsp;·&nbsp; `+
+  document.getElementById('import-preview-body').innerHTML=html;
+  document.getElementById('import-summary').innerHTML=
+    `<span style="color:var(--white)">${rows.length} rows</span> &nbsp;·&nbsp; `+
+    `<span style="color:var(--green)">${matched} matched</span> &nbsp;·&nbsp; `+
     `<span style="color:var(--yellow)">${newFirms} new firms</span> &nbsp;·&nbsp; `+
-    `<span style="color:var(--gray)">${dupes} duplicates (skipped)</span>`;
-
-  document.getElementById('import-confirm-btn').textContent =
-    `Import ${pendingImport.length} Contact${pendingImport.length !== 1 ? 's' : ''}`;
-
+    `<span style="color:var(--gray)">${dupes} duplicates skipped</span>`;
+  document.getElementById('import-confirm-btn').textContent='Import '+pendingImport.length+' Contact'+(pendingImport.length!==1?'s':'');
   openM('m-import');
 }
 
-function findBestPrimeMatch(company) {
-  if (!company) return null;
-  const q = company.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  // Exact match first
-  let match = PRIMES.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === q);
-  if (match) return match;
-
-  // Partial match — company name contains prime name or vice versa
-  match = PRIMES.find(p => {
-    const pn = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return q.includes(pn.slice(0, 6)) || pn.includes(q.slice(0, 6));
+function confirmImport(){
+  let added=0;
+  pendingImport.forEach(({row,primeId})=>{
+    const ct={fn:row.name,ro:row.title,em:row.email,ph:row.phone};
+    if(primeId){const p=PRIMES.find(x=>x.id===primeId);if(p){p.contacts.push(ct);added++;}}
+    else{PRIMES.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6),name:row.company||'Imported Firm',city:'Texas',contacts:[ct]});added++;}
   });
-  return match || null;
+  closeM('m-import');renderPrimes();
+  setTimeout(()=>alert('Import complete!\n\n'+added+' contacts added.'),200);
 }
 
-function confirmImport() {
-  let added = 0;
-  pendingImport.forEach(({ row, primeId }) => {
-    const contact = { fn: row.name, ro: row.title, em: row.email, ph: row.phone };
-
-    if (primeId) {
-      // Add to existing prime
-      const prime = PRIMES.find(p => p.id === primeId);
-      if (prime) { prime.contacts.push(contact); added++; }
-    } else {
-      // Create new prime with this contact
-      PRIMES.push({
-        id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
-        name: row.company || 'Imported Firm',
-        city: 'Texas',
-        web: '',
-        desc: '',
-        scope: 'Water/Wastewater Engineering',
-        contacts: [contact]
-      });
-      added++;
-    }
-  });
-
-  closeM('m-import');
-  renderPrimes();
-
-  // Show result
-  setTimeout(() => {
-    alert(`✓ Import complete!\n\n${added} contacts added successfully.\n\nThe Prime Contractors list has been updated.`);
-  }, 200);
-}
-
-// ═════════════════════════════════════
-// INIT
-// ═════════════════════════════════════
-// Auto-set today's date everywhere
-(function(){
-  const d = new Date();
-  const fmt = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  ['last-updated','footer-date','footer-date2'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=fmt;
-  });
-})();
-renderAll();
-// Primes render deferred to tab click - avoids freeze on load
+fetchBids();
 </script>
 </body>
 </html>
