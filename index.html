@@ -808,13 +808,31 @@ let curF='all', curS='';
 // ═════════════════════════════════════
 // TABS
 // ═════════════════════════════════════
+// Save template content before any tab switch
+function saveTemplates(){
+  ['tpl1-subj','tpl1-body','tpl2-subj','tpl2-body','tpl3-subj','tpl3-body'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) sessionStorage.setItem('sri-'+id, el.tagName==='TEXTAREA'?el.value:el.value);
+  });
+}
+
+// Restore template content after SRI tab renders
+function restoreTemplates(){
+  ['tpl1-subj','tpl1-body','tpl2-subj','tpl2-body','tpl3-subj','tpl3-body'].forEach(id=>{
+    const el=document.getElementById(id);
+    const saved=sessionStorage.getItem('sri-'+id);
+    if(el && saved) { el.tagName==='TEXTAREA' ? el.value=saved : el.value=saved; }
+  });
+}
+
 function switchTab(id,btn){
+  saveTemplates();
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='primes'){ setTimeout(renderPrimes,0); }
-  if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();},0); }
+  if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();setTimeout(restoreTemplates,50);},0); }
 }
 
 // ═════════════════════════════════════
