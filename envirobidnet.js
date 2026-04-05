@@ -4,28 +4,23 @@ const cheerio = require('cheerio');
 const TIMEOUT = 20000;
 const DAYS = 30;
 
-// Credentials — stored as Railway env vars (never hardcoded in public repo)
 const EBN_USER = process.env.ENVIROBIDNET_USER || 'divyasrigl';
 const EBN_PASS = process.env.ENVIROBIDNET_PASS || 'Sriglobal23*';
 
-// Exact categories checked in SRI Global search
 const CATEGORIES = [
-  { slug: 'scada-and-environmental-technology',       label: 'SCADA & Environmental Technology' },
   { slug: 'civil-engineering',                        label: 'Civil Engineering - all services' },
   { slug: 'consulting-engineering',                   label: 'Consulting/Engineering' },
   { slug: 'environmental-engineering-and-consulting', label: 'Environmental Engineering and Consulting' },
-  { slug: 'architect',                                label: 'Architect' },
-  { slug: 'water-tanks-standpipes',                   label: 'Water Tanks & Standpipes' },
+  { slug: 'scada-and-environmental-technology',       label: 'SCADA & Environmental Technology' },
+  { slug: 'water-wastewater',                         label: 'Water, Wastewater Treatment' },
 ];
 
-// Search keywords — pulls only Engineering/Professional/Architectural bids
 const KEYWORDS = [
   'Engineering or Professional',
   'Professional Engineering',
   'Architectural Engineering',
 ];
 
-// Relevance filter — must match at least one
 const RELEVANT = [
   'engineering','professional','architectural','architect',
   'scada','instrumentation','electrical','controls','e&i',
@@ -36,75 +31,108 @@ const RELEVANT = [
 async function scrapeEnviroBidNet() {
   const bids = [];
   const seen = new Set();
-
-  // ── Step 1: Get login page for CSRF token ──────────────────
   let sessionCookie = '';
-  let csrf = '';
 
+  // ── Step 1: Inspect login form to get exact field names ───
   try {
-    console.log('[EnviroBidNet] Getting login page...');
+    console.log('[EnviroBidNet] Fetching login page...');
     const loginPage = await axios.get('https://envirobidnet.com/login', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
       timeout: TIMEOUT,
       maxRedirects: 5
     });
 
     const $lp = cheerio.load(loginPage.data);
-    csrf = $lp('input[name="_token"]').val()
-      || $lp('input[name="csrf_token"]').val()
-      || $lp('input[name="authenticity_token"]').val()
-      || '';
+    const initCookies = (loginPage.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
 
-    const initCookies = (loginPage.headers['set-cookie'] || [])
-      .map(c => c.split(';')[0]).join('; ');
+    // Get ALL form fields dynamically — don't assume field names
+    const formData = {};
+    $lp('form input, form select').each((i, el) => {
+      const name = $lp(el).attr('name');
+      const val  = $lp(el).attr('value') || '';
+      const type = $lp(el).attr('type') || 'text';
+      if (!name) return;
+      if (type === 'hidden' || type === 'submit') {
+        formData[name] = val; // Keep hidden fields (CSRF etc)
+      }
+    });
 
-    console.log('[EnviroBidNet] CSRF:', csrf ? 'found' : 'not found');
+    // Set credentials using common field name patterns
+    const emailFields  = ['email','username','user','login','user_email','Email','Username'];
+    const passFields   = ['password','pass','passwd','Password','Pass'];
 
-    // ── Step 2: POST login ─────────────────────────────────
-    console.log('[EnviroBidNet] Logging in as:', EBN_USER);
+    for (const f of emailFields) {
+      if ($lp(`input[name="${f}"]`).length > 0) { formData[f] = EBN_USER; break; }
+    }
+    for (const f of passFields) {
+      if ($lp(`input[name="${f}"]`).length > 0) { formData[f] = EBN_PASS; break; }
+    }
+
+    // Fallback — set both common names just in case
+    if (!Object.keys(formData).some(k => emailFields.includes(k))) {
+      formData['email']    = EBN_USER;
+      formData['username'] = EBN_USER;
+    }
+    if (!Object.keys(formData).some(k => passFields.includes(k))) {
+      formData['password'] = EBN_PASS;
+    }
+
+    // Get form action URL
+    const formAction = $lp('form').attr('action') || '/login';
+    const postUrl = formAction.startsWith('http') ? formAction : 'https://envirobidnet.com' + formAction;
+
+    console.log('[EnviroBidNet] Login form fields:', Object.keys(formData).join(', '));
+    console.log('[EnviroBidNet] Posting to:', postUrl);
+    console.log('[EnviroBidNet] User:', EBN_USER);
+
+    // ── Step 2: POST login ────────────────────────────────
     const loginRes = await axios.post(
-      'https://envirobidnet.com/login',
-      new URLSearchParams({
-        email:    EBN_USER,
-        username: EBN_USER,
-        password: EBN_PASS,
-        _token:   csrf,
-        remember: '1'
-      }).toString(),
+      postUrl,
+      new URLSearchParams(formData).toString(),
       {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Content-Type': 'application/x-www-form-urlencoded',
           'Referer': 'https://envirobidnet.com/login',
+          'Origin': 'https://envirobidnet.com',
           'Cookie': initCookies,
           'Accept': 'text/html,application/xhtml+xml',
-          'Origin': 'https://envirobidnet.com',
         },
         timeout: TIMEOUT,
-        maxRedirects: 5,
+        maxRedirects: 10,
         validateStatus: s => s < 500
       }
     );
 
-    const respCookies = (loginRes.headers['set-cookie'] || [])
-      .map(c => c.split(';')[0]);
-    sessionCookie = [...initCookies.split('; '), ...respCookies]
-      .filter(Boolean).join('; ');
+    // Collect all cookies from response
+    const respCookies = (loginRes.headers['set-cookie'] || []).map(c => c.split(';')[0]);
+    sessionCookie = [...initCookies.split('; '), ...respCookies].filter(c => c && c.includes('=')).join('; ');
 
-    // Verify login worked
-    const bodyText = typeof loginRes.data === 'string' ? loginRes.data : '';
-    const loginOK = !bodyText.includes('Invalid credentials')
-      && !bodyText.includes('Login failed')
-      && !bodyText.includes('incorrect')
-      && (loginRes.status === 200 || loginRes.status === 302);
+    // Check login result
+    const body = typeof loginRes.data === 'string' ? loginRes.data : '';
+    const loginFailed = body.toLowerCase().includes('invalid')
+      || body.toLowerCase().includes('incorrect password')
+      || body.toLowerCase().includes('login failed')
+      || body.toLowerCase().includes('wrong password');
+    const loginOK = !loginFailed && (
+      loginRes.status === 302
+      || body.includes('dashboard')
+      || body.includes('logout')
+      || body.includes('my account')
+      || body.includes('Welcome')
+      || loginRes.request?.path === '/'
+      || loginRes.request?.path?.includes('dashboard')
+    );
 
-    if (loginOK) {
-      console.log('[EnviroBidNet] Login successful');
+    console.log('[EnviroBidNet] Login status:', loginRes.status, '| OK:', loginOK);
+    if (!loginOK) {
+      console.warn('[EnviroBidNet] Login uncertain — will try scraping anyway');
     } else {
-      console.warn('[EnviroBidNet] Login may have failed — continuing anyway');
+      console.log('[EnviroBidNet] Login confirmed successful');
     }
 
   } catch(err) {
@@ -112,20 +140,23 @@ async function scrapeEnviroBidNet() {
     return { bids: [], source: 'EnviroBidNet' };
   }
 
-  // ── Step 3: Search with each keyword across categories ────
+  // ── Step 3: Scrape each category with TX state + keywords ─
   for (const keyword of KEYWORDS) {
     for (const cat of CATEGORIES) {
+      // TX is default state — include in URL
       const urls = [
         `https://envirobidnet.com/bids/${cat.slug}/all?state=TX&days=${DAYS}&q=${encodeURIComponent(keyword)}`,
         `https://envirobidnet.com/bids/${cat.slug}/all?state=TX&q=${encodeURIComponent(keyword)}`,
         `https://envirobidnet.com/bids/${cat.slug}/all?state=TX&days=${DAYS}`,
       ];
 
+      let gotResults = false;
       for (const url of urls) {
+        if (gotResults) break;
         try {
           const res = await axios.get(url, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               'Accept': 'text/html,application/xhtml+xml',
               'Referer': 'https://envirobidnet.com',
               'Cookie': sessionCookie,
@@ -137,13 +168,13 @@ async function scrapeEnviroBidNet() {
           const $ = cheerio.load(res.data);
           const before = bids.length;
 
-          // Table layout (most common on EnviroBidNet)
           const selectors = [
             'table.bids-table tbody tr',
             'table tbody tr',
             '.bid-listing tr',
             'tr.bid-row',
             '.listing-row',
+            '[class*="bid-item"]',
           ];
 
           for (const sel of selectors) {
@@ -159,7 +190,7 @@ async function scrapeEnviroBidNet() {
                   || $(cells[0]).text().trim();
                 const agency = $(el).find('[class*="agency"],[class*="owner"]').first().text().trim()
                   || $(cells[1]).text().trim();
-                const stateCell = $(cells).filter((i, c) => $(c).text().trim().length === 2).first().text().trim();
+                const stateCell = $(cells).filter((i, c) => /^[A-Z]{2}$/.test($(c).text().trim())).first().text().trim();
                 const due = $(el).find('[class*="due"],[class*="date"],[class*="close"]').first().text().trim()
                   || $(cells[cells.length - 2]).text().trim()
                   || $(cells[cells.length - 1]).text().trim();
@@ -167,56 +198,48 @@ async function scrapeEnviroBidNet() {
 
                 if (!name || name.length < 5) return;
                 if (/^(title|bid|project|agency|due|date|state|category|description)$/i.test(name.trim())) return;
+                // Only TX bids (TX is default state in URL but double-check)
                 if (stateCell && stateCell.length === 2 && stateCell.toUpperCase() !== 'TX') return;
 
                 const key = name.slice(0, 50).toLowerCase();
                 if (seen.has(key)) return;
 
-                // Must match relevance filter
                 const text = (name + ' ' + agency + ' ' + cat.label + ' ' + keyword).toLowerCase();
                 if (!RELEVANT.some(k => text.includes(k))) return;
 
                 seen.add(key);
                 bids.push({
                   id: 'ebn-' + Buffer.from(name + agency).toString('base64').slice(0, 14),
-                  source: 'EnviroBidNet',
-                  name,
+                  source: 'EnviroBidNet', name,
                   agency: agency || 'Texas Agency',
-                  city: 'Texas',
-                  region: detectRegion(agency + ' ' + name),
+                  city: 'Texas', region: detectRegion(agency + ' ' + name),
                   scope: `${cat.label} — ${keyword} (TX, ${DAYS} days)`,
-                  due: cleanDate(due) || 'See link',
-                  value: 'TBD',
+                  due: cleanDate(due) || 'See link', value: 'TBD',
                   status: detectStatus(due),
                   url: link.startsWith('http') ? link : link ? 'https://envirobidnet.com' + link : url,
                   scrapedAt: new Date().toISOString()
                 });
               } catch(e) {}
             });
-            break; // Found a working selector
+
+            if (bids.length > before) { gotResults = true; break; }
           }
 
-          const found = bids.length - before;
-          if (found > 0) {
-            console.log(`[EnviroBidNet] "${keyword}" / ${cat.label}: +${found} bids`);
-            break; // URL worked, move to next category
-          }
-
+          if (gotResults) console.log(`[EnviroBidNet] ${cat.label} / "${keyword}": +${bids.length - before} bids`);
           await sleep(1500);
         } catch(err) {
           console.warn(`[EnviroBidNet] ${cat.label} failed:`, err.message);
         }
       }
-
-      await sleep(2000);
+      await sleep(1500);
     }
   }
 
-  // ── Step 4: Also run keyword-only search across all TX bids ──
+  // ── Step 4: Broad TX keyword search as fallback ───────────
   for (const keyword of KEYWORDS) {
     try {
-      const searchUrl = `https://envirobidnet.com/bids/all?state=TX&days=${DAYS}&q=${encodeURIComponent(keyword)}`;
-      const res = await axios.get(searchUrl, {
+      const url = `https://envirobidnet.com/bids/all?state=TX&days=${DAYS}&q=${encodeURIComponent(keyword)}`;
+      const res = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'text/html,application/xhtml+xml',
@@ -238,14 +261,14 @@ async function scrapeEnviroBidNet() {
           if (!name || name.length < 5) return;
           const key = name.slice(0, 50).toLowerCase();
           if (seen.has(key)) return;
-          const text = (name + ' ' + agency + ' ' + keyword).toLowerCase();
+          const text = (name + ' ' + agency).toLowerCase();
           if (!RELEVANT.some(k => text.includes(k))) return;
           seen.add(key);
           bids.push({
             id: 'ebn-kw-' + Buffer.from(name + agency).toString('base64').slice(0, 14),
             source: 'EnviroBidNet', name,
             agency: agency || 'Texas Agency', city: 'Texas', region: 'statewide',
-            scope: `Engineering/Professional/Architectural Services — TX (${DAYS} days)`,
+            scope: `Engineering/Professional Services — TX (${DAYS} days)`,
             due: cleanDate(due) || 'See link', value: 'TBD',
             status: detectStatus(due),
             url: link.startsWith('http') ? link : 'https://envirobidnet.com' + link,
@@ -255,7 +278,7 @@ async function scrapeEnviroBidNet() {
       });
       await sleep(2000);
     } catch(err) {
-      console.warn('[EnviroBidNet] Keyword search failed:', err.message);
+      console.warn('[EnviroBidNet] Broad search failed:', err.message);
     }
   }
 
