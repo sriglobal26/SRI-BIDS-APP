@@ -1,38 +1,45 @@
-const path = require('path');
-const fs = require('fs');
-
-function loadScraper(name) {
-  // Try scrapers/ folder first, then root
-  const nested = path.join(__dirname, 'scrapers', name);
-  const flat = path.join(__dirname, name);
-  return require(fs.existsSync(nested) ? nested : flat);
-}
-
 async function runAllScrapers() {
   console.log('[Scrapers] Running all sources...');
-  const { scrapeCivCast } = loadScraper('civcast.js');
-  const { scrapeEnviroBidNet } = loadScraper('envirobidnet.js');
-  const { scrapeH2bid, scrapeTXESBD } = loadScraper('other.js');
 
-  const results = await Promise.allSettled([
-    scrapeCivCast(),
-    scrapeEnviroBidNet(),
-    scrapeH2bid(),
-    scrapeTXESBD()
-  ]);
+  const { scrapeCivCast }             = require('./civcast.js');
+  const { scrapeH2bid, scrapeTXESBD } = require('./other.js');
+  const { scrapeAustinWater }         = require('./austinwater.js');
+  const { scrapeSAWS }                = require('./saws.js');
+  const { scrapeBidNetTX }            = require('./bidnet.js');
+  const { scrapeDemandStar }          = require('./demandstar.js');
+  const { scrapeTRA }                 = require('./tra.js');
+
+  const scraperDefs = [
+    { name: 'CivCast',      fn: scrapeCivCast },
+    { name: 'H2bid',        fn: scrapeH2bid },
+    { name: 'TX ESBD',      fn: scrapeTXESBD },
+    { name: 'Austin Water', fn: scrapeAustinWater },
+    { name: 'SAWS',         fn: scrapeSAWS },
+    { name: 'BidNet TX',    fn: scrapeBidNetTX },
+    { name: 'DemandStar',   fn: scrapeDemandStar },
+    { name: 'TRA',          fn: scrapeTRA },
+  ];
 
   const allBids = [];
-  const names = ['CivCast','EnviroBidNet','H2bid','TX ESBD'];
-  results.forEach((r, i) => {
+  const results = [];
+
+  const settled = await Promise.allSettled(scraperDefs.map(s => s.fn()));
+
+  settled.forEach((r, i) => {
+    const { name } = scraperDefs[i];
     if (r.status === 'fulfilled') {
-      console.log('[' + names[i] + '] ' + r.value.length + ' bids');
-      allBids.push(...r.value);
+      const bids = Array.isArray(r.value) ? r.value : (r.value.bids || []);
+      console.log(`[${name}] ${bids.length} bids`);
+      allBids.push(...bids);
+      results.push({ source: name, count: bids.length, status: 'ok', message: '' });
     } else {
-      console.warn('[' + names[i] + '] Failed:', r.reason?.message);
+      console.warn(`[${name}] Failed:`, r.reason?.message);
+      results.push({ source: name, count: 0, status: 'error', message: r.reason?.message || 'Unknown error' });
     }
   });
-  console.log('[Scrapers] Total: ' + allBids.length + ' bids');
-  return allBids;
+
+  console.log('[Scrapers] Total:', allBids.length, 'bids across all sources');
+  return { scraped: allBids, results };
 }
 
 module.exports = { runAllScrapers };

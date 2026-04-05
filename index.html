@@ -440,15 +440,15 @@ www.srigl.com</textarea>
     <div class="stat"><div class="n" style="color:var(--yellow)">4</div><div class="l">Live<br>Sources</div></div>
   </div>
   <div class="scrape-bar">
-    <button class="btn1" style="font-size:10px;padding:7px 16px" onclick="triggerScrape()">Pull Latest Bids Now</button>
-    <span class="scrape-status" id="scrape-status">Ready</span>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a href="https://www.civcastusa.com/bids?keywords=electrical+instrumentation+water&state=TX" target="_blank" class="source-pill">CivCast</a>
-      <a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all?state=TX" target="_blank" class="source-pill">EnviroBidNet</a>
-      <a href="https://h2bid.com/Bids/BidsSearchPreview?keyword=electrical+instrumentation&state=TX" target="_blank" class="source-pill">H2bid</a>
-      <a href="https://www.txsmartbuy.gov/esbd" target="_blank" class="source-pill">TX ESBD</a>
+    <button class="btn1" style="font-size:10px;padding:7px 16px" onclick="triggerScrape()" id="scrape-btn">⟳ Refresh Bids Now</button>
+    <span class="scrape-status" id="scrape-status">Loading...</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center" id="source-status-row">
+      <span class="source-pill" id="src-civcast" title="CivCast">CivCast</span>
+      <span class="source-pill" id="src-envirobidnet" title="EnviroBidNet">EnviroBidNet</span>
+      <span class="source-pill" id="src-h2bid" title="H2bid">H2bid</span>
+      <span class="source-pill" id="src-txesbd" title="TX ESBD">TX ESBD</span>
     </div>
-    <span class="last-pull">Last pull: <span id="last-pull-time">Never</span></span>
+    <span class="last-pull" style="margin-left:auto">Last pull: <span id="last-pull-time">—</span></span>
     <button class="btn1" style="font-size:10px;padding:7px 14px;background:var(--orange)" onclick="openM('m-addbid')">+ Add Manually</button>
   </div>
   <div class="sec">Open Bids &mdash; Engineering Design</div>
