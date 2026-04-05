@@ -62,6 +62,14 @@ async function initDB() {
       message TEXT
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS primes (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
   // Migration — add updated_at if missing (old deployments)
   await pool.query(`
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
@@ -178,6 +186,42 @@ app.get('/api/scrape/log', async (req, res) => {
   } catch(e) { res.json([]); }
 });
 
+// ─── PRIMES API ──────────────────────────────────────────────
+app.get('/api/primes', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM primes ORDER BY created_at ASC');
+    res.json({ primes: r.rows.map(r => r.data) });
+  } catch(e) { res.json({ primes: [] }); }
+});
+
+app.post('/api/primes', async (req, res) => {
+  try {
+    const prime = { ...req.body, updatedAt: new Date().toISOString() };
+    await pool.query(
+      'INSERT INTO primes (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()',
+      [prime.id, JSON.stringify(prime)]
+    );
+    res.json({ success: true, prime });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/primes/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM primes WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.patch('/api/primes/:id', async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE primes SET data = data || $1, updated_at=NOW() WHERE id=$2',
+      [JSON.stringify(req.body), req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ─── SCRAPE ENGINE ────────────────────────────────────────────
 async function runScrape() {
   if (scrapeStatus.running) return;
@@ -206,7 +250,7 @@ async function runScrape() {
 }
 
 // ─── CRON ─────────────────────────────────────────────────────
-require('node-cron').schedule('0 7 * * *', () => runScrape());   // Daily 7 AM
+require('node-cron').schedule('0 23 * * *', () => runScrape());  // Daily 6 PM EST
 require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 AM
   try {
     const r = await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' != 'Manual'");

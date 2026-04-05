@@ -1126,6 +1126,7 @@ function pc(p){
       <div class="pra">
         <button class="pb em" onclick="openEM('${p.id}')">✉ Email</button>
         <button class="pb co" onclick="openCM('${p.id}')">+ Contact</button>
+        <button class="pb" style="border-color:rgba(239,71,111,.3);color:var(--red);background:rgba(239,71,111,.07)" onclick="deletePrime('${p.id}')">✕ Delete</button>
       </div>
     </div>
     <div class="clist">
@@ -1141,10 +1142,12 @@ function saveCont(){
   const ln=document.getElementById('c-ln').value.trim();
   const fullName=(fn+(ln?' '+ln:'')).trim();
   if(!fullName){alert('Enter at least a first name.');return;}
-  PRIMES.find(x=>x.id===cPrime).contacts.push({fn:fullName,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});
+  const p=PRIMES.find(x=>x.id===cPrime);
+  p.contacts.push({fn:fullName,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});
+  fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});
   renderPrimes();closeM('m-contact');
 }
-function delCont(pid,idx){if(!confirm('Remove this contact?'))return;PRIMES.find(x=>x.id===pid).contacts.splice(idx,1);renderPrimes();}
+function delCont(pid,idx){if(!confirm('Remove this contact?'))return;const p=PRIMES.find(x=>x.id===pid);p.contacts.splice(idx,1);fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});renderPrimes();}
 
 function openEM(pid){
   ePrime=pid;
@@ -1189,7 +1192,9 @@ function sendEm(){
 function openAP(){['ap-n','ap-c','ap-w','ap-d','ap-s'].forEach(i=>document.getElementById(i).value='');openM('m-ap');}
 function saveAP(){
   const n=document.getElementById('ap-n').value.trim();if(!n){alert('Name required.');return;}
-  PRIMES.push({id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',web:document.getElementById('ap-w').value.trim(),desc:document.getElementById('ap-d').value.trim()||'Custom prime contractor.',scope:document.getElementById('ap-s').value.trim()||'Water / WW E&I',contacts:[]});
+  const prime={id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',web:document.getElementById('ap-w').value.trim(),desc:document.getElementById('ap-d').value.trim()||'Custom prime contractor.',scope:document.getElementById('ap-s').value.trim()||'Water / WW E&I',contacts:[]};
+  PRIMES.push(prime);
+  fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(prime)}).catch(()=>{});
   renderPrimes();closeM('m-ap');
 }
 
@@ -1387,10 +1392,34 @@ function confirmImport() {
   }, 200);
 }
 
+function deletePrime(pid){
+  if(!confirm('Remove this prime contractor permanently?'))return;
+  PRIMES=PRIMES.filter(x=>x.id!==pid);
+  fetch('/api/primes/'+pid,{method:'DELETE'}).catch(()=>{});
+  renderPrimes();
+}
+
+async function fetchPrimes(){
+  try{
+    const res=await fetch('/api/primes');
+    const data=await res.json();
+    if(data.primes && data.primes.length>0){
+      PRIMES=data.primes;
+      console.log('[Primes] Loaded',PRIMES.length,'from DB');
+    } else {
+      console.log('[Primes] DB empty, seeding',PRIMES.length,'primes...');
+      for(const p of PRIMES){
+        await fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});
+      }
+    }
+  }catch(e){
+    console.warn('[Primes] Using hardcoded list');
+  }
+}
+
 // ═════════════════════════════════════
 // INIT
 // ═════════════════════════════════════
-// Auto-set today's date everywhere
 (function(){
   const d = new Date();
   const fmt = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
@@ -1400,6 +1429,7 @@ function confirmImport() {
   });
 })();
 renderAll();
+fetchPrimes();
 // Primes render deferred to tab click - avoids freeze on load
 </script>
 </body>
