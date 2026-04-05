@@ -8,10 +8,32 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ─── DATABASE ────────────────────────────────────────────────
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+// Use DATABASE_PUBLIC_URL first (avoids Railway internal IPv6 issues)
+const dbUrl = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
+
+// Parse connection string into explicit fields — more reliable than connectionString alone
+let poolConfig;
+try {
+  const u = new URL(dbUrl);
+  poolConfig = {
+    host: u.hostname,
+    port: parseInt(u.port) || 5432,
+    user: u.username,
+    password: u.password,
+    database: u.pathname.replace('/', ''),
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15000,
+    idleTimeoutMillis: 30000,
+    max: 10
+  };
+} catch(e) {
+  poolConfig = {
+    connectionString: dbUrl,
+    ssl: { rejectUnauthorized: false }
+  };
+}
+
+const pool = new Pool(poolConfig);
 
 async function initDB() {
   await pool.query(`
