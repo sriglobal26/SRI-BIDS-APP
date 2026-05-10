@@ -10,6 +10,36 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
+const fs = require('fs');
+
+// Serve index.html with bids injected server-side
+app.get('/', async (req, res) => {
+  try {
+    let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+    const data = await readBids();
+    const bidsJson = JSON.stringify(data.bids || []);
+    // Inject bids into the page - replace hardcoded BIDS array
+    html = html.replace(
+      /const BIDS=\[[\s\S]*?\];/,
+      `const BIDS=${bidsJson};`
+    );
+    // Also handle let BIDS = [];
+    html = html.replace(
+      /let BIDS = \[\]; \/\/ loaded from \/api\/bids/,
+      `let BIDS = ${bidsJson};`
+    );
+    // Also handle let BIDS = [];  (any variant)
+    html = html.replace(
+      /let BIDS=\[\];/,
+      `let BIDS=${bidsJson};`
+    );
+    res.send(html);
+  } catch(e) {
+    console.error('Serve error:', e.message);
+    res.sendFile(__dirname + '/index.html');
+  }
+});
+
 app.use(express.static(__dirname));
 
 // ─── DATABASE ────────────────────────────────────────────────
