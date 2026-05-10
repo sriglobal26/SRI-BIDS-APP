@@ -52,7 +52,7 @@ h1 span{color:var(--cyan)}h1 span.ora{color:var(--orange)}
 .si{width:100%;background:var(--card);border:1px solid rgba(255,255,255,.08);color:var(--white);font-family:var(--mono);font-size:10px;padding:6px 8px 6px 26px;border-radius:2px;outline:none;transition:border-color .2s}
 .si:focus{border-color:var(--cyan)}.si::placeholder{color:var(--gray)}
 /* TABLE */
-.tw{overflow-x:auto;overflow-y:auto;max-height:600px;border-radius:4px;border:1px solid rgba(255,255,255,.06);margin-bottom:28px}.tw thead tr{position:sticky;top:0;z-index:10}
+.tw{overflow-x:auto;border-radius:4px;border:1px solid rgba(255,255,255,.06);margin-bottom:28px}
 table{width:100%;border-collapse:collapse;font-size:11.5px}
 thead tr{background:rgba(26,74,138,.55);border-bottom:1px solid rgba(0,200,212,.2)}
 thead th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--cyan);padding:11px 12px;text-align:left;white-space:nowrap}
@@ -508,21 +508,13 @@ Best regards,
     <div class="stat"><div class="n" style="color:var(--yellow)">$1.04B</div><div class="l">TWDB HB500<br>Pipeline</div></div>
   </div>
   <!-- Source quick-links -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-    <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">View Bids On:</span>
-    <button onclick="toggleSrc('civcast')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">CivCast ▾</button>
-    <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
-    <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
-    <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">Pull from:</span>
+    <a href="https://www.civcastusa.com/bids?keywords=electrical+instrumentation+water&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ CivCast — TX E&I</a>
+    <a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all?state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ EnviroBidNet — SCADA TX</a>
+    <a href="https://h2bid.com/Bids/BidsSearchPreview?keyword=electrical+instrumentation&state=TX" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ H2bid — TX Water</a>
+    <a href="https://www.txsmartbuy.gov/esbd" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;text-decoration:none;font-weight:600">↗ TX ESBD</a>
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
-  </div>
-  <!-- Source results panels -->
-  <div id="src-panel" style="display:none;background:var(--card);border:1px solid rgba(0,200,212,.2);border-radius:4px;margin-bottom:14px;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06)">
-      <span id="src-panel-title" style="font-family:var(--mono);font-size:11px;color:var(--cyan)"></span>
-      <button onclick="closeSrc()" style="background:transparent;border:none;color:var(--gray);cursor:pointer;font-size:16px">✕</button>
-    </div>
-    <iframe id="src-iframe" style="width:100%;height:520px;border:none;background:#fff" src=""></iframe>
   </div>
 
   <div class="sec">Open Bids</div>
@@ -533,7 +525,6 @@ Best regards,
     <button class="fb" onclick="filt('active',this)">🟢 Active</button>
     <button class="fb" onclick="filt('prebid',this)">🟡 Pre-Bid</button>
     <button class="fb" onclick="filt('houston',this)">📍 Houston</button>
-    <button class="fb" onclick="filt('texas',this)">🤠 Texas</button>
     <div class="sw"><input class="si" type="text" placeholder="Search bids…" oninput="srch(this.value)"></div>
     <span id="bids-result-count" style="font-family:var(--mono);font-size:10px;color:var(--yellow);white-space:nowrap"></span>
   </div>
@@ -709,105 +700,18 @@ Best regards,
 // ═════════════════════════════════════
 // DATA
 // ═════════════════════════════════════
-const BIDS=[
-  {id:1,num:'01',name:'Water & Wastewater Facilities IDIQ',agency:'City of Austin – Austin Water',city:'Austin',scope:'IDIQ task-order contract; E&I engineering design work assignments at multiple water & wastewater facilities',due:'Mar 26, 2026',value:'IDIQ / TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:2,num:'02',name:'Overhaul Washwater Return Vertical Turbine Pump',agency:'City of Austin – Austin Water',city:'Austin',scope:'Comprehensive overhaul of vertical turbine pump; electrical motor, controls & instrumentation components',due:'Mar 26, 2026',value:'TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:3,num:'03',name:'TCWSP Murphy Drive Pump Station – Generator Improvements',agency:'Trinity River Authority (TRA)',city:'DFW Region',scope:'Two 3,000kW generators, MV switchgear, paralleling switchgear, underground duct banks; full SCADA integration design',due:'Active – TBD',value:'TBD',status:'active',region:'dfw',url:'https://tra.procureware.com/Bids'},
-  {id:4,num:'04',name:'Muddy Creek WWTP – Emergency Power & PLC Replacement',agency:'City of Fort Worth',city:'Fort Worth',scope:'480V / 1,500kW generators, ATS, PLC replacements, odor control electrical improvements',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:5,num:'05',name:'Plano Spring Creek Lift Station No. 2 Improvements',agency:'City of Fort Worth / Plano',city:'Fort Worth / Plano',scope:'Electrical & control equipment, AFDs for 4 pumps, 60 MGD capacity; decommission LS No. 1 electrical',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:6,num:'06',name:'Ten Mile Creek – DAF & Electrical / Instrumentation Improvements',agency:'City of Dallas',city:'Dallas',scope:'Decommission DAF tanks; electrical & instrumentation improvements; RAS/WAS & thickener electrical upgrades',due:'TBD 2026',value:'~$17,400,000',status:'active',region:'dfw',url:'https://dallascityhall.com/departments/procurement/Pages/current_bids_proposals.aspx'},
-  {id:7,num:'07',name:'Bandera Lift Station Rehabilitation – E&I Package',agency:'Harris County WCID No. 36',city:'Houston (Harris Co.)',scope:'SCADA & network panels, VFD, ATS, instrumentation & control devices, conduit, wire; SCADA programming',due:'TBD 2026',value:'~$2,206,436',status:'active',region:'houston',url:'https://www.harriscountywcid36.com/'},
-  {id:8,num:'08',name:'Lift Station – New Electrical Equipment & Pumps',agency:'Harris County UD No. 6',city:'Houston (Harris Co.)',scope:'Install new electrical equipment on elevated platform, new pumps; backup generator; controls and panel upgrades',due:'In Progress – Fall 2026',value:'TBD',status:'active',region:'houston',url:'https://www.harriscountyud6.org/'},
-  {id:9,num:'09',name:'Medio Creek WRC – Standby Generator Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Standby generator replacement at wastewater reclamation facility; electrical and controls integration',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:10,num:'10',name:'Bitters Pump Station Upgrades & Tank Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Electrical, automation & controls upgrades; pump station improvements; tank replacement with full E&I scope',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:11,num:'11',name:'Surface Water Treatment Plant – E&I & SCADA Engineering Design',agency:'City of Pearland',city:'Pearland (S. Houston)',scope:'Main site power & distribution system design; SCADA system architecture; instrumentation engineering for treatment trains, pump station, ground storage tanks',due:'CMAR GMP – Mid-2026',value:'Part of ~$71.4M pkg',status:'prebid',region:'houston',url:'https://www.pearlandtx.gov/departments/engineering-and-public-works/projects-division/project-updates/surface-water-treatment-plant'},
-  {id:12,num:'12',name:'City of Strawn – WTP SCADA & Electrical Engineering Design',agency:'City of Strawn (TWDB HB500)',city:'Strawn (W. Texas)',scope:'Open-source SCADA system design, alternate power supply engineering, electrical design for microfilter replacement; TWDB grant funded',due:'TBD – Post-funding',value:'~$1,085,000',status:'prebid',region:'statewide',url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp'},
-];
+let BIDS = []; // loaded from /api/bids
 
-// SRI Global = Engineering Design only.
-// Auto-move install / construction / overhaul / award pending bids to Deleted.
-// Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
+
 const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
-const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works'];
 let bidState={};
-BIDS.forEach(b=>{
-  const srcExempt = EXEMPT_SOURCES.some(s => (b.source||'').toLowerCase().includes(s));
-  const isNonDesign = !srcExempt && (
-    NON_DESIGN_KEYWORDS.some(kw =>
-      b.name.toLowerCase().includes(kw) ||
-      b.scope.toLowerCase().includes(kw)
-    ) || b.status === 'pending'
-  );
-  bidState[b.id] = isNonDesign ? 'deleted' : 'active';
-});
+function isNonDesign(b){
+  return NON_DESIGN_KEYWORDS.some(kw=>(b.name+' '+(b.scope||'')).toLowerCase().includes(kw))||b.status==='pending';
+}
 
 // ── 78 firms · 107 contacts imported from SRI_Global_Waste_water_Primes_List.xlsx ──
-let PRIMES = [
-  {id:"p1",name:"5 Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Liz Parent",ro:"P.E., CFM",em:"liz@5engineering.com",ph:"832-800-3483"},{fn:"Jennie Almerico",ro:"P.E., VP Water & Wastewater Services",em:"Jennie@5engineering.com",ph:"832-610-4314"}]},
-  {id:"p2",name:"AECOM",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Wendy Lundeen",ro:"P.E., Project Manager",em:"wendy.lundeen@aecom.com",ph:"713-267-2853"},{fn:"Palge Cronin",ro:"PE, Project Engineer",em:"palge.cronin@aecom.com",ph:"972-735-3076"},{fn:"Vishakha Kaushik",ro:"Project Engineer",em:"vishakha.kaushik@aecom.com",ph:"281-675-1906"}]},
-  {id:"p3",name:"AEI Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"J.T. (Tom) Matkin",ro:"P.E., Vice President",em:"tmatkin@aeiengineering.com",ph:"281-350-7027"}]},
-  {id:"p4",name:"Alan Plummer Associates",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Adrian Dongell",ro:"P.E., Project Manager II",em:"adongell@apaienv.com",ph:"214-631-6100"},{fn:"Alan R. Tucker",ro:"P.E., Principal",em:"atuker@apaienv.com",ph:"817-806-1780"},{fn:"Jesse Guerra",ro:"Project Manager (San Antonio)",em:"jguerra@plummer.com",ph:"210-210-1278"}]},
-  {id:"p5",name:"Amani Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mahesh B. Dutta",ro:"P.E., CFM, Executive VP",em:"mdutta@amaniengineering.com",ph:"713-270-5700"}]},
-  {id:"p6",name:"Arcadis Design and Consultancy",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Anna Stehouwer",ro:"PE, Project Water Engineer",em:"Anna.Stehouwer@arcadis.com",ph:"713-453-4767"},{fn:"Wendell Barnes",ro:"PE",em:"Wendell.barnes@arcadis.com",ph:"713-453-4767"}]},
-  {id:"p7",name:"AVILES Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Shou Ting HU",ro:"M.S., P.E., President",em:"sthu@avilesengineering.com",ph:"713-895-7645"}]},
-  {id:"p8",name:"BGE Inc.",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Matt Froehlich",ro:"PE, Senior Project Manager",em:"mfroehlich@bgeinc.com",ph:"281-579-0340"}]},
-  {id:"p9",name:"Binkley & Barfield",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Chris Campbell",ro:"PE, Managing Director — Public Infrastructure",em:"clc@binkleybarfield.com",ph:"713-869-3433"},{fn:"Steven F. Albert",ro:"PE, CFM, Vice President",em:"salbert@binkleybarfield.com",ph:"281-772-5877"},{fn:"Jeremy Austin",ro:"PE, Project Manager",em:"jaustin@binkleybarfield.com",ph:"713-869-3433"}]},
-  {id:"p10",name:"Black & Veatch",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"John D'Antoni",ro:"P.E., Regional Asset Management Leader",em:"DantonijM@bv.com",ph:"713-255-3344"},{fn:"David A. Timmermann",ro:"P.E., Associate Vice President",em:"TimmermannDA@bv.com",ph:"469-513-3220"}]},
-  {id:"p11",name:"Burgess & Niple",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Amanda E. Frazier",ro:"EIT, Graduate Engineer",em:"amanda.frazier@burgessniple.com",ph:"432-689-8909"}]},
-  {id:"p12",name:"CDM Smith",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Bryan Craig",ro:"Senior Project Manager",em:"craigba@cdmsmith.com",ph:"214-346-2843"},{fn:"Gerald S. Furrier",ro:"PE, BCEE, Associate",em:"furriergS@cdmsmith.com",ph:"713-423-7337"}]},
-  {id:"p13",name:"CobbFendley",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Kelsey L. Woody",ro:"Marketing & Communications Coordinator",em:"kwoody@cobbfendley.com",ph:"713-462-3242"}]},
-  {id:"p14",name:"STV, Inc",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"S. Christopher Schmid",ro:"PE, Associate",em:"cschmid@cpyi.com",ph:"214-638-0500"}]},
-  {id:"p15",name:"Dannenbaum Engineering Corporation",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Douglas Harris",ro:"P.E., Senior Project Manager",em:"Doug.Harris@dannenbaum.com",ph:"713-527-6428"},{fn:"Selena Stewart",ro:"PR / Corporate Development",em:"selena.stewart@dannenbaum.com",ph:"713-527-6457"},{fn:"Carl D. McConnell",ro:"P.E., PMP, Deputy Manager Public Works",em:"carl.mcconnell@dannenbaum.com",ph:"713-527-6384"}]},
-  {id:"p16",name:"Dunaway Associates",city:"Texas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jason Kelliher",ro:"PE, Discipline Lead",em:"jkelliher@dunawayassociates.com",ph:"432-848-4397"}]},
-  {id:"p17",name:"Dunham Engineering",city:"College Station, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jimmy Dunham",ro:"P.E., Vice President",em:"jim@dunhamengineering.com",ph:"979-690-6555"}]},
-  {id:"p18",name:"EA Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mark Dellape",ro:"Project Manager",em:"mdelape@eaest.com",ph:"410-584-7000"}]},
-  {id:"p19",name:"EJES Inc.",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Kamal Rasheed",ro:"PE, VP Gulf Regional Services",em:"krasheed@ejesinc.com",ph:"504-218-7103"},{fn:"Aaron B. Hargrove",ro:"PE, Technical Design Manager",em:"ahargrove@ejesinc.com",ph:"281-272-1612"}]},
-  {id:"p20",name:"FCM Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Frank Mbachu",ro:"President",em:"",ph:"713-706-4412"},{fn:"Gregory Johnson",ro:"Engineer",em:"gjohnson@fcm-engineers.com",ph:"713-706-4412"}]},
-  {id:"p21",name:"Freese and Nichols",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Robert Jenkins",ro:"PMP, Project Manager",em:"Rob.Jenkins@freese.com",ph:"210-884-0139"}]},
-  {id:"p22",name:"Garver",city:"Fort Worth, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Paul Banschbach",ro:"PE, Water Infrastructure Team Leader",em:"PMBanschbach@GarverUSA.com",ph:"682-747-5396"}]},
-  {id:"p23",name:"HALFF Associates",city:"Dallas, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jayson D. Melcher",ro:"PE, Operations Manager",em:"jmelcher@halff.com",ph:"972-761-1642"}]},
-  {id:"p24",name:"Hatch",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Craig Shrader",ro:"Project Manager",em:"craig.shrader@hatch.com",ph:"713-467-9961"}]},
-  {id:"p25",name:"HDR Engineering",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Heather Lindner",ro:"PE, CFM, Water/Wastewater Engineer",em:"heather.lindner@hdrinc.com",ph:"210-841-2800"}]},
-  {id:"p26",name:"HRGreen",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Michael Halde",ro:"PE, Vice President / WW Practice Leader",em:"mhalde@hrgreen.com",ph:"713-338-8015"},{fn:"Rebekkah C. Sandt",ro:"PE, Project Manager",em:"rsandt@hrgreen.com",ph:"713-338-8013"},{fn:"Eric Hall",ro:"PE, Regional Director — Water",em:"ehall@hrgreen.com",ph:"713-338-8022"},{fn:"Ayobamidele Bello",ro:"Engineer",em:"",ph:"713-338-8026"}]},
-  {id:"p27",name:"HVJ Associates",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sanjeev Sanjeevan",ro:"PE, Project Manager",em:"ssanjeevan@hvj.com",ph:"281-933-7388"}]},
-  {id:"p28",name:"ICMC Group",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sanjeet Shrestha",ro:"P.E., Project Engineer",em:"sanjeet@icmcgroup.net",ph:"713-681-5757"}]},
-  {id:"p29",name:"IDCUS",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Naddem Abbasi",ro:"P.E., Civil Engineering Manager",em:"naddem@idcus.com",ph:"713-541-5591"}]},
-  {id:"p30",name:"Intrusa Inc. Consulting Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mauricio Pinto",ro:"SE, PE, PMP, President",em:"mrpinto@intrusaengineers.com",ph:"713-482-7066"}]},
-  {id:"p31",name:"Jacobs Engineering",city:"Dallas / Fort Worth / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Tim Lyons",ro:"P.E., Project Manager",em:"Timothy.Lyons@jacobs.com",ph:"469-941-8912"},{fn:"Douglas L. Smith",ro:"P.E., Principal Project Manager",em:"doug.l.smith@jacobs.com",ph:"817-304-5502"},{fn:"Michael E. Lucchesi",ro:"P.E., Vice President",em:"michael.lucchesi@jacobs.com",ph:"832-351-7312"},{fn:"Ken C. Hall",ro:"PE, Senior Project Manager",em:"ken.hall@jacobs.com",ph:"817-735-6000"},{fn:"Michael Ancell",ro:"P.E., Water Resources Sr. PM",em:"michael.ancell@jacobs.com",ph:"915-206-2165"}]},
-  {id:"p32",name:"KCI Technologies",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Lomes Petty",ro:"TX Utility Services, SUE Practice Leader",em:"lomes.petty@kci.com",ph:"832-975-1560"},{fn:"John Mudd",ro:"PE, Associate Project Manager",em:"john.mudd@kci.com",ph:"281-323-9398"},{fn:"Jared M. Jones",ro:"Sr. Project Manager",em:"jared.jones@kci.com",ph:"832-975-1523"}]},
-  {id:"p33",name:"Kimley-Horn",city:"Dallas / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"M. Anthony Samarripas",ro:"P.E.",em:"anthony.samarripas@kimley-horn.com",ph:"972-770-1314"},{fn:"Connie Curtis",ro:"P.E.",em:"connie.curtis@kimley-horn.com",ph:"281-920-6578"}]},
-  {id:"p34",name:"KIT Professionals",city:"Houston / Dallas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Sunil Kommineni",ro:"PhD, PE, BCEE, Vice President",em:"skommineni@kitprofs.com",ph:"713-783-8700"},{fn:"Bharath Ramalingam",ro:"PE, Project Manager",em:"bramalingam@kitprofs.com",ph:"972-456-9650"},{fn:"William G. Pembroke",ro:"PE, Project Director North Texas",em:"bpembroke@kitprofs.com",ph:"972-456-9650"},{fn:"Frank L. Stephens",ro:"PE, Senior Project Manager",em:"fstephens@kitprofs.com",ph:"713-783-8700"}]},
-  {id:"p35",name:"LAN (Lockwood Andrews & Newnam)",city:"Houston / Austin",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Stephen A. Gilbreath",ro:"PE, Business Group Director",em:"SAGilbreath@lan-inc.com",ph:"713-266-6900"},{fn:"Hunter B. Hanson",ro:"EIT, Hydraulic Engineer",em:"HBHanson@lan-inc.com",ph:"512-338-4212"}]},
-  {id:"p36",name:"MBCO Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Brock Crenek",ro:"P.E., ENV SP, Sr. Vice President",em:"brock.crenek@mbcoengineering.com",ph:"281-760-1656"}]},
-  {id:"p37",name:"Michael Baker International",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mohamed Bagha",ro:"PE, Senior Project Manager",em:"mbagha@mbakerintl.com",ph:"713-954-5344"}]},
-  {id:"p38",name:"Neel-Schaffer",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Charles 'Sonny' Smoak Jr.",ro:"P.E., Senior VP / Houston Office Manager",em:"sonny.smoak@neel-schaffer.com",ph:"713-783-7117"}]},
-  {id:"p39",name:"Nedu Engineering Services",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Nkemdi I. Ohalete",ro:"P.E., Principal",em:"nkemdi@neduengineers.com",ph:"713-268-1666"},{fn:"Roshan Adhikari",ro:"EIT, Graduate Engineer",em:"staff@neduengineers.com",ph:"713-268-1666"}]},
-  {id:"p40",name:"Omega Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Santiago Castaneda",ro:"PE, Executive Vice President",em:"scastaneda@omegaengineers.com",ph:"281-221-8989"}]},
-  {id:"p41",name:"Othon Inc. Consulting",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"John J. Sakolosky",ro:"PE, Chief Municipal Engineer",em:"jsakolosky@othon.com",ph:"713-975-8555"}]},
-  {id:"p42",name:"Pacheco Koch",city:"Dallas / Houston",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Thelma Flores Box",ro:"PE, Associate Principal",em:"tbox@pkce.com",ph:"972-235-3031"},{fn:"Chris Jones",ro:"Principal Engineer (Houston Infrastructure)",em:"",ph:"281-883-0103"}]},
-  {id:"p43",name:"Pape-Dawson Engineers",city:"San Antonio / Austin",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Lee Niles",ro:"P.E., Design Leader",em:"lniles@pape-dawson.com",ph:"210-375-9000"}]},
-  {id:"p44",name:"Parsons Water and Infrastructure",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Eugene Max Han",ro:"Sr. Subcontract Administrator",em:"",ph:"713-871-7000"}]},
-  {id:"p45",name:"PGAL",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Coatas Georghiou",ro:"PE, Principal",em:"cgeorghiou@pgal.com",ph:"713-968-9351"}]},
-  {id:"p46",name:"Progressive Civil Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Mohammad Irfan",ro:"P.E., PTOE, President & Principal Engineer",em:"Mirfan@pcehouston.com",ph:"281-206-7494"}]},
-  {id:"p47",name:"Root 3 Power",city:"Spring, TX",web:'',desc:'Power Systems Engineering — E&I Sub-Consultant Opportunity.',scope:'Power Systems Engineering Design, MV/LV, Water/WW Electrical',contacts:[{fn:"Matt Proctor",ro:"P.E., Power Systems Consultant & Managing Partner",em:"matt.proctor@root3power.com",ph:"346-225-3210"}]},
-  {id:"p48",name:"S&B Infrastructure",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Chantal Fullerton",ro:"Marketing / Proposal Manager",em:"cdfullerton@sbinfra.com",ph:"713-845-5401"}]},
-  {id:"p49",name:"Specific Energy",city:"Georgetown, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Michael Blake",ro:"Project Manager",em:"michael.blake@specificenergy.com",ph:"512-930-9415"}]},
-  {id:"p50",name:"Stanley Consultants",city:"Austin, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jesse Cabrera",ro:"Project Manager",em:"CabreraJesse@stanleygroup.com",ph:"512-427-3616"},{fn:"Steve Holton",ro:"Project Manager",em:"holtonsteve@stanleygroup.com",ph:"512-427-3654"}]},
-  {id:"p51",name:"Stantec",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jarah Parke",ro:"PE, PMP, CFM, Project Manager",em:"jarah.parke@stantec.com",ph:"702-821-4332"},{fn:"Betty Leite",ro:"PE, CFM, PMP, Senior Project Manager",em:"betty.leite@stantec.com",ph:"713-587-5700"},{fn:"John Keane",ro:"Project Manager",em:"john.keane@stantec.com",ph:"713-403-1609"}]},
-  {id:"p52",name:"Sowells Construction Management",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater CM&I, Engineering Design Support',contacts:[{fn:"Jerry D. Sowells",ro:"M.S., CCM, Principal",em:"jsowells@scmandi.com",ph:"832-731-7290"}]},
-  {id:"p53",name:"Technikos",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Ora Gibson",ro:"Managing Owner",em:"ogibson@technikosllc.com",ph:"281-414-2855"}]},
-  {id:"p54",name:"Tetra Tech",city:"Houston / San Antonio / Dallas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Leslie Turner",ro:"P.E., BCEE, PMP, Operations Manager",em:"leslie.turner@tetratech.com",ph:"832-251-5167"},{fn:"Mandi Siebels",ro:"PE, Water and Wastewater",em:"mandi.siebels@tetratech.com",ph:"832-251-5185"},{fn:"Donald Burger",ro:"P.E., Senior Engineer (San Antonio)",em:"don.burger@tetratech.com",ph:"210-299-7909"},{fn:"Robert Ivanovic",ro:"PMP, National Electrical I&C SCADA Manager",em:"robert.ivanovic@tetratech.com",ph:"702-241-4949"},{fn:"Mia R. Welch",ro:"PE, North Texas Regional Manager",em:"mia.welch@tetratech.com",ph:"214-231-4805"}]},
-  {id:"p55",name:"Tran Systems",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Aadit Kapadia",ro:"Project Manager",em:"askapadia@transystems.com",ph:"713-807-4436"}]},
-  {id:"p56",name:"Trigone Associates",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Regina Cassanova",ro:"Project Manager",em:"rcassanova@trigonassociates.com",ph:"504-585-5767"},{fn:"Greg Kolenovsky",ro:"New Orleans Office",em:"gkolenovsky@trigonassociates.com",ph:""}]},
-  {id:"p57",name:"V&A Consulting Engineers",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Jose Villalobos",ro:"PE, Founding Principal & CMO",em:"Jvillalobos@vaengineering.com",ph:"510-903-6600"}]},
-  {id:"p58",name:"WRA Engineers",city:"Baltimore, MD",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Dennis J. Hasson",ro:"PE, BCEE, Partner",em:"dhasson@wrallp.com",ph:"443-286-7476"}]},
-  {id:"p59",name:"Zarinkelk Engineering Services",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Giti Zarinkelk",ro:"P.E., F.SAME, President",em:"giti.zarinkelk@zarinkelk.com",ph:"832-242-2426"},{fn:"Michael J. Bagstad",ro:"P.E., Project Manager",em:"mike.bagstad@zarinkelk.com",ph:"832-242-2426"},{fn:"Hossein Zandi",ro:"P.E.",em:"hossein.zandi@zarinkelk.com",ph:"832-242-2426"}]},
-  {id:"p60",name:"EJES Inc. (Houston)",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Aaron B. Hargrove",ro:"PE, Technical Design Manager",em:"ahargrove@ejesinc.com",ph:"281-272-1612"}]},
-  {id:"p61",name:"Ing Garza Construction",city:"Laredo, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"David A. Garza",ro:"PE, PMP, CCM",em:"dgarza@inggarza.com",ph:"956-792-3597"}]},
-  {id:"p62",name:"Neera Engineering",city:"Texas",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Prasad Namuduri",ro:"P.E.",em:"psnamuduri@gmail.com",ph:"832-641-5413"}]},
-  {id:"p63",name:"TSC Engineering",city:"Houston, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Nelson B. Nuckles",ro:"P.E., Sr. Project Manager",em:"BarbNuckles@tscengineering.com",ph:"713-784-7777"}]},
-  {id:"p64",name:"Ardurra Group (formerly LNV)",city:"San Antonio, TX",web:'',desc:'Water/Wastewater Engineering — E&I Sub-Consultant Opportunity.',scope:'Water/Wastewater Engineering Design & Project Management',contacts:[{fn:"Byron G. Sanderfer",ro:"PE, CFM, Principal/VP",em:"BSANDERFER@LNVINC.COM",ph:"210-822-2232"}]},
-];
+let PRIMES = []; // loaded from /primes.js
+
 
 let cPrime=null, ePrime=null;
 const SN={closing:'Closing Soon',active:'Active Bid',prebid:'Pre-Bid',pending:'Award Pending'};
@@ -817,31 +721,15 @@ let curF='all', curS='';
 // ═════════════════════════════════════
 // TABS
 // ═════════════════════════════════════
-// Save template content before any tab switch
-function saveTemplates(){
-  ['tpl1-subj','tpl1-body','tpl2-subj','tpl2-body','tpl3-subj','tpl3-body'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) sessionStorage.setItem('sri-'+id, el.tagName==='TEXTAREA'?el.value:el.value);
-  });
-}
-
-// Restore template content after SRI tab renders
-function restoreTemplates(){
-  ['tpl1-subj','tpl1-body','tpl2-subj','tpl2-body','tpl3-subj','tpl3-body'].forEach(id=>{
-    const el=document.getElementById(id);
-    const saved=sessionStorage.getItem('sri-'+id);
-    if(el && saved) { el.tagName==='TEXTAREA' ? el.value=saved : el.value=saved; }
-  });
-}
-
 function switchTab(id,btn){
-  saveTemplates();
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
-  if(id==='primes'){ setTimeout(renderPrimes,0); }
-  if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();setTimeout(restoreTemplates,50);},0); }
+  setTimeout(()=>{
+    if(id==='primes') renderPrimes();
+    if(id==='sri'){ renderSRIDir(); buildFirmSelector(); }
+  },50);
 }
 
 // ═════════════════════════════════════
@@ -863,6 +751,61 @@ function row(b,ctx){
     <td class="ts">${b.scope}</td>${urlCell}<td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
     <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
   </tr>`;
+}
+
+// ═══════════════════════════════
+// FETCH BIDS FROM SERVER API
+// ═══════════════════════════════
+async function fetchBids(){
+  try {
+    setStatus('running','Loading bids...');
+    const res = await fetch('/api/bids');
+    const data = await res.json();
+    BIDS = (data.bids||[]).map((b,i)=>({
+      id: b.id||'bid-'+i,
+      num: String(i+1).padStart(2,'0'),
+      name: b.name||b.title||'Unnamed Bid',
+      agency: b.agency||b.owner||'Unknown Agency',
+      city: b.city||b.location||'Texas',
+      scope: b.scope||b.description||'E&I Engineering — See RFQ link',
+      due: b.due||b.dueDate||b.closingDate||'See link',
+      value: b.value||b.estimatedValue||'TBD',
+      status: b.status||'active',
+      region: b.region||'statewide',
+      url: b.url||b.link||'',
+      source: b.source||'Unknown'
+    }));
+    bidState={};
+    BIDS.forEach(b=>{bidState[b.id]=isNonDesign(b)?'deleted':'active';});
+    if(data.lastUpdated){
+      const el=document.getElementById('last-pull-time');
+      if(el) el.textContent=new Date(data.lastUpdated).toLocaleString();
+    }
+    setStatus('done','Loaded '+BIDS.length+' bids');
+    renderAll();
+    populateCampSelect();
+  }catch(e){
+    console.error('fetchBids:',e);
+    setStatus('error','Could not reach server');
+  }
+}
+
+async function triggerScrape(){
+  setStatus('running','Pulling from CivCast, EnviroBidNet, H2bid, TX ESBD...');
+  try{
+    await fetch('/api/scrape',{method:'POST'});
+    let tries=0;
+    const poll=setInterval(async()=>{
+      tries++;
+      await fetchBids();
+      if(BIDS.length>0||tries>24){clearInterval(poll);}
+    },5000);
+  }catch(e){setStatus('error','Scrape failed');}
+}
+
+function setStatus(type,msg){
+  const el=document.getElementById('scrape-status');
+  if(el){el.className='scrape-status '+type;el.textContent=msg;}
 }
 
 function renderAll(){
@@ -890,43 +833,15 @@ function updStats(){
 }
 function filt(f,btn){curF=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyF();}
 function srch(q){curS=q.toLowerCase().trim();applyF();}
-function isReallyClosing(b){
-  // Only show in Closing Soon if due date is real and in the future (within 14 days)
-  try{
-    const d=new Date(b.due);
-    if(isNaN(d.getTime())) return false;
-    const diff=(d-Date.now())/86400000;
-    return diff>=0 && diff<=14;
-  }catch{return false;}
-}
-
-function checkExpired(){
-  // Move past-due unselected bids to deleted
-  BIDS.forEach(b=>{
-    if(bidState[b.id]!=='active') return;
-    try{
-      const d=new Date(b.due);
-      if(isNaN(d.getTime())) return;
-      if((d-Date.now())<0) bidState[b.id]='deleted';
-    }catch{}
-  });
-}
-
 function applyF(){
-  checkExpired();
   const active=BIDS.filter(b=>bidState[b.id]==='active');
   const filtered=active.filter(b=>{
-    let mf=false;
-    if(curF==='all') mf=true;
-    else if(curF==='closing') mf=isReallyClosing(b);
-    else if(curF==='active') mf=b.status==='active'||b.status==='closing';
-    else if(curF==='prebid') mf=b.status==='prebid';
-    else if(curF==='houston') mf=b.region==='houston';
-    else if(curF==='texas') mf=['austin','sa','dfw','statewide'].includes(b.region);
+    const mf=curF==='all'||b.status===curF||(curF==='houston'&&b.region==='houston');
     const ms=!curS||[b.name,b.agency,b.city,b.scope,b.due,b.value,b.region].join(' ').toLowerCase().includes(curS);
     return mf&&ms;
   });
   document.getElementById('bids-body').innerHTML=filtered.map(b=>row(b,'active')).join('');
+  // Show count
   const lbl=document.getElementById('bids-result-count');
   if(lbl) lbl.textContent=curS||curF!=='all'?`${filtered.length} of ${active.length} bids`:'';
 }
@@ -937,41 +852,33 @@ function applyF(){
 function renderSRIDir(){
   const totalContacts = PRIMES.reduce((t,p)=>t+p.contacts.length,0);
   const container = document.getElementById('sri-pdir');
-  container.innerHTML = '';
+  container.innerHTML = PRIMES.map(p=>{
+    const ctHtml = p.contacts.length===0
+      ? `<div class="no-contact-msg" style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.4);font-style:italic;padding:5px 0">
+           No contacts — <a onclick="switchTab('primes',document.querySelector('.tab-btn:nth-child(5)'))" style="color:var(--cyan);cursor:pointer;text-decoration:none">go to Prime Contractors tab to add</a>
+         </div>`
+      : p.contacts.map(c=>`
+          <div class="pdir-contact">
+            <div class="pdc-info">
+              <div class="pdc-name">${c.fn}</div>
+              <div class="pdc-role">${c.ro||''}</div>
+            </div>
+            <div class="pdc-links">
+              ${c.em?`<a class="pdc-em" href="mailto:${c.em}" title="Send email">✉ ${c.em}</a>`:'<span style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.35)">No email</span>'}
+              ${c.ph?`<a class="pdc-ph" href="tel:${c.ph}" title="Call">📞 ${c.ph}</a>`:''}
+            </div>
+          </div>`).join('');
+    const web=p.web?`<a href="${p.web}" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--sky);text-decoration:none;margin-left:8px">↗ ${p.web.replace('https://','')}</a>`:'';
+    return `<div class="pdir-card">
+      <div class="pdir-name">${p.name} <span style="font-family:var(--mono);font-size:9px;color:var(--gray);font-weight:400">(${p.contacts.length})</span></div>
+      <div class="pdir-loc">📍 ${p.city}</div>
+      <div class="pdir-contacts">${ctHtml}</div>
+    </div>`;
+  }).join('');
+  // Update stat in SRI header
   const el = document.getElementById('sri-prime-count');
   if(el) el.textContent = `${PRIMES.length} Firms · ${totalContacts} Contacts`;
-  // Chunked render -- 8 cards at a time so browser stays responsive
-  let i = 0;
-  function chunk(){
-    const frag = document.createDocumentFragment();
-    PRIMES.slice(i, i+8).forEach(p => {
-      const ctHtml = p.contacts.length===0
-        ? `<div class="no-contact-msg" style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.4);font-style:italic;padding:5px 0">No contacts yet</div>`
-        : p.contacts.map(c=>`
-            <div class="pdir-contact">
-              <div class="pdc-info">
-                <div class="pdc-name">${c.fn}</div>
-                <div class="pdc-role">${c.ro||''}</div>
-              </div>
-              <div class="pdc-links">
-                ${c.em?`<a class="pdc-em" href="mailto:${c.em}">&#x2709; ${c.em}</a>`:'<span style="font-family:var(--mono);font-size:10px;color:rgba(139,155,173,.35)">No email</span>'}
-                ${c.ph?`<a class="pdc-ph" href="tel:${c.ph}">&#128222; ${c.ph}</a>`:''}
-              </div>
-            </div>`).join('');
-      const div = document.createElement('div');
-      div.className = 'pdir-card';
-      div.innerHTML = `
-        <div class="pdir-name">${p.name} <span style="font-family:var(--mono);font-size:9px;color:var(--gray);font-weight:400">(${p.contacts.length})</span></div>
-        <div class="pdir-loc">&#128205; ${p.city}</div>
-        <div class="pdir-contacts">${ctHtml}</div>`;
-      frag.appendChild(div);
-    });
-    container.appendChild(frag);
-    i += 8;
-    if(i < PRIMES.length) setTimeout(chunk, 20);
-    else populateCampSelect();
-  }
-  chunk();
+  populateCampSelect();
 }
 
 function filterSRIDir(q){
@@ -995,7 +902,6 @@ function populateCampSelect(){
   sel.innerHTML = '<option value="">— Select a bid —</option>' +
     all.map(b=>`<option value="${b.id}">${b.name} · ${b.due}</option>`).join('');
   if(prev) sel.value = prev;
-  // buildFirmSelector only called when SRI tab is opened — not here
 }
 
 function loadCampaign(){
@@ -1004,38 +910,27 @@ function loadCampaign(){
   const info = document.getElementById('camp-bid-info');
   if(info) info.textContent = bid ? `Agency: ${bid.agency} · Due: ${bid.due}` : '';
   document.getElementById('camp-empty').style.display = bid ? 'none' : 'block';
+  buildFirmSelector();
   updateCampPreview();
 }
 
 function buildFirmSelector(){
   const grid = document.getElementById('firm-selector-grid');
   if(!grid) return;
-  grid.innerHTML = '';
-  let i = 0;
-  function chunk(){
-    const frag = document.createDocumentFragment();
-    PRIMES.slice(i, i+10).forEach(p => {
-      const hasContact = p.contacts.length > 0 && p.contacts.some(c=>c.em);
-      const ctList = p.contacts.filter(c=>c.em).map(c=>`<div style="font-family:var(--mono);font-size:9px;color:var(--gray);margin-top:2px">&#x2709; ${c.fn} — ${c.em}</div>`).join('');
-      const lbl = document.createElement('label');
-      lbl.className = 'firm-sel-label';
-      lbl.dataset.name = p.name.toLowerCase() + ' ' + p.city.toLowerCase();
-      lbl.style.cssText = `background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:3px;padding:9px 11px;cursor:${hasContact?'pointer':'default'};display:flex;gap:9px;align-items:flex-start;transition:background .15s;${hasContact?'':'opacity:.4'}`;
-      lbl.innerHTML = `<input type="checkbox" class="firm-chk" data-pid="${p.id}" ${!hasContact?'disabled':''} onchange="updFirmSelCount();updateCampPreview()" style="margin-top:3px;flex-shrink:0;accent-color:var(--cyan)">
-        <div>
-          <div style="font-size:12px;font-weight:500;color:var(--white)">${p.name}</div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--gray)">&#128205; ${p.city}</div>
-          ${ctList}
-          ${!hasContact?'<div style="font-family:var(--mono);font-size:9px;color:rgba(239,71,111,.5);margin-top:2px">No email — add in Primes tab</div>':''}
-        </div>`;
-      frag.appendChild(lbl);
-    });
-    grid.appendChild(frag);
-    i += 10;
-    if(i < PRIMES.length) setTimeout(chunk, 20);
-    else updFirmSelCount();
-  }
-  chunk();
+  grid.innerHTML = PRIMES.map(p=>{
+    const hasContact = p.contacts.length > 0 && p.contacts.some(c=>c.em);
+    const ctList = p.contacts.filter(c=>c.em).map(c=>`<div style="font-family:var(--mono);font-size:9px;color:var(--gray);margin-top:2px">✉ ${c.fn} — ${c.em}</div>`).join('');
+    return `<label style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:3px;padding:9px 11px;cursor:${hasContact?'pointer':'default'};display:flex;gap:9px;align-items:flex-start;transition:background .15s;${hasContact?'':'opacity:.4'}" class="firm-sel-label" data-name="${p.name.toLowerCase()} ${p.city.toLowerCase()}">
+      <input type="checkbox" class="firm-chk" data-pid="${p.id}" ${!hasContact?'disabled':''} onchange="updFirmSelCount();updateCampPreview()" style="margin-top:3px;flex-shrink:0;accent-color:var(--cyan)">
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--white)">${p.name}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--gray)">📍 ${p.city}</div>
+        ${ctList}
+        ${!hasContact?'<div style="font-family:var(--mono);font-size:9px;color:rgba(239,71,111,.5);margin-top:2px">No email — add contact in Primes tab</div>':''}
+      </div>
+    </label>`;
+  }).join('');
+  updFirmSelCount();
 }
 
 function filterFirmSelector(q){
@@ -1148,23 +1043,25 @@ function searchPrimes(q){
 }
 
 function renderPrimes(){
-  const filtered = primeSearchQ
-    ? PRIMES.filter(p=> p.name.toLowerCase().includes(primeSearchQ)
-        || p.city.toLowerCase().includes(primeSearchQ)
-        || p.contacts.some(c=>(c.fn+' '+c.ro+' '+c.em).toLowerCase().includes(primeSearchQ)))
-    : PRIMES;
-  const lbl = document.getElementById('primes-count-label');
-  if(lbl) lbl.textContent = primeSearchQ ? `${filtered.length} firms matching "${primeSearchQ}"` : `All Firms — ${PRIMES.length} companies · ${PRIMES.reduce((t,p)=>t+p.contacts.length,0)} contacts`;
-  const grid = document.getElementById('primes-grid');
+  const fil=primeSearchQ?PRIMES.filter(p=>
+    p.name.toLowerCase().includes(primeSearchQ)||
+    p.city.toLowerCase().includes(primeSearchQ)||
+    p.contacts.some(c=>(c.fn+' '+c.em).toLowerCase().includes(primeSearchQ))):PRIMES;
+  const lbl=document.getElementById('primes-count-label');
+  if(lbl) lbl.textContent=primeSearchQ?fil.length+' firms matching "'+primeSearchQ+'"':
+    'All Firms — '+PRIMES.length+' companies · '+PRIMES.reduce((t,p)=>t+p.contacts.length,0)+' contacts';
+  const grid=document.getElementById('primes-grid');
   grid.innerHTML='';
   let i=0;
   function chunk(){
-    grid.innerHTML += filtered.slice(i,i+10).map(pc).join('');
+    grid.innerHTML+=fil.slice(i,i+10).map(pc).join('');
     i+=10;
-    if(i<filtered.length) setTimeout(chunk,0);
+    if(i<fil.length) setTimeout(chunk,50);
+    else renderSRIDir();
   }
   chunk();
 }
+
 function pc(p){
   const cl=p.contacts.length===0
     ?`<div class="nocont">No contacts — click "+ Add"</div>`
@@ -1186,7 +1083,6 @@ function pc(p){
       <div class="pra">
         <button class="pb em" onclick="openEM('${p.id}')">✉ Email</button>
         <button class="pb co" onclick="openCM('${p.id}')">+ Contact</button>
-        <button class="pb" style="border-color:rgba(239,71,111,.3);color:var(--red);background:rgba(239,71,111,.07)" onclick="deletePrime('${p.id}')">✕ Delete</button>
       </div>
     </div>
     <div class="clist">
@@ -1202,12 +1098,10 @@ function saveCont(){
   const ln=document.getElementById('c-ln').value.trim();
   const fullName=(fn+(ln?' '+ln:'')).trim();
   if(!fullName){alert('Enter at least a first name.');return;}
-  const p=PRIMES.find(x=>x.id===cPrime);
-  p.contacts.push({fn:fullName,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});
-  fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});
+  PRIMES.find(x=>x.id===cPrime).contacts.push({fn:fullName,ro:document.getElementById('c-ro').value.trim(),em:document.getElementById('c-em').value.trim(),ph:document.getElementById('c-ph').value.trim()});
   renderPrimes();closeM('m-contact');
 }
-function delCont(pid,idx){if(!confirm('Remove this contact?'))return;const p=PRIMES.find(x=>x.id===pid);p.contacts.splice(idx,1);fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});renderPrimes();}
+function delCont(pid,idx){if(!confirm('Remove this contact?'))return;PRIMES.find(x=>x.id===pid).contacts.splice(idx,1);renderPrimes();}
 
 function openEM(pid){
   ePrime=pid;
@@ -1252,9 +1146,7 @@ function sendEm(){
 function openAP(){['ap-n','ap-c','ap-w','ap-d','ap-s'].forEach(i=>document.getElementById(i).value='');openM('m-ap');}
 function saveAP(){
   const n=document.getElementById('ap-n').value.trim();if(!n){alert('Name required.');return;}
-  const prime={id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',web:document.getElementById('ap-w').value.trim(),desc:document.getElementById('ap-d').value.trim()||'Custom prime contractor.',scope:document.getElementById('ap-s').value.trim()||'Water / WW E&I',contacts:[]};
-  PRIMES.push(prime);
-  fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(prime)}).catch(()=>{});
+  PRIMES.push({id:'p'+Date.now(),name:n,city:document.getElementById('ap-c').value.trim()||'Texas',web:document.getElementById('ap-w').value.trim(),desc:document.getElementById('ap-d').value.trim()||'Custom prime contractor.',scope:document.getElementById('ap-s').value.trim()||'Water / WW E&I',contacts:[]});
   renderPrimes();closeM('m-ap');
 }
 
@@ -1452,72 +1344,23 @@ function confirmImport() {
   }, 200);
 }
 
-function deletePrime(pid){
-  if(!confirm('Remove this prime contractor permanently?'))return;
-  PRIMES=PRIMES.filter(x=>x.id!==pid);
-  fetch('/api/primes/'+pid,{method:'DELETE'}).catch(()=>{});
-  renderPrimes();
-}
-
-async function fetchPrimes(){
-  try{
-    const res=await fetch('/api/primes');
-    const data=await res.json();
-    if(data.primes && data.primes.length>0){
-      PRIMES=data.primes;
-      console.log('[Primes] Loaded',PRIMES.length,'from DB');
-    } else {
-      console.log('[Primes] DB empty, seeding',PRIMES.length,'primes...');
-      for(const p of PRIMES){
-        await fetch('/api/primes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)}).catch(()=>{});
-      }
-    }
-  }catch(e){
-    console.warn('[Primes] Using hardcoded list');
-  }
-}
-
-
-// ─── SOURCE PANELS ────────────────────────────────────────────
-const SRC_CONFIG = {
-  civcast:      { label: 'CivCast — Engineering Services TX', url: 'https://www.civcastusa.com/bids?keywords=engineering+services&state=TX&timeInfo=0' },
-  envirobidnet: { label: 'EnviroBidNet — Login to view bids', url: 'https://envirobidnet.com/login' },
-  h2bid:        { label: 'H2bid — Water/WW Engineering TX', url: 'https://h2bid.com/Bids/BidsSearchPreview?keyword=engineering+services&state=TX' },
-  txesbd:       { label: 'TX ESBD — NIGP 913/920/956', url: 'https://www.txsmartbuy.gov/esbd?keywords=water+electrical' }
-};
-let curSrc = null;
-function toggleSrc(key){
-  const panel = document.getElementById('src-panel');
-  const iframe = document.getElementById('src-iframe');
-  const title = document.getElementById('src-panel-title');
-  if(curSrc === key){ closeSrc(); return; }
-  curSrc = key;
-  const cfg = SRC_CONFIG[key];
-  title.textContent = cfg.label;
-  iframe.src = cfg.url;
-  panel.style.display = 'block';
-  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-function closeSrc(){
-  curSrc = null;
-  document.getElementById('src-panel').style.display = 'none';
-  document.getElementById('src-iframe').src = '';
-}
-
 // ═════════════════════════════════════
 // INIT
 // ═════════════════════════════════════
 (function(){
-  const d = new Date();
-  const fmt = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  ['last-updated','footer-date','footer-date2'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=fmt;
-  });
+  const d=new Date();
+  const fmt=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  document.querySelectorAll('#last-updated,#footer-date').forEach(el=>{if(el)el.textContent=fmt;});
 })();
-renderAll();
-fetchPrimes();
-// Primes render deferred to tab click - avoids freeze on load
+
+// Load PRIMES from server then fetch live bids
+fetch('/primes.js').then(r=>r.text()).then(code=>{
+  eval(code);
+  console.log('Primes loaded:',PRIMES.length,'firms');
+}).catch(e=>console.warn('Primes load failed:',e.message));
+
+fetchBids();
+
 </script>
 </body>
 </html>
