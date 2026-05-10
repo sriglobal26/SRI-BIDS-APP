@@ -178,6 +178,40 @@ let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished:
 // ─── ROUTES ──────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: Math.round(process.uptime()) }));
 
+// ── Settings API — save scraper credentials ──
+const settings = {
+  civcast_user: process.env.CIVCAST_USER || '',
+  civcast_pass: process.env.CIVCAST_PASS || '',
+  envirobidnet_user: process.env.ENVIROBIDNET_USER || '',
+  envirobidnet_pass: process.env.ENVIROBIDNET_PASS || ''
+};
+
+app.get('/api/settings', (req, res) => {
+  res.json({
+    civcast_user: settings.civcast_user,
+    civcast_pass: settings.civcast_pass ? '••••••••' : '',
+    envirobidnet_user: settings.envirobidnet_user,
+    envirobidnet_pass: settings.envirobidnet_pass ? '••••••••' : ''
+  });
+});
+
+app.post('/api/settings', (req, res) => {
+  const { civcast_user, civcast_pass, envirobidnet_user, envirobidnet_pass } = req.body;
+  if (civcast_user !== undefined) settings.civcast_user = civcast_user;
+  if (civcast_pass !== undefined && civcast_pass !== '••••••••') settings.civcast_pass = civcast_pass;
+  if (envirobidnet_user !== undefined) settings.envirobidnet_user = envirobidnet_user;
+  if (envirobidnet_pass !== undefined && envirobidnet_pass !== '••••••••') settings.envirobidnet_pass = envirobidnet_pass;
+  
+  // Update env vars so scrapers pick them up
+  process.env.CIVCAST_USER = settings.civcast_user;
+  process.env.CIVCAST_PASS = settings.civcast_pass;
+  process.env.ENVIROBIDNET_USER = settings.envirobidnet_user;
+  process.env.ENVIROBIDNET_PASS = settings.envirobidnet_pass;
+  
+  console.log('[Settings] Credentials updated — CivCast:', settings.civcast_user, '| EnviroBidNet:', settings.envirobidnet_user);
+  res.json({ success: true });
+});
+
 app.get('/api/bids', async (req, res) => {
   try { res.json(await readBids()); }
   catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); }

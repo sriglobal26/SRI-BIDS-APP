@@ -327,6 +327,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
   <button class="tab-btn" onclick="switchTab('primes',this)">Prime Contractors</button>
   <button class="tab-btn" onclick="switchTab('agencies',this)">Agencies</button>
   <button class="tab-btn" onclick="switchTab('platforms',this)">Platforms</button>
+  <button class="tab-btn" onclick="switchTab('settings',this)" style="margin-left:auto;color:var(--yellow)">⚙ Settings</button>
 </div>
 
 <div class="wrap">
@@ -635,6 +636,51 @@ Best regards,
   <p>Engineering Design Only · Electrical · Instrumentation · SCADA · Controls · Power Systems</p>
 </footer>
 
+
+
+<!-- ══ TAB: SETTINGS ══ -->
+<div class="tab-pane" id="tab-settings">
+  <div class="ph">
+    <div>
+      <div class="badge" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">// Scraper Credentials</div>
+      <h1>Settings</h1>
+      <p class="subtitle">Enter your login credentials for bid sources. Saved securely to the server.</p>
+    </div>
+  </div>
+
+  <div style="max-width:500px">
+    <div class="sec" style="color:var(--cyan)">EnviroBidNet Credentials</div>
+    <div style="background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:20px;margin-bottom:20px">
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl2">Username / Email</label>
+        <input class="fi" id="ebn-user" placeholder="your@email.com" type="email">
+      </div>
+      <div class="fg" style="margin-bottom:16px">
+        <label class="fl2">Password</label>
+        <input class="fi" id="ebn-pass" placeholder="••••••••" type="password">
+      </div>
+      <button class="btn1" onclick="saveSettings()">💾 Save & Test</button>
+      <span id="settings-status" style="font-family:var(--mono);font-size:10px;color:var(--gray);margin-left:12px"></span>
+    </div>
+
+    <div class="sec" style="color:var(--cyan)">CivCast Credentials</div>
+    <div style="background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:20px;margin-bottom:20px">
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl2">Username / Email</label>
+        <input class="fi" id="cc-user" placeholder="your@email.com" type="email">
+      </div>
+      <div class="fg" style="margin-bottom:16px">
+        <label class="fl2">Password</label>
+        <input class="fi" id="cc-pass" placeholder="••••••••" type="password">
+      </div>
+      <button class="btn1" onclick="saveSettings()">💾 Save & Test</button>
+    </div>
+
+    <div style="background:rgba(0,200,212,.06);border:1px solid rgba(0,200,212,.2);border-radius:4px;padding:14px;font-family:var(--mono);font-size:10px;color:#A8D8E8;line-height:1.8">
+      💡 After saving, go to <strong style="color:var(--cyan)">Active Bids</strong> tab and click <strong style="color:var(--cyan)">Pull Latest Bids Now</strong> to test.
+    </div>
+  </div>
+</div>
 
 </div><!-- end wrap -->
 
@@ -1564,6 +1610,39 @@ function closeSrc(){
 renderAll();
 fetchPrimes();
 fetchBids();
+loadSettings();
+
+// ── SETTINGS ──
+async function loadSettings(){
+  try {
+    const res = await fetch('/api/settings');
+    const d = await res.json();
+    if(d.envirobidnet_user) document.getElementById('ebn-user').value = d.envirobidnet_user;
+    if(d.envirobidnet_pass) document.getElementById('ebn-pass').value = d.envirobidnet_pass;
+    if(d.civcast_user) document.getElementById('cc-user').value = d.civcast_user;
+    if(d.civcast_pass) document.getElementById('cc-pass').value = d.civcast_pass;
+  } catch(e){}
+}
+
+async function saveSettings(){
+  const status = document.getElementById('settings-status');
+  if(status) status.textContent = 'Saving...';
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        envirobidnet_user: document.getElementById('ebn-user').value,
+        envirobidnet_pass: document.getElementById('ebn-pass').value,
+        civcast_user: document.getElementById('cc-user').value,
+        civcast_pass: document.getElementById('cc-pass').value
+      })
+    });
+    if(status){ status.textContent = '✓ Saved! Now pull bids to test.'; status.style.color='var(--green)'; }
+  } catch(e){
+    if(status){ status.textContent = '✗ Save failed'; status.style.color='var(--red)'; }
+  }
+}
 // Primes render deferred to tab click - avoids freeze on load
 </script>
 </body>
