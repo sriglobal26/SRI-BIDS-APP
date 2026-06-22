@@ -8,148 +8,50 @@ const KEYWORDS = ['electrical','instrumentation','scada','controls','water','was
 async function scrapeH2bid() {
   const bids = [];
   const seen = new Set();
+  const searches = ['electrical instrumentation water', 'scada water texas', 'wastewater engineering'];
 
-  // H2bid search API endpoints — try JSON first, fallback to HTML
-  const searches = [
-    { kw: 'Engineering Services', label: 'Engineering Services' },
-    { kw: 'electrical water',     label: 'Electrical Water' },
-    { kw: 'scada water',          label: 'SCADA Water' },
-    { kw: 'wastewater',           label: 'Wastewater' },
-  ];
-  // H2bid — Texas/USA only via state filter
-
-  for (const { kw, label } of searches) {
+  for (const kw of searches) {
     try {
-      // Try JSON API endpoint first
-      const apiUrl = `https://h2bid.com/api/bids/search?keyword=${encodeURIComponent(kw)}&state=TX&country=US&format=json`;
-      let handled = false;
+      const res = await axios.get(`https://h2bid.com/Bids/BidsSearchPreview?keyword=${encodeURIComponent(kw)}&state=TX`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml'
+        },
+        timeout: TIMEOUT
+      });
 
-      try {
-        const apiRes = await axios.get(apiUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-          timeout: TIMEOUT
-        });
-        if (apiRes.data && Array.isArray(apiRes.data.bids || apiRes.data)) {
-          const items = apiRes.data.bids || apiRes.data;
-          for (const item of items) {
-            const name = item.title || item.name || item.bidName || '';
-            const agency = item.agency || item.owner || item.organization || '';
-            if (!name || name.length < 5) continue;
-            const key = name.slice(0, 40).toLowerCase();
-            if (seen.has(key)) continue;
-            const text = (name + ' ' + agency).toLowerCase();
-            if (!KEYWORDS.some(k => text.includes(k))) continue;
-            seen.add(key);
-            bids.push({
-              id: 'h2bid-' + (item.id || Buffer.from(name + agency).toString('base64').slice(0, 12)),
-              source: 'H2bid', name,
-              agency: agency || 'Unknown', city: item.city || item.location || 'Texas',
-              region: detectRegion(item.city || item.location || ''),
-              scope: item.description || item.scope || 'Water/Wastewater E&I — See H2bid for scope',
-              due: cleanDate(item.dueDate || item.closingDate || item.due) || 'See link',
-              value: item.estimatedValue || item.value || 'TBD',
-              status: detectStatus(item.dueDate || item.closingDate || ''),
-              url: item.url || item.link || `https://h2bid.com/bids/${item.id || ''}`,
-              scrapedAt: new Date().toISOString()
-            });
-          }
-          handled = true;
-        }
-      } catch(apiErr) { /* fallback to HTML below */ }
-
-      // HTML fallback
-      if (!handled) {
-        const htmlUrls = [
-          `https://h2bid.com/Bids/BidsSearchPreview?keyword=${encodeURIComponent(kw)}&state=TX&country=US`,
-          `https://h2bid.com/bids?q=${encodeURIComponent(kw)}&state=TX&country=US`,
-        ];
-
-        for (const url of htmlUrls) {
-          try {
-            const res = await axios.get(url, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml',
-                'Referer': 'https://h2bid.com',
-              },
-              timeout: TIMEOUT
-            });
-
-            // Check if response is JSON
-            const contentType = res.headers['content-type'] || '';
-            if (contentType.includes('json')) {
-              const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-              const items = Array.isArray(data) ? data : (data.bids || data.results || []);
-              for (const item of items) {
-                const name = item.title || item.name || item.BidTitle || item.ProjectName || '';
-                const agency = item.agency || item.Agency || item.Owner || '';
-                if (!name || name.length < 5) continue;
-                const key = name.slice(0, 40).toLowerCase();
-                if (seen.has(key)) continue;
-                const text = (name + ' ' + agency).toLowerCase();
-                if (!KEYWORDS.some(k => text.includes(k))) continue;
-                seen.add(key);
-                bids.push({
-                  id: 'h2bid-' + Buffer.from(name + agency).toString('base64').slice(0, 12),
-                  source: 'H2bid', name,
-                  agency: agency || 'Unknown', city: item.City || item.city || 'Texas',
-                  region: detectRegion(item.City || item.city || ''),
-                  scope: 'Water/Wastewater E&I — See H2bid for scope',
-                  due: cleanDate(item.DueDate || item.dueDate || item.ClosingDate) || 'See link',
-                  value: item.EstimatedValue || item.estimatedValue || 'TBD',
-                  status: detectStatus(item.DueDate || item.dueDate || ''),
-                  url: `https://h2bid.com/bids/${item.BidID || item.id || ''}`,
-                  scrapedAt: new Date().toISOString()
-                });
-              }
-              break;
-            }
-
-            // HTML parse
-            const $ = cheerio.load(res.data);
-            const selectors = ['table tbody tr', '.bid-row', '[class*="bid-item"]', '.result-item'];
-            for (const sel of selectors) {
-              const rows = $(sel);
-              if (rows.length < 2) continue;
-              rows.each((i, el) => {
-                try {
-                  const cells = $(el).find('td');
-                  if (cells.length < 2) return;
-                  const name = $(cells[0]).text().trim() || $(cells[1]).text().trim();
-                  const agency = $(cells[1]).text().trim() || $(cells[2]).text().trim();
-                  const due = $(cells[cells.length - 1]).text().trim();
-                  const link = $(el).find('a').first().attr('href') || '';
-                  if (!name || name.length < 5 || /^(title|bid|name)$/i.test(name)) return;
-                  const key = name.slice(0, 40).toLowerCase();
-                  if (seen.has(key)) return;
-                  const text = (name + ' ' + agency).toLowerCase();
-                  if (!KEYWORDS.some(k => text.includes(k))) return;
-                  seen.add(key);
-                  bids.push({
-                    id: 'h2bid-' + Buffer.from(name + agency).toString('base64').slice(0, 12),
-                    source: 'H2bid', name,
-                    agency: agency || 'Unknown', city: 'Texas', region: 'statewide',
-                    scope: 'Water/Wastewater E&I — See H2bid for scope',
-                    due: cleanDate(due) || 'See link', value: 'TBD',
-                    status: detectStatus(due),
-                    url: link.startsWith('http') ? link : 'https://h2bid.com' + link,
-                    scrapedAt: new Date().toISOString()
-                  });
-                } catch(e) {}
-              });
-              break;
-            }
-            break;
-          } catch(e) {}
-        }
-      }
-
+      const $ = cheerio.load(res.data);
+      $('table tbody tr').each((i, el) => {
+        try {
+          const cells = $(el).find('td');
+          if (cells.length < 3) return;
+          const name = $(cells[0]).text().trim() || $(cells[1]).text().trim();
+          const agency = $(cells[1]).text().trim();
+          const due = $(cells[cells.length-1]).text().trim();
+          const link = $(el).find('a').first().attr('href') || '';
+          if (!name || name.length < 5) return;
+          const key = name.slice(0,40).toLowerCase();
+          if (seen.has(key)) return;
+          const text = (name+' '+agency).toLowerCase();
+          if (!KEYWORDS.some(k=>text.includes(k))) return;
+          seen.add(key);
+          bids.push({
+            id: 'h2bid-'+Buffer.from(name+agency).toString('base64').slice(0,12),
+            source: 'H2bid', name,
+            agency: agency||'Unknown', city: 'Texas', region: 'statewide',
+            scope: 'Water/Wastewater E&I — See H2bid for scope',
+            due: cleanDate(due)||'See link', value: 'TBD',
+            status: detectStatus(due),
+            url: link.startsWith('http')?link:`https://h2bid.com${link}`,
+            scrapedAt: new Date().toISOString()
+          });
+        } catch(e){}
+      });
       await sleep(2000);
     } catch(err) {
-      console.warn(`[H2bid] "${label}" failed:`, err.message);
+      console.warn('[H2bid]', kw, 'failed:', err.message);
     }
   }
-
   console.log('[H2bid] Found', bids.length, 'bids');
   return { bids, source: 'H2bid' };
 }
@@ -159,68 +61,153 @@ async function scrapeTXESBD() {
   const bids = [];
   const seen = new Set();
 
-  // TX ESBD is a SPA — scrape their search page with keyword searches
-  const searches = [
-    { url: 'https://www.txsmartbuy.gov/esbd?keywords=electrical+instrumentation+water', label: 'E&I Water' },
-    { url: 'https://www.txsmartbuy.gov/esbd?keywords=scada+water', label: 'SCADA' },
-    { url: 'https://www.txsmartbuy.gov/esbd?keywords=engineering+services+water', label: 'Engineering' },
-    { url: 'https://www.txsmartbuy.gov/esbd?keywords=wastewater+electrical', label: 'WW Electrical' },
+  // TX ESBD API endpoints — direct JSON API calls
+  const apiEndpoints = [
+    {
+      url: 'https://www.txsmartbuy.gov/esbd/api/v1/solicitations?keywords=electrical+instrumentation+water&status=open&limit=50',
+      label: 'API v1 E&I Water'
+    },
+    {
+      url: 'https://www.txsmartbuy.gov/esbd/api/solicitations?q=electrical+water&state=TX&status=open',
+      label: 'API solicitations'
+    },
+    {
+      url: 'https://comptroller.texas.gov/purchasing/vendor/cps/esbd/search.php?kw=electrical+instrumentation+water&status=O',
+      label: 'Comptroller search'
+    }
   ];
 
-  for (const { url, label } of searches) {
+  // Try API endpoints first
+  for (const { url, label } of apiEndpoints) {
     try {
       const res = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
+          'Accept': 'application/json, text/html',
+          'X-Requested-With': 'XMLHttpRequest'
         },
         timeout: TIMEOUT
       });
 
-      const $ = cheerio.load(res.data);
-      let parsed = 0;
+      // Handle JSON response
+      if (typeof res.data === 'object') {
+        const items = res.data.solicitations || res.data.bids || res.data.results || 
+                      res.data.data || (Array.isArray(res.data) ? res.data : []);
+        if (items.length > 0) {
+          console.log(`[TX ESBD] ${label}: ${items.length} results from API`);
+          for (const item of items) {
+            const name = item.title || item.name || item.solicitationTitle || item.description || '';
+            const agency = item.agency || item.agencyName || item.entity || 'Texas State Agency';
+            if (!name || name.length < 5) continue;
+            const key = name.slice(0,50).toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            bids.push({
+              id: 'esbd-'+Buffer.from(name+agency).toString('base64').slice(0,14),
+              source: 'TX ESBD', name,
+              agency, city: 'Texas', region: 'statewide',
+              scope: item.description || item.scope || 'TX ESBD Solicitation — E&I Engineering',
+              due: cleanDate(item.dueDate || item.closingDate || item.responseDeadline) || 'See link',
+              value: item.estimatedValue || item.value || 'TBD',
+              status: detectStatus(item.dueDate || item.closingDate || ''),
+              url: item.url || item.link || `https://www.txsmartbuy.gov/esbd/${item.id||''}`,
+              scrapedAt: new Date().toISOString()
+            });
+          }
+          if (bids.length > 0) break;
+        }
+      }
+      await sleep(1500);
+    } catch(err) {
+      console.warn(`[TX ESBD] ${label} failed:`, err.message);
+    }
+  }
 
-      // Try multiple selectors
-      const selectors = ['table tbody tr', '.bid-row', '[class*="solicitation"] tr', 'tr'];
-      for (const sel of selectors) {
-        const rows = $(sel);
-        if (rows.length < 2) continue;
+  // Fallback — try ESBD portal search page with different keywords
+  if (bids.length === 0) {
+    const fallbackUrls = [
+      'https://www.txsmartbuy.gov/esbd?keywords=electrical+instrumentation',
+      'https://www.txsmartbuy.gov/esbd?keywords=scada+water+treatment',
+      'https://www.txsmartbuy.gov/esbd?keywords=wastewater+electrical'
+    ];
 
-        rows.each((i, el) => {
+    for (const url of fallbackUrls) {
+      try {
+        const res = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          },
+          timeout: TIMEOUT
+        });
+
+        const $ = cheerio.load(res.data);
+
+        // Look for JSON data embedded in the page
+        const scripts = $('script:not([src])').toArray();
+        for (const script of scripts) {
+          const content = $(script).html() || '';
+          if (content.includes('solicitation') || content.includes('bids')) {
+            const match = content.match(/\[.*"title".*\]/s);
+            if (match) {
+              try {
+                const items = JSON.parse(match[0]);
+                items.forEach(item => {
+                  const name = item.title || item.name || '';
+                  if (!name || name.length < 5) return;
+                  const key = name.slice(0,50).toLowerCase();
+                  if (seen.has(key)) return;
+                  seen.add(key);
+                  bids.push({
+                    id: 'esbd-'+Buffer.from(name).toString('base64').slice(0,14),
+                    source: 'TX ESBD', name,
+                    agency: item.agency || 'Texas State Agency',
+                    city: 'Texas', region: 'statewide',
+                    scope: 'TX ESBD Solicitation — E&I Engineering',
+                    due: cleanDate(item.dueDate || '') || 'See link',
+                    value: 'TBD',
+                    status: detectStatus(item.dueDate || ''),
+                    url: `https://www.txsmartbuy.gov/esbd/${item.id||''}`,
+                    scrapedAt: new Date().toISOString()
+                  });
+                });
+              } catch(e) {}
+            }
+          }
+        }
+
+        // Try table parsing as last resort
+        $('table tbody tr, .solicitation-row').each((i, el) => {
           try {
             const cells = $(el).find('td');
             if (cells.length < 2) return;
-            const name = $(el).find('a, [class*="title"]').first().text().trim()
-              || $(cells[0]).text().trim();
+            const name = $(el).find('a').first().text().trim() || $(cells[0]).text().trim();
             const agency = $(cells[1]).text().trim();
-            const due = $(cells[cells.length - 1]).text().trim();
+            const due = $(cells[cells.length-1]).text().trim();
             const link = $(el).find('a').first().attr('href') || '';
             if (!name || name.length < 5) return;
-            if (/^(title|solicitation|agency|due|date|status|type|no\.)$/i.test(name.trim())) return;
-            const key = name.slice(0, 50).toLowerCase();
+            const key = name.slice(0,50).toLowerCase();
             if (seen.has(key)) return;
             seen.add(key);
-            parsed++;
             bids.push({
-              id: 'esbd-' + Buffer.from(name + agency).toString('base64').slice(0, 14),
+              id: 'esbd-'+Buffer.from(name+agency).toString('base64').slice(0,14),
               source: 'TX ESBD', name,
-              agency: agency || 'Texas State Agency',
+              agency: agency||'Texas State Agency',
               city: 'Texas', region: 'statewide',
-              scope: 'Texas ESBD Solicitation — Electrical/Instrumentation/SCADA Engineering',
-              due: cleanDate(due) || 'See link', value: 'TBD',
+              scope: 'TX ESBD Solicitation — E&I Engineering',
+              due: cleanDate(due)||'See link', value: 'TBD',
               status: detectStatus(due),
-              url: link.startsWith('http') ? link : link ? 'https://www.txsmartbuy.gov' + link : url,
+              url: link.startsWith('http')?link:`https://www.txsmartbuy.gov${link}`,
               scrapedAt: new Date().toISOString()
             });
           } catch(e) {}
         });
-        if (parsed > 0) break;
-      }
 
-      console.log('[TX ESBD] "' + label + '": ' + parsed + ' bids');
-      await sleep(2000);
-    } catch(err) {
-      console.warn('[TX ESBD] "' + label + '" failed:', err.message);
+        if (bids.length > 0) break;
+        await sleep(2000);
+      } catch(err) {
+        console.warn('[TX ESBD] Fallback failed:', err.message);
+      }
     }
   }
 
@@ -228,29 +215,28 @@ async function scrapeTXESBD() {
   return { bids, source: 'TX ESBD' };
 }
 
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function cleanDate(str) {
   if (!str) return '';
   const match = str.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4}/i);
-  return match ? match[0] : str.replace(/due|close|date|:/gi, '').trim().slice(0, 30);
+  return match ? match[0] : str.replace(/due|close|date|:/gi,'').trim().slice(0,30);
 }
 
-function detectStatus(due = '') {
+function detectStatus(due='') {
   try {
     const d = new Date(due);
-    const diff = (d - Date.now()) / 86400000;
+    const diff = (d-Date.now())/86400000;
     if (isNaN(diff)) return 'active';
-    if (diff <= 7) return 'closing';
-    return diff <= 30 ? 'active' : 'prebid';
+    if (diff<=7) return 'closing';
+    return diff<=30?'active':'prebid';
   } catch { return 'active'; }
 }
 
-function detectRegion(city = '') {
+function detectRegion(city='') {
   const c = city.toLowerCase();
-  if (['houston','pearland','baytown','pasadena','katy','sugar land','league city','conroe','galveston'].some(h => c.includes(h))) return 'houston';
-  if (['dallas','plano','fort worth','arlington','denton'].some(h => c.includes(h))) return 'dfw';
+  if (['houston','pearland','baytown','pasadena','katy','sugar land','league city','conroe','galveston'].some(h=>c.includes(h))) return 'houston';
+  if (['dallas','plano','fort worth','arlington'].some(h=>c.includes(h))) return 'dfw';
   if (c.includes('austin')) return 'austin';
   if (c.includes('san antonio')) return 'sa';
   return 'statewide';
