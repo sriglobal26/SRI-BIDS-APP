@@ -327,7 +327,6 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
   <button class="tab-btn" onclick="switchTab('primes',this)">Prime Contractors</button>
   <button class="tab-btn" onclick="switchTab('agencies',this)">Agencies</button>
   <button class="tab-btn" onclick="switchTab('platforms',this)">Platforms</button>
-  <button class="tab-btn" onclick="switchTab('settings',this)" style="margin-left:auto;color:var(--yellow)">⚙ Settings</button>
 </div>
 
 <div class="wrap">
@@ -637,51 +636,6 @@ Best regards,
 </footer>
 
 
-
-<!-- ══ TAB: SETTINGS ══ -->
-<div class="tab-pane" id="tab-settings">
-  <div class="ph">
-    <div>
-      <div class="badge" style="color:var(--yellow);border-color:rgba(255,209,102,.3)">// Scraper Credentials</div>
-      <h1>Settings</h1>
-      <p class="subtitle">Enter your login credentials for bid sources. Saved securely to the server.</p>
-    </div>
-  </div>
-
-  <div style="max-width:500px">
-    <div class="sec" style="color:var(--cyan)">EnviroBidNet Credentials</div>
-    <div style="background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:20px;margin-bottom:20px">
-      <div class="fg" style="margin-bottom:12px">
-        <label class="fl2">Username / Email</label>
-        <input class="fi" id="ebn-user" placeholder="your@email.com" type="email">
-      </div>
-      <div class="fg" style="margin-bottom:16px">
-        <label class="fl2">Password</label>
-        <input class="fi" id="ebn-pass" placeholder="••••••••" type="password">
-      </div>
-      <button class="btn1" onclick="saveSettings()">💾 Save & Test</button>
-      <span id="settings-status" style="font-family:var(--mono);font-size:10px;color:var(--gray);margin-left:12px"></span>
-    </div>
-
-    <div class="sec" style="color:var(--cyan)">CivCast Credentials</div>
-    <div style="background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:20px;margin-bottom:20px">
-      <div class="fg" style="margin-bottom:12px">
-        <label class="fl2">Username / Email</label>
-        <input class="fi" id="cc-user" placeholder="your@email.com" type="email">
-      </div>
-      <div class="fg" style="margin-bottom:16px">
-        <label class="fl2">Password</label>
-        <input class="fi" id="cc-pass" placeholder="••••••••" type="password">
-      </div>
-      <button class="btn1" onclick="saveSettings()">💾 Save & Test</button>
-    </div>
-
-    <div style="background:rgba(0,200,212,.06);border:1px solid rgba(0,200,212,.2);border-radius:4px;padding:14px;font-family:var(--mono);font-size:10px;color:#A8D8E8;line-height:1.8">
-      💡 After saving, go to <strong style="color:var(--cyan)">Active Bids</strong> tab and click <strong style="color:var(--cyan)">Pull Latest Bids Now</strong> to test.
-    </div>
-  </div>
-</div>
-
 </div><!-- end wrap -->
 
 <!-- ══ MODALS ══ -->
@@ -755,7 +709,20 @@ Best regards,
 // ═════════════════════════════════════
 // DATA
 // ═════════════════════════════════════
-let BIDS = []; // loaded from /api/bids
+const BIDS=[
+  {id:1,num:'01',name:'Water & Wastewater Facilities IDIQ',agency:'City of Austin – Austin Water',city:'Austin',scope:'IDIQ task-order contract; E&I engineering design work assignments at multiple water & wastewater facilities',due:'Mar 26, 2026',value:'IDIQ / TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
+  {id:2,num:'02',name:'Overhaul Washwater Return Vertical Turbine Pump',agency:'City of Austin – Austin Water',city:'Austin',scope:'Comprehensive overhaul of vertical turbine pump; electrical motor, controls & instrumentation components',due:'Mar 26, 2026',value:'TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
+  {id:3,num:'03',name:'TCWSP Murphy Drive Pump Station – Generator Improvements',agency:'Trinity River Authority (TRA)',city:'DFW Region',scope:'Two 3,000kW generators, MV switchgear, paralleling switchgear, underground duct banks; full SCADA integration design',due:'Active – TBD',value:'TBD',status:'active',region:'dfw',url:'https://tra.procureware.com/Bids'},
+  {id:4,num:'04',name:'Muddy Creek WWTP – Emergency Power & PLC Replacement',agency:'City of Fort Worth',city:'Fort Worth',scope:'480V / 1,500kW generators, ATS, PLC replacements, odor control electrical improvements',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
+  {id:5,num:'05',name:'Plano Spring Creek Lift Station No. 2 Improvements',agency:'City of Fort Worth / Plano',city:'Fort Worth / Plano',scope:'Electrical & control equipment, AFDs for 4 pumps, 60 MGD capacity; decommission LS No. 1 electrical',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
+  {id:6,num:'06',name:'Ten Mile Creek – DAF & Electrical / Instrumentation Improvements',agency:'City of Dallas',city:'Dallas',scope:'Decommission DAF tanks; electrical & instrumentation improvements; RAS/WAS & thickener electrical upgrades',due:'TBD 2026',value:'~$17,400,000',status:'active',region:'dfw',url:'https://dallascityhall.com/departments/procurement/Pages/current_bids_proposals.aspx'},
+  {id:7,num:'07',name:'Bandera Lift Station Rehabilitation – E&I Package',agency:'Harris County WCID No. 36',city:'Houston (Harris Co.)',scope:'SCADA & network panels, VFD, ATS, instrumentation & control devices, conduit, wire; SCADA programming',due:'TBD 2026',value:'~$2,206,436',status:'active',region:'houston',url:'https://www.harriscountywcid36.com/'},
+  {id:8,num:'08',name:'Lift Station – New Electrical Equipment & Pumps',agency:'Harris County UD No. 6',city:'Houston (Harris Co.)',scope:'Install new electrical equipment on elevated platform, new pumps; backup generator; controls and panel upgrades',due:'In Progress – Fall 2026',value:'TBD',status:'active',region:'houston',url:'https://www.harriscountyud6.org/'},
+  {id:9,num:'09',name:'Medio Creek WRC – Standby Generator Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Standby generator replacement at wastewater reclamation facility; electrical and controls integration',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
+  {id:10,num:'10',name:'Bitters Pump Station Upgrades & Tank Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Electrical, automation & controls upgrades; pump station improvements; tank replacement with full E&I scope',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
+  {id:11,num:'11',name:'Surface Water Treatment Plant – E&I & SCADA Engineering Design',agency:'City of Pearland',city:'Pearland (S. Houston)',scope:'Main site power & distribution system design; SCADA system architecture; instrumentation engineering for treatment trains, pump station, ground storage tanks',due:'CMAR GMP – Mid-2026',value:'Part of ~$71.4M pkg',status:'prebid',region:'houston',url:'https://www.pearlandtx.gov/departments/engineering-and-public-works/projects-division/project-updates/surface-water-treatment-plant'},
+  {id:12,num:'12',name:'City of Strawn – WTP SCADA & Electrical Engineering Design',agency:'City of Strawn (TWDB HB500)',city:'Strawn (W. Texas)',scope:'Open-source SCADA system design, alternate power supply engineering, electrical design for microfilter replacement; TWDB grant funded',due:'TBD – Post-funding',value:'~$1,085,000',status:'prebid',region:'statewide',url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp'},
+];
 
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
@@ -883,14 +850,15 @@ function switchTab(id,btn){
 function row(b,ctx){
   const dcl=(b.status==='closing'&&ctx==='active')?' style="color:var(--red)"':'';
   let acts='';
-  if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(${b.id},'selected')">✓ Select</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else if(ctx==='selected') acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button></div>`;
+  const eid=encodeURIComponent(b.id);
+  if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent('${eid}'),'selected')">✓ Select</button><button class="ab del" onclick="mark(decodeURIComponent('${eid}'),'deleted')">✕ Delete</button></div>`;
+  else if(ctx==='selected') acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button><button class="ab del" onclick="mark(decodeURIComponent('${eid}'),'deleted')">✕ Delete</button></div>`;
+  else acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button></div>`;
   const stCl=ctx==='selected'?'selected':ctx==='deleted'?'deleted':(SL[b.status]||'active');
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
   const urlCell = b.url
-    ? `<td class="tu"><a href="${b.url}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px;display:block;margin-bottom:4px" title="${b.url}">↗ View RFQ</a><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--gray);padding:2px 6px;border-radius:2px;cursor:pointer">✎ Edit</button></td>`
-    : `<td class="tu"><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(0,200,212,.25);background:rgba(0,200,212,.06);color:var(--cyan);padding:3px 8px;border-radius:2px;cursor:pointer">+ Add Link</button></td>`;
+    ? `<td class="tu"><a href="${b.url}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px;display:block;margin-bottom:4px" title="${b.url}">↗ View RFQ</a><button onclick="editUrl(decodeURIComponent('${eid}'))" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--gray);padding:2px 6px;border-radius:2px;cursor:pointer">✎ Edit</button></td>`
+    : `<td class="tu"><button onclick="editUrl(decodeURIComponent('${eid}'))" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(0,200,212,.25);background:rgba(0,200,212,.06);color:var(--cyan);padding:3px 8px;border-radius:2px;cursor:pointer">+ Add Link</button></td>`;
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
     <td class="tn">${b.num}</td><td class="tp">${b.name}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
     <td class="ts">${b.scope}</td>${urlCell}<td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
@@ -909,7 +877,16 @@ function renderAll(){
   applyF(); updBadges(); updStats(); populateCampSelect();
 }
 
-function mark(id,state){bidState[id]=state;renderAll();}
+function mark(id,state){
+  bidState[id]=state;
+  renderAll();
+  // Save to server so it persists after refresh
+  fetch('/api/bids/'+id, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({userState:state})
+  }).catch(e=>console.warn('mark save failed:',e.message));
+}
 
 function updBadges(){
   document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active').length;
@@ -924,7 +901,8 @@ function updStats(){
 function filt(f,btn){curF=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyF();}
 function srch(q){curS=q.toLowerCase().trim();applyF();}
 function isReallyClosing(b){
-  // Only show in Closing Soon if due date is real and in the future (within 14 days)
+  // Show if status is 'closing' OR due date is within 14 days
+  if(b.status==='closing') return true;
   try{
     const d=new Date(b.due);
     if(isNaN(d.getTime())) return false;
@@ -934,13 +912,14 @@ function isReallyClosing(b){
 }
 
 function checkExpired(){
-  // Move past-due unselected bids to deleted
+  // Update status to closing if due within 7 days — don't auto-delete
   BIDS.forEach(b=>{
     if(bidState[b.id]!=='active') return;
     try{
       const d=new Date(b.due);
       if(isNaN(d.getTime())) return;
-      if((d-Date.now())<0) bidState[b.id]='deleted';
+      const diff=(d-Date.now())/86400000;
+      if(diff>=0 && diff<=7) b.status='closing';
     }catch{}
   });
 }
@@ -952,7 +931,8 @@ function applyF(){
     let mf=false;
     if(curF==='all') mf=true;
     else if(curF==='closing') mf=isReallyClosing(b);
-    else if(curF==='active') mf=b.status==='active'||b.status==='closing';
+    else if(curF==='active'||curF==='open') mf=b.status==='active'||b.status==='closing'||b.status==='prebid';
+    else if(curF==='week') mf=isReallyClosing(b);
     else if(curF==='prebid') mf=b.status==='prebid';
     else if(curF==='houston') mf=b.region==='houston';
     else if(curF==='texas') mf=['austin','sa','dfw','statewide'].includes(b.region);
@@ -1299,7 +1279,7 @@ document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e
 // EDIT BID URL
 // ═════════════════════════════════════
 function editUrl(bidId){
-  const b = BIDS.find(x=>x.id===bidId);
+  const b = BIDS.find(x=>String(x.id)===String(bidId));
   const newUrl = prompt(`RFQ Link for:\n${b.name}\n\nPaste the official city/agency bid URL:`, b.url||'');
   if(newUrl===null) return;
   b.url = newUrl.trim();
@@ -1492,65 +1472,6 @@ function deletePrime(pid){
   renderPrimes();
 }
 
-// ═══════════════════════════════════
-// FETCH BIDS FROM SERVER API
-// ═══════════════════════════════════
-async function fetchBids(){
-  const status = document.getElementById('scrape-status');
-  try {
-    if(status){ status.className='scrape-status running'; status.textContent='Loading bids...'; }
-    const res = await fetch('/api/bids');
-    const data = await res.json();
-    BIDS = (data.bids||[]).map((b,i) => ({
-      id: b.id || 'bid-'+i,
-      num: String(i+1).padStart(2,'0'),
-      name: b.name || b.title || 'Unnamed Bid',
-      agency: b.agency || b.owner || 'Unknown Agency',
-      city: b.city || b.location || 'Texas',
-      scope: b.scope || b.description || 'E&I Engineering',
-      due: b.due || b.dueDate || 'See link',
-      value: b.value || 'TBD',
-      status: b.status || 'active',
-      region: b.region || 'statewide',
-      url: b.url || b.link || '',
-      source: b.source || 'Unknown'
-    }));
-    bidState = {};
-    BIDS.forEach(b => { bidState[b.id] = isNonDesign(b) ? 'deleted' : 'active'; });
-    if(data.lastUpdated){
-      const lpt = document.getElementById('last-pull-time');
-      if(lpt) lpt.textContent = new Date(data.lastUpdated).toLocaleString();
-    }
-    if(status){ status.className='scrape-status done'; status.textContent = BIDS.length + ' bids loaded'; }
-    renderAll();
-    populateCampSelect();
-  } catch(e) {
-    console.error('fetchBids:', e.message);
-    if(status){ status.className='scrape-status error'; status.textContent='Could not load bids'; }
-  }
-}
-
-async function triggerScrape(){
-  const status = document.getElementById('scrape-status');
-  if(status){ status.className='scrape-status running'; status.textContent='Pulling from all sources...'; }
-  try {
-    await fetch('/api/scrape', {method:'POST'});
-    // Poll every 5s until bids update
-    let tries = 0;
-    const prevCount = BIDS.length;
-    const poll = setInterval(async()=>{
-      tries++;
-      await fetchBids();
-      if(BIDS.length !== prevCount || tries > 24){
-        clearInterval(poll);
-        if(status){ status.className='scrape-status done'; status.textContent='Done — '+BIDS.length+' bids'; }
-      }
-    }, 5000);
-  } catch(e) {
-    if(status){ status.className='scrape-status error'; status.textContent='Scrape failed'; }
-  }
-}
-
 async function fetchPrimes(){
   try{
     const res=await fetch('/api/primes');
@@ -1609,40 +1530,6 @@ function closeSrc(){
 })();
 renderAll();
 fetchPrimes();
-fetchBids();
-loadSettings();
-
-// ── SETTINGS ──
-async function loadSettings(){
-  try {
-    const res = await fetch('/api/settings');
-    const d = await res.json();
-    if(d.envirobidnet_user) document.getElementById('ebn-user').value = d.envirobidnet_user;
-    if(d.envirobidnet_pass) document.getElementById('ebn-pass').value = d.envirobidnet_pass;
-    if(d.civcast_user) document.getElementById('cc-user').value = d.civcast_user;
-    if(d.civcast_pass) document.getElementById('cc-pass').value = d.civcast_pass;
-  } catch(e){}
-}
-
-async function saveSettings(){
-  const status = document.getElementById('settings-status');
-  if(status) status.textContent = 'Saving...';
-  try {
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        envirobidnet_user: document.getElementById('ebn-user').value,
-        envirobidnet_pass: document.getElementById('ebn-pass').value,
-        civcast_user: document.getElementById('cc-user').value,
-        civcast_pass: document.getElementById('cc-pass').value
-      })
-    });
-    if(status){ status.textContent = '✓ Saved! Now pull bids to test.'; status.style.color='var(--green)'; }
-  } catch(e){
-    if(status){ status.textContent = '✗ Save failed'; status.style.color='var(--red)'; }
-  }
-}
 // Primes render deferred to tab click - avoids freeze on load
 </script>
 </body>

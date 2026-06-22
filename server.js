@@ -7,39 +7,9 @@ const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-const fs = require('fs');
-
-// Serve index.html with bids injected server-side
-app.get('/', async (req, res) => {
-  try {
-    let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-    const data = await readBids();
-    const bidsJson = JSON.stringify(data.bids || []);
-    // Inject bids into the page - replace hardcoded BIDS array
-    html = html.replace(
-      /const BIDS=\[[\s\S]*?\];/,
-      `const BIDS=${bidsJson};`
-    );
-    // Also handle let BIDS = [];
-    html = html.replace(
-      /let BIDS = \[\]; \/\/ loaded from \/api\/bids/,
-      `let BIDS = ${bidsJson};`
-    );
-    // Also handle let BIDS = [];  (any variant)
-    html = html.replace(
-      /let BIDS=\[\];/,
-      `let BIDS=${bidsJson};`
-    );
-    res.send(html);
-  } catch(e) {
-    console.error('Serve error:', e.message);
-    res.sendFile(__dirname + '/index.html');
-  }
-});
-
 app.use(express.static(__dirname));
 
 // ─── DATABASE ────────────────────────────────────────────────
@@ -104,14 +74,6 @@ async function initDB() {
   await pool.query(`
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
   `).catch(() => {});
-  // Settings table
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS settings (
-      id TEXT PRIMARY KEY,
-      data JSONB NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
   console.log('[DB] Ready');
 
   // Seed known bids if DB is empty
@@ -135,6 +97,7 @@ const SEED_BIDS = [
 
 // ─── NORMALIZE ───────────────────────────────────────────────
 function normalizeBid(raw, idx) {
+  // Include userState so frontend can restore select/delete status
   return {
     id: raw.id || 'bid-' + idx,
     num: String(idx + 1).padStart(2, '0'),
@@ -185,59 +148,6 @@ let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished:
 
 // ─── ROUTES ──────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: Math.round(process.uptime()) }));
-
-// ── Settings API — save scraper credentials to DB ──
-async function getSettings() {
-  try {
-    const r = await pool.query("SELECT data FROM settings WHERE id='scraper_creds' LIMIT 1");
-    if (r.rows.length > 0) {
-      const d = r.rows[0].data;
-      process.env.CIVCAST_USER = d.civcast_user || process.env.CIVCAST_USER || '';
-      process.env.CIVCAST_PASS = d.civcast_pass || process.env.CIVCAST_PASS || '';
-      process.env.ENVIROBIDNET_USER = d.envirobidnet_user || process.env.ENVIROBIDNET_USER || '';
-      process.env.ENVIROBIDNET_PASS = d.envirobidnet_pass || process.env.ENVIROBIDNET_PASS || '';
-      return d;
-    }
-  } catch(e) { console.error('[Settings] Read error:', e.message); }
-  return {};
-}
-
-app.get('/api/settings', async (req, res) => {
-  const d = await getSettings();
-  res.json({
-    civcast_user: d.civcast_user || process.env.CIVCAST_USER || '',
-    civcast_pass: (d.civcast_pass || process.env.CIVCAST_PASS) ? '••••••••' : '',
-    envirobidnet_user: d.envirobidnet_user || process.env.ENVIROBIDNET_USER || '',
-    envirobidnet_pass: (d.envirobidnet_pass || process.env.ENVIROBIDNET_PASS) ? '••••••••' : ''
-  });
-});
-
-app.post('/api/settings', async (req, res) => {
-  try {
-    const { civcast_user, civcast_pass, envirobidnet_user, envirobidnet_pass } = req.body;
-    const existing = await getSettings();
-    const updated = {
-      civcast_user: civcast_user || existing.civcast_user || '',
-      civcast_pass: (civcast_pass && civcast_pass !== '••••••••') ? civcast_pass : (existing.civcast_pass || ''),
-      envirobidnet_user: envirobidnet_user || existing.envirobidnet_user || '',
-      envirobidnet_pass: (envirobidnet_pass && envirobidnet_pass !== '••••••••') ? envirobidnet_pass : (existing.envirobidnet_pass || '')
-    };
-    await pool.query(
-      "INSERT INTO settings (id, data) VALUES ('scraper_creds', $1) ON CONFLICT (id) DO UPDATE SET data=$1",
-      [JSON.stringify(updated)]
-    );
-    // Apply immediately to env
-    process.env.CIVCAST_USER = updated.civcast_user;
-    process.env.CIVCAST_PASS = updated.civcast_pass;
-    process.env.ENVIROBIDNET_USER = updated.envirobidnet_user;
-    process.env.ENVIROBIDNET_PASS = updated.envirobidnet_pass;
-    console.log('[Settings] Saved to DB — EBN:', updated.envirobidnet_user, '| CC:', updated.civcast_user);
-    res.json({ success: true });
-  } catch(e) {
-    console.error('[Settings] Save error:', e.message);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
 
 app.get('/api/bids', async (req, res) => {
   try { res.json(await readBids()); }
@@ -362,11 +272,7 @@ require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 A
 initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log('[SRI Bids] Listening on port', PORT);
-    // Load saved credentials from DB before first scrape
-    getSettings().then(() => {
-      console.log('[Settings] Loaded from DB');
-      setTimeout(runScrape, 8000);
-    }).catch(() => setTimeout(runScrape, 8000));
+    setTimeout(runScrape, 8000);
   });
 }).catch(err => {
   console.error('[DB] Init failed:', err.message);
