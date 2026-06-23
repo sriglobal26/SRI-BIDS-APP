@@ -80,10 +80,12 @@ async function scrapeTXESBD() {
     try {
       // TX ESBD NIGP code search URL
       const nigpNum = code.replace('-', '');
+      // TX ESBD uses classitemCode parameter (e.g. 92533 for 925-33)
+      const classCode = code.replace('-','');
       const urls = [
-        `https://www.txsmartbuy.gov/esbd?nigpCode=${code}&status=open`,
-        `https://www.txsmartbuy.gov/esbd?nigp=${nigpNum}&status=open`,
-        `https://comptroller.texas.gov/purchasing/vendor/cps/esbd/search.php?nigp=${nigpNum}&status=O`
+        `https://www.txsmartbuy.gov/esbd?classitemCode=${classCode}`,
+        `https://www.txsmartbuy.gov/esbd?classItemCode=${classCode}&status=open`,
+        `https://www.txsmartbuy.gov/esbd?nigp=${classCode}&status=open`
       ];
 
       for (const url of urls) {
