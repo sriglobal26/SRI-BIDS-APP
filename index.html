@@ -613,7 +613,17 @@ Best regards,
   <div class="plg">
     <div class="plc"><div class="pln">H2bid</div><div class="plt">Largest water/WW utility bid database nationally. Best for E&I keyword searches by state.</div><div class="plks"><span class="kw">SCADA</span><span class="kw">instrumentation</span><span class="kw">generator</span><span class="kw">controls</span></div><a href="https://h2bid.com" target="_blank" class="pll">h2bid.com</a></div>
     <div class="plc"><div class="pln">CivCast USA</div><div class="plt">Texas-focused civil/construction bid platform. Heavy GC and sub presence; free to browse.</div><div class="plks"><span class="kw">electrical water TX</span><span class="kw">instrumentation</span></div><a href="https://civcastusa.com" target="_blank" class="pll">civcastusa.com</a></div>
-    <div class="plc"><div class="pln">TX ESBD</div><div class="plt">Official Texas Electronic State Business Daily. All state & local bids required to post here. NIGP codes: 925-33, 925-97, 925-93, 925-31, 925-57.</div><div class="plks"><span class="kw">925-33</span><span class="kw">925-97</span><span class="kw">925-93</span><span class="kw">925-31</span><span class="kw">925-57</span></div><a href="https://www.txsmartbuy.gov/esbd" target="_blank" class="pll">txsmartbuy.gov/esbd</a></div>
+    <div class="plc">
+  <div class="pln">TX ESBD</div>
+  <div class="plt">Texas Electronic State Business Daily — click NIGP code to search directly:</div>
+  <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
+    <a href="https://www.txsmartbuy.gov/esbd?classitemCode=92533&status=open" target="_blank" class="source-pill" style="font-size:10px">925-33 Engineering</a>
+    <a href="https://www.txsmartbuy.gov/esbd?classitemCode=92597&status=open" target="_blank" class="source-pill" style="font-size:10px;color:var(--cyan)">925-97 Water Supply</a>
+    <a href="https://www.txsmartbuy.gov/esbd?classitemCode=92593&status=open" target="_blank" class="source-pill" style="font-size:10px;color:var(--cyan)">925-93 Wastewater</a>
+    <a href="https://www.txsmartbuy.gov/esbd?classitemCode=92531&status=open" target="_blank" class="source-pill" style="font-size:10px;color:var(--yellow)">925-31 Electrical</a>
+    <a href="https://www.txsmartbuy.gov/esbd?classitemCode=92557&status=open" target="_blank" class="source-pill" style="font-size:10px;color:var(--yellow)">925-57 Instrumentation</a>
+  </div>
+</div><div class="plt">Official Texas Electronic State Business Daily. All state & local bids required to post here. NIGP codes: 925-33, 925-97, 925-93, 925-31, 925-57.</div><div class="plks"><span class="kw">925-33</span><span class="kw">925-97</span><span class="kw">925-93</span><span class="kw">925-31</span><span class="kw">925-57</span></div><a href="https://www.txsmartbuy.gov/esbd" target="_blank" class="pll">txsmartbuy.gov/esbd</a></div>
     <div class="plc"><div class="pln">TRA Procureware</div><div class="plt">Trinity River Authority's own portal. Register for TRA bid alerts — DFW generator and SCADA work.</div><div class="plks"><span class="kw">TRA</span><span class="kw">generator</span><span class="kw">SCADA</span></div><a href="https://tra.procureware.com/Bids" target="_blank" class="pll">tra.procureware.com/Bids</a></div>
     <div class="plc"><div class="pln">EnviroBidNet</div><div class="plt">Specialized environmental & SCADA bid aggregator. Dedicated SCADA & Environmental Technology category.</div><div class="plks"><span class="kw">SCADA</span><span class="kw">environmental tech</span></div><a href="https://envirobidnet.com/bids/scada-and-environmental-technology/all" target="_blank" class="pll">envirobidnet.com — SCADA</a></div>
     <div class="plc"><div class="pln">BidNet Direct TX</div><div class="plt">Texas local government procurement network. Real-time keyword-matched notifications including Houston-area MUDs.</div><div class="plks"><span class="kw">water E&I</span><span class="kw">MUD bids</span></div><a href="https://www.bidnetdirect.com/texas" target="_blank" class="pll">bidnetdirect.com/texas</a></div>
@@ -709,26 +719,18 @@ Best regards,
 // ═════════════════════════════════════
 // DATA
 // ═════════════════════════════════════
-const BIDS=[
-  {id:1,num:'01',name:'Water & Wastewater Facilities IDIQ',agency:'City of Austin – Austin Water',city:'Austin',scope:'IDIQ task-order contract; E&I engineering design work assignments at multiple water & wastewater facilities',due:'Mar 26, 2026',value:'IDIQ / TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:2,num:'02',name:'Overhaul Washwater Return Vertical Turbine Pump',agency:'City of Austin – Austin Water',city:'Austin',scope:'Comprehensive overhaul of vertical turbine pump; electrical motor, controls & instrumentation components',due:'Mar 26, 2026',value:'TBD',status:'closing',region:'austin',url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm'},
-  {id:3,num:'03',name:'TCWSP Murphy Drive Pump Station – Generator Improvements',agency:'Trinity River Authority (TRA)',city:'DFW Region',scope:'Two 3,000kW generators, MV switchgear, paralleling switchgear, underground duct banks; full SCADA integration design',due:'Active – TBD',value:'TBD',status:'active',region:'dfw',url:'https://tra.procureware.com/Bids'},
-  {id:4,num:'04',name:'Muddy Creek WWTP – Emergency Power & PLC Replacement',agency:'City of Fort Worth',city:'Fort Worth',scope:'480V / 1,500kW generators, ATS, PLC replacements, odor control electrical improvements',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:5,num:'05',name:'Plano Spring Creek Lift Station No. 2 Improvements',agency:'City of Fort Worth / Plano',city:'Fort Worth / Plano',scope:'Electrical & control equipment, AFDs for 4 pumps, 60 MGD capacity; decommission LS No. 1 electrical',due:'TBD 2026',value:'TBD',status:'active',region:'dfw',url:'https://www.fortworthtexas.gov/departments/water'},
-  {id:6,num:'06',name:'Ten Mile Creek – DAF & Electrical / Instrumentation Improvements',agency:'City of Dallas',city:'Dallas',scope:'Decommission DAF tanks; electrical & instrumentation improvements; RAS/WAS & thickener electrical upgrades',due:'TBD 2026',value:'~$17,400,000',status:'active',region:'dfw',url:'https://dallascityhall.com/departments/procurement/Pages/current_bids_proposals.aspx'},
-  {id:7,num:'07',name:'Bandera Lift Station Rehabilitation – E&I Package',agency:'Harris County WCID No. 36',city:'Houston (Harris Co.)',scope:'SCADA & network panels, VFD, ATS, instrumentation & control devices, conduit, wire; SCADA programming',due:'TBD 2026',value:'~$2,206,436',status:'active',region:'houston',url:'https://www.harriscountywcid36.com/'},
-  {id:8,num:'08',name:'Lift Station – New Electrical Equipment & Pumps',agency:'Harris County UD No. 6',city:'Houston (Harris Co.)',scope:'Install new electrical equipment on elevated platform, new pumps; backup generator; controls and panel upgrades',due:'In Progress – Fall 2026',value:'TBD',status:'active',region:'houston',url:'https://www.harriscountyud6.org/'},
-  {id:9,num:'09',name:'Medio Creek WRC – Standby Generator Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Standby generator replacement at wastewater reclamation facility; electrical and controls integration',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:10,num:'10',name:'Bitters Pump Station Upgrades & Tank Replacement',agency:'San Antonio Water System (SAWS)',city:'San Antonio',scope:'Electrical, automation & controls upgrades; pump station improvements; tank replacement with full E&I scope',due:'Recently Bid',value:'TBD',status:'pending',region:'sa',url:'https://apps.saws.org/business_center/contractsol/'},
-  {id:11,num:'11',name:'Surface Water Treatment Plant – E&I & SCADA Engineering Design',agency:'City of Pearland',city:'Pearland (S. Houston)',scope:'Main site power & distribution system design; SCADA system architecture; instrumentation engineering for treatment trains, pump station, ground storage tanks',due:'CMAR GMP – Mid-2026',value:'Part of ~$71.4M pkg',status:'prebid',region:'houston',url:'https://www.pearlandtx.gov/departments/engineering-and-public-works/projects-division/project-updates/surface-water-treatment-plant'},
-  {id:12,num:'12',name:'City of Strawn – WTP SCADA & Electrical Engineering Design',agency:'City of Strawn (TWDB HB500)',city:'Strawn (W. Texas)',scope:'Open-source SCADA system design, alternate power supply engineering, electrical design for microfilter replacement; TWDB grant funded',due:'TBD – Post-funding',value:'~$1,085,000',status:'prebid',region:'statewide',url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp'},
-];
+let BIDS = [];
 
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
 // Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
 const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
 const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works'];
+const NON_DESIGN_KW = ['install','overhaul','construction','replacement','rehab'];
+function isNonDesign(b){
+  return NON_DESIGN_KW.some(k=>(b.name+' '+(b.scope||'')).toLowerCase().includes(k))||b.status==='pending';
+}
+
 let bidState={};
 BIDS.forEach(b=>{
   const srcExempt = EXEMPT_SOURCES.some(s => (b.source||'').toLowerCase().includes(s));
@@ -1472,6 +1474,70 @@ function deletePrime(pid){
   renderPrimes();
 }
 
+
+// ═══════════════════════════════════════
+// FETCH BIDS FROM SERVER
+// ═══════════════════════════════════════
+async function fetchBids(){
+  const status = document.getElementById('scrape-status');
+  try {
+    if(status){ status.className='scrape-status running'; status.textContent='Loading bids...'; }
+    const res = await fetch('/api/bids');
+    const data = await res.json();
+    BIDS = (data.bids||[]).map((b,i) => ({
+      id: b.id || 'bid-'+i,
+      num: String(i+1).padStart(2,'0'),
+      name: b.name || b.title || 'Unnamed Bid',
+      agency: b.agency || b.owner || 'Unknown Agency',
+      city: b.city || b.location || 'Texas',
+      scope: b.scope || b.description || 'E&I Engineering — See RFQ link',
+      due: b.due || b.dueDate || 'See link',
+      value: b.value || 'TBD',
+      status: b.status || 'active',
+      region: b.region || 'statewide',
+      url: b.url || b.link || '',
+      source: b.source || 'Unknown',
+      userState: b.userState || 'active'
+    }));
+    bidState = {};
+    BIDS.forEach(b => {
+      bidState[b.id] = (b.userState && b.userState !== 'active')
+        ? b.userState
+        : isNonDesign(b) ? 'deleted' : 'active';
+    });
+    if(data.lastUpdated){
+      const lpt = document.getElementById('last-pull-time');
+      if(lpt) lpt.textContent = new Date(data.lastUpdated).toLocaleString();
+    }
+    if(status){ status.className='scrape-status done'; status.textContent = BIDS.length + ' bids loaded'; }
+    renderAll();
+    populateCampSelect();
+  } catch(e){
+    console.error('fetchBids:', e.message);
+    if(status){ status.className='scrape-status error'; status.textContent='Could not load bids'; }
+  }
+}
+
+async function triggerScrape(){
+  const status = document.getElementById('scrape-status');
+  if(status){ status.className='scrape-status running'; status.textContent='Pulling from all sources...'; }
+  try {
+    await fetch('/api/scrape', {method:'POST'});
+    let tries = 0;
+    const prevCount = BIDS.length;
+    const poll = setInterval(async()=>{
+      tries++;
+      await fetchBids();
+      if(BIDS.length !== prevCount || tries > 24){
+        clearInterval(poll);
+        if(status){ status.className='scrape-status done'; status.textContent='Done — '+BIDS.length+' bids'; }
+      }
+    }, 5000);
+  } catch(e){
+    if(status){ status.className='scrape-status error'; status.textContent='Scrape failed — check server'; }
+  }
+}
+
 async function fetchPrimes(){
   try{
     const res=await fetch('/api/primes');
@@ -1496,7 +1562,7 @@ const SRC_CONFIG = {
   civcast:      { label: 'CivCast — Engineering Services TX', url: 'https://www.civcastusa.com/bids?keywords=engineering+services&state=TX&timeInfo=0' },
   envirobidnet: { label: 'EnviroBidNet — Login to view bids', url: 'https://envirobidnet.com/login' },
   h2bid:        { label: 'H2bid — Water/WW Engineering TX', url: 'https://h2bid.com/Bids/BidsSearchPreview?keyword=engineering+services&state=TX' },
-  txesbd:       { label: 'TX ESBD — NIGP 925-33/97/93/31/57', url: 'https://www.txsmartbuy.gov/esbd?classitemCode=92533' }
+  txesbd:       { label: 'TX ESBD — NIGP 925-33/97/93/31/57', url: 'https://www.txsmartbuy.gov/esbd?classitemCode=92597' }
 };
 let curSrc = null;
 function toggleSrc(key){
