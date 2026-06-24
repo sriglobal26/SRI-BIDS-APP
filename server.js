@@ -10,6 +10,42 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+const fs = require('fs');
+
+// Serve index.html with bids injected from database
+app.get('/', async (req, res) => {
+  try {
+    let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+    
+    // Get bids from database
+    const data = await readBids();
+    const bidsJson = JSON.stringify(data.bids || []);
+    
+    // Replace ANY form of BIDS declaration with live data
+    html = html
+      .replace(/const BIDS=\[[\s\S]*?\];/, 'let BIDS=' + bidsJson + ';')
+      .replace(/const BIDS = \[[\s\S]*?\];/, 'let BIDS=' + bidsJson + ';')
+      .replace(/let BIDS = \[\];.*?\/\/ loaded from \/api\/bids/, 'let BIDS=' + bidsJson + ';')
+      .replace(/let BIDS = \[\];/, 'let BIDS=' + bidsJson + ';');
+    
+    // Also inject lastUpdated
+    if (data.lastUpdated) {
+      html = html.replace(
+        '</body>',
+        '<script>document.addEventListener("DOMContentLoaded",function(){' +
+        'var el=document.getElementById("last-pull-time");' +
+        'if(el)el.textContent=new Date("' + data.lastUpdated + '").toLocaleString();' +
+        '});</script></body>'
+      );
+    }
+    
+    res.send(html);
+  } catch(e) {
+    console.error('[Server] Serve error:', e.message);
+    res.sendFile(__dirname + '/index.html');
+  }
+});
+
 app.use(express.static(__dirname));
 
 // ─── DATABASE ────────────────────────────────────────────────
