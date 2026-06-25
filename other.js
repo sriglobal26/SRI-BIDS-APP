@@ -54,7 +54,7 @@ async function scrapeH2bid() {
             due: cleanDate(due) || 'See link',
             value: 'TBD',
             status: detectStatus(due),
-            url: link.startsWith('http') ? link : `https://h2bid.com${link}`,
+            url: link ? (link.startsWith('http') ? link : 'https://h2bid.com' + link) : 'https://h2bid.com/Bids/BidsSearch?keyword=water+electrical&state=TX',
             scrapedAt: new Date().toISOString()
           });
         } catch(e) {}
