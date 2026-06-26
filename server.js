@@ -251,7 +251,12 @@ app.post('/api/bids', async (req, res) => {
 app.post('/api/fix-unnamed', async (req, res) => {
   try {
     const result = await pool.query(
-      "UPDATE bids SET data = data || '{"url":"https://www.envirobidnet.com/search_bids","name":"EnviroBidNet — Texas E&I Bid Alert","agency":"EnviroBidNet"}' WHERE data->>'name' = 'Unnamed Bid' OR data->>'name' = '' OR data->>'url' = ''"
+      `UPDATE bids SET data = jsonb_set(jsonb_set(jsonb_set(data,
+        '{url}', to_jsonb('https://www.envirobidnet.com/search_bids'::text)),
+        '{name}', to_jsonb('EnviroBidNet - Texas E&I Bid Alert'::text)),
+        '{agency}', to_jsonb('EnviroBidNet'::text))
+      WHERE (data->>'name' IS NULL OR data->>'name' = '' OR data->>'name' = 'Unnamed Bid')
+      OR (data->>'url' IS NULL OR data->>'url' = '')`
     );
     console.log('[Fix] Updated', result.rowCount, 'unnamed bids');
     res.json({ success: true, updated: result.rowCount });
