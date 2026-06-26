@@ -205,10 +205,28 @@ app.post('/api/bids', async (req, res) => {
     // Extract URL from email HTML body
     if (!body.url && body.html) {
       const html = body.html.replace(/&amp;/g,'&');
-      const ebnMatch = html.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/[^\s"<>'"]+/i);
-      const ccMatch = html.match(/https?:\/\/(?:www\.)?civcastusa\.com\/[^\s"<>'"]+/i);
-      const bidMatch = html.match(/https?:\/\/[^\s"<>'"]*(?:bid|solicitation|rfq)[^\s"<>'"]{5,}/i);
-      body.url = ebnMatch?.[0] || ccMatch?.[0] || bidMatch?.[0] || '';
+      
+      // Priority 1: EnviroBidNet subscriber view bid URL (exact format)
+      const ebnViewMatch = html.match(/https:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/\d+[^\s"<>']*/i);
+      if (ebnViewMatch) { body.url = ebnViewMatch[0]; }
+      
+      // Priority 2: Any EnviroBidNet URL
+      if (!body.url) {
+        const ebnMatch = html.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/[^\s"<>'"]+/i);
+        if (ebnMatch) { body.url = ebnMatch[0]; }
+      }
+      
+      // Priority 3: CivCast URL
+      if (!body.url) {
+        const ccMatch = html.match(/https?:\/\/(?:www\.)?civcastusa\.com\/[^\s"<>'"]+/i);
+        if (ccMatch) { body.url = ccMatch[0]; }
+      }
+      
+      // Priority 4: Any bid URL
+      if (!body.url) {
+        const bidMatch = html.match(/https?:\/\/[^\s"<>'"]*(?:bid|solicitation|rfq)[^\s"<>'"]{5,}/i);
+        if (bidMatch) { body.url = bidMatch[0]; }
+      }
     }
 
     // Default URL if still empty
