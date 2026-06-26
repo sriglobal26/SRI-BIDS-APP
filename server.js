@@ -200,10 +200,64 @@ app.post('/api/scrape', (req, res) => {
 
 app.post('/api/bids', async (req, res) => {
   try {
-    const bid = { id: 'manual-' + Date.now(), source: 'Manual', ...req.body };
+    let body = { ...req.body };
+
+    // Extract URL from email HTML body
+    if (!body.url && body.html) {
+      const html = body.html.replace(/&amp;/g,'&');
+      const ebnMatch = html.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/[^\s"<>'"]+/i);
+      const ccMatch = html.match(/https?:\/\/(?:www\.)?civcastusa\.com\/[^\s"<>'"]+/i);
+      const bidMatch = html.match(/https?:\/\/[^\s"<>'"]*(?:bid|solicitation|rfq)[^\s"<>'"]{5,}/i);
+      body.url = ebnMatch?.[0] || ccMatch?.[0] || bidMatch?.[0] || '';
+    }
+
+    // Default URL if still empty
+    if (!body.url || body.url === '') {
+      const from = (body.from || body.agency || body.name || '').toLowerCase();
+      if (from.includes('civcast')) {
+        body.url = 'https://www.civcastusa.com/bids';
+      } else {
+        body.url = 'https://www.envirobidnet.com/search_bids';
+      }
+    }
+
+    // Fix name - replace Unnamed Bid
+    if (!body.name || body.name.trim() === '' || body.name === 'Unnamed Bid') {
+      const from = (body.from || body.agency || '').toLowerCase();
+      body.name = body.subject && body.subject.trim() !== ''
+        ? body.subject.trim()
+        : from.includes('civcast')
+          ? 'CivCast — Texas E&I Bid Alert'
+          : 'EnviroBidNet — Texas E&I Bid Alert';
+    }
+
+    // Fix agency
+    if (!body.agency || body.agency === 'Unknown Agency') {
+      const from = (body.from || '').toLowerCase();
+      body.agency = from.includes('civcast') ? 'CivCast USA' : 'EnviroBidNet';
+    }
+
+    const bid = { id: 'manual-' + Date.now(), source: 'Email Alert', addedAt: new Date().toISOString(), ...body };
+    console.log('[POST /api/bids] Name:', bid.name, '| URL:', bid.url?.slice(0,60));
     await saveBid(bid);
     res.json({ success: true, bid });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) { 
+    console.error('[POST /api/bids] Error:', e.message);
+    res.status(500).json({ success: false, error: e.message }); 
+  }
+});
+
+// Fix all existing unnamed bids
+app.post('/api/fix-unnamed', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "UPDATE bids SET data = data || '{"url":"https://www.envirobidnet.com/search_bids","name":"EnviroBidNet — Texas E&I Bid Alert","agency":"EnviroBidNet"}' WHERE data->>'name' = 'Unnamed Bid' OR data->>'name' = '' OR data->>'url' = ''"
+    );
+    console.log('[Fix] Updated', result.rowCount, 'unnamed bids');
+    res.json({ success: true, updated: result.rowCount });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/bids/:id', async (req, res) => {
