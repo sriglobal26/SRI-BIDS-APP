@@ -360,8 +360,20 @@ require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 A
 
 // ─── START ────────────────────────────────────────────────────
 initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', async () => {
     console.log('[SRI Bids] Listening on port', PORT);
+    // Auto-fix all unnamed bids with EnviroBidNet URL
+    try {
+      const r = await pool.query(
+        `UPDATE bids SET data = jsonb_set(jsonb_set(jsonb_set(data,
+          '{url}', '"https://www.envirobidnet.com/search_bids"'),
+          '{name}', '"EnviroBidNet — Texas E&I Bid Alert"'),
+          '{agency}', '"EnviroBidNet"')
+        WHERE (data->>'name' IS NULL OR data->>'name' = '' OR data->>'name' = 'Unnamed Bid')
+        OR (data->>'url' IS NULL OR data->>'url' = '')`
+      );
+      if(r.rowCount > 0) console.log('[AutoFix] Updated', r.rowCount, 'unnamed bids');
+    } catch(e) { console.warn('[AutoFix]', e.message); }
     setTimeout(runScrape, 8000);
   });
 }).catch(err => {
