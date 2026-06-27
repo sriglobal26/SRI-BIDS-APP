@@ -318,6 +318,111 @@ app.post('/api/fix-unnamed', async (req, res) => {
   }
 });
 
+// ── Parse multiple bids from one EnviroBidNet email ──
+app.post('/api/email-bids', async (req, res) => {
+  try {
+    const { html, subject, from } = req.body;
+    if (!html) return res.json({ success: false, error: 'No HTML provided' });
+
+    const rawHtml = html.replace(/&amp;/g, '&');
+    
+    // Extract all subscriber_view_bid URLs with their bid IDs
+    const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)[^\s"<>\)\]]*/gi;
+    const matches = [...rawHtml.matchAll(bidUrlPattern)];
+    
+    // Remove duplicates by bid ID
+    const seen = new Set();
+    const uniqueMatches = matches.filter(m => {
+      if (seen.has(m[1])) return false;
+      seen.add(m[1]);
+      return true;
+    });
+
+    if (uniqueMatches.length === 0) {
+      // Fall back to single bid processing
+      const singleUrl = rawHtml.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/\d+[^\s"<>\)\]]*/i);
+      const bid = {
+        id: 'ebn-' + Date.now(),
+        name: subject || 'EnviroBidNet — Texas E&I Bid Alert',
+        agency: 'EnviroBidNet',
+        city: 'Texas',
+        region: 'statewide',
+        scope: 'E&I Engineering — See RFQ link',
+        due: 'See link',
+        value: 'TBD',
+        status: 'active',
+        source: 'EnviroBidNet',
+        url: singleUrl ? singleUrl[0] : 'https://www.envirobidnet.com/search_bids',
+        scrapedAt: new Date().toISOString()
+      };
+      await saveBid(bid);
+      return res.json({ success: true, created: 1, bids: [bid] });
+    }
+
+    // Plain text for extracting descriptions and dates
+    const plainText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    
+    const createdBids = [];
+    
+    for (const match of uniqueMatches) {
+      const bidId = match[1];
+      const bidUrl = match[0];
+      
+      // Find bid description near this bid ID in plain text
+      const bidIdPos = plainText.indexOf(bidId);
+      let name = 'EnviroBidNet — Texas E&I Bid Alert';
+      let due = 'See link';
+      let agency = 'EnviroBidNet';
+      let scope = 'E&I Engineering — See RFQ link';
+      
+      if (bidIdPos > -1) {
+        // Get text around the bid ID (200 chars before and after)
+        const context = plainText.substring(Math.max(0, bidIdPos - 50), bidIdPos + 300);
+        
+        // Extract description (text after bid ID)
+        const descMatch = context.match(new RegExp(bidId + '\\s+([^\\n]{10,200})'));
+        if (descMatch) {
+          name = descMatch[1].trim().slice(0, 150);
+          scope = descMatch[1].trim();
+        }
+        
+        // Extract expiration date
+        const expMatch = context.match(/[Ee]xpir\w*[:\s]*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/);
+        if (expMatch) due = expMatch[1];
+        
+        // Extract agency from description
+        const agencyMatch = name.match(/^([A-Z][A-Z0-9]+(?:\s[A-Z][A-Z0-9]+)*)[:\s]/);
+        if (agencyMatch) agency = agencyMatch[1];
+      }
+      
+      const bid = {
+        id: 'ebn-' + bidId + '-' + Date.now(),
+        name: name || subject || 'EnviroBidNet Bid #' + bidId,
+        agency: agency,
+        city: 'Texas',
+        region: 'statewide',
+        scope: scope,
+        due: due,
+        value: 'TBD',
+        status: 'active',
+        source: 'EnviroBidNet',
+        bidId: bidId,
+        url: bidUrl,
+        scrapedAt: new Date().toISOString()
+      };
+      
+      await saveBid(bid);
+      createdBids.push(bid);
+      console.log('[Email Bid] Created: #' + bidId, name.slice(0,50), '| Due:', due, '| URL:', bidUrl.slice(0,60));
+    }
+    
+    res.json({ success: true, created: createdBids.length, bids: createdBids });
+  } catch(e) {
+    console.error('[Email Bids] Error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.delete('/api/bids/:id', async (req, res) => {
   await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]);
   res.json({ success: true });
