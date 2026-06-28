@@ -666,6 +666,28 @@ Best regards,
 </footer>
 
 
+
+<!-- MODAL: Edit RFQ URL -->
+<div class="mbg" id="m-editurl"><div class="modal" style="max-width:500px">
+  <div class="mhd">
+    <div><div class="mtit">Add / Edit RFQ Link</div><div class="msub" id="edit-url-name"></div></div>
+    <button class="mcl" onclick="closeM('m-editurl')">✕</button>
+  </div>
+  <div class="mbd">
+    <div class="fg">
+      <label class="fl2">RFQ / Bid URL</label>
+      <input class="fi" id="edit-url-input" type="url" placeholder="https://envirobidnet.com/..." style="font-size:12px">
+    </div>
+    <div style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--gray);line-height:1.7">
+      💡 Copy the URL from EnviroBidNet or CivCast bid page and paste here.
+    </div>
+  </div>
+  <div class="mft">
+    <button class="btn2" onclick="closeM('m-editurl')">Cancel</button>
+    <button class="btn1" onclick="saveEditUrl()">Save Link</button>
+  </div>
+</div></div>
+
 </div><!-- end wrap -->
 
 <!-- ══ MODALS ══ -->
@@ -1300,7 +1322,40 @@ document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e
 // ═════════════════════════════════════
 // EDIT BID URL
 // ═════════════════════════════════════
+// Edit URL Modal
+let editingBidId = null;
 function editUrl(bidId){
+  editingBidId = String(bidId);
+  const b = BIDS.find(x=>String(x.id)===String(bidId));
+  if(!b) return;
+  document.getElementById('edit-url-name').textContent = b.name || 'Unnamed Bid';
+  document.getElementById('edit-url-input').value = b.url || '';
+  openM('m-editurl');
+  setTimeout(()=>document.getElementById('edit-url-input').focus(), 200);
+}
+
+function saveEditUrl(){
+  const url = document.getElementById('edit-url-input').value.trim();
+  if(!url){ alert('Please enter a URL'); return; }
+  const b = BIDS.find(x=>String(x.id)===String(editingBidId));
+  if(!b) return;
+  b.url = url;
+  // Save to server
+  fetch('/api/bids/'+editingBidId, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url: url})
+  }).then(()=>{
+    closeM('m-editurl');
+    renderAll();
+  }).catch(e=>{
+    closeM('m-editurl');
+    renderAll();
+  });
+}
+
+// Legacy editUrl below (kept for reference)
+function editUrl_legacy(bidId){
   const b = BIDS.find(x=>String(x.id)===String(bidId));
   const newUrl = prompt(`RFQ Link for:\n${b.name}\n\nPaste the official city/agency bid URL:`, b.url||'');
   if(newUrl===null) return;

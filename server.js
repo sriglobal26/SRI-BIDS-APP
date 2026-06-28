@@ -376,37 +376,41 @@ app.post('/api/email-bids', async (req, res) => {
       let scope = 'E&I Engineering — See RFQ link';
       
       if (bidIdPos > -1) {
-        // Get text around the bid ID (200 chars before and after)
-        const context = plainText.substring(Math.max(0, bidIdPos - 50), bidIdPos + 300);
-        
-        // Extract description (text after bid ID)
-        const descMatch = context.match(new RegExp(bidId + '\\s+([^\\n]{10,200})'));
+        // Get text around the bid ID (500 chars after)
+        const context = plainText.substring(Math.max(0, bidIdPos - 20), bidIdPos + 500);
+
+        // Extract description - text after bid ID
+        const descMatch = context.match(new RegExp(bidId + '[^\\d]([^\n]{10,300})'));
         if (descMatch) {
-          name = descMatch[1].trim().slice(0, 150);
-          scope = descMatch[1].trim();
+          const rawDesc = descMatch[1].trim();
+          name = rawDesc.slice(0, 200);
+          scope = rawDesc.slice(0, 500);
         }
-        
-        // Extract expiration date
-        const expMatch = context.match(/[Ee]xpir\w*[:\s]*(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/);
+
+        // Extract expiration date - multiple formats
+        const expMatch = context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{4}-\d{2}-\d{2})/) ||
+                         context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/) ||
+                         context.match(/(\d{4}-\d{2}-\d{2})/) ||
+                         context.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
         if (expMatch) due = expMatch[1];
-        
-        // Extract agency from description
-        const agencyMatch = name.match(/^([A-Z][A-Z0-9]+(?:\s[A-Z][A-Z0-9]+)*)[:\s]/);
-        if (agencyMatch) agency = agencyMatch[1];
+
+        // Extract agency - text before colon at start
+        const agencyMatch = name.match(/^([A-Za-z0-9]+(?:[\s\-][A-Za-z0-9]+)?)[:\s]/);
+        if (agencyMatch) agency = agencyMatch[1].trim();
       }
       
       const bid = {
-        id: 'ebn-' + bidId + '-' + Date.now(),
-        name: name || subject || 'EnviroBidNet Bid #' + bidId,
-        agency: agency,
+        id: 'ebn-' + bidId,
+        name: (name || subject || 'EnviroBidNet Bid #' + bidId).slice(0, 200),
+        agency: agency || 'EnviroBidNet',
         city: 'Texas',
         region: 'statewide',
-        scope: scope,
-        due: due,
+        scope: scope || 'E&I Engineering — See RFQ link',
+        due: due || 'See link',
         value: 'TBD',
         status: 'active',
         source: 'EnviroBidNet',
-        bidId: bidId,
+        bidId: '#' + bidId,
         url: bidUrl,
         scrapedAt: new Date().toISOString()
       };
