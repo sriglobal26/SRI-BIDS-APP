@@ -319,7 +319,29 @@ app.post('/api/fix-unnamed', async (req, res) => {
 });
 
 // ── Parse multiple bids from one EnviroBidNet email ──
+// Debug endpoint - shows what Make.com sends
+app.get('/api/email-bids/debug', (req, res) => {
+  res.json({ status: 'email-bids endpoint is active', method: 'POST required' });
+});
+
+// Store last received for debugging
+let lastReceived = null;
+app.get('/api/email-bids/last', (req, res) => {
+  res.json(lastReceived || { message: 'No data received yet' });
+});
+
 app.post('/api/email-bids', async (req, res) => {
+  lastReceived = {
+    subject: req.body.subject,
+    from: req.body.from,
+    hasHtml: !!req.body.html,
+    htmlLength: (req.body.html||'').length,
+    hasText: !!req.body.text,
+    textLength: (req.body.text||'').length,
+    htmlPreview: (req.body.html||'').slice(0,200),
+    receivedAt: new Date().toISOString()
+  };
+  console.log('[Email Bids] Received:', JSON.stringify(lastReceived));
   try {
     const { html, subject, from } = req.body;
     if (!html) return res.json({ success: false, error: 'No HTML provided' });
