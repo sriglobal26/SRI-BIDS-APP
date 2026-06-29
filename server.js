@@ -185,10 +185,8 @@ app.get('/', async (req, res) => {
       });
     const bidsJson = JSON.stringify(bids);
     // Replace any BIDS declaration with live data
-    html = html
-      .replace(/const BIDS=\[.*?\];/s, 'let BIDS=' + bidsJson + ';')
-      .replace(/let BIDS = \[\];/, 'let BIDS=' + bidsJson + ';')
-      .replace(/let BIDS=\[\];/, 'let BIDS=' + bidsJson + ';');
+    // Inject bids - replace the empty array
+    html = html.replace('let BIDS=[];', 'let BIDS=' + bidsJson + ';');
     res.send(html);
   } catch(e) {
     console.error('[Serve]', e.message);
