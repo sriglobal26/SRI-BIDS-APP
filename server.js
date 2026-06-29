@@ -154,25 +154,35 @@ app.get('/', async (req, res) => {
   try {
     let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
     const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
-    const bids = r.rows.map((row, i) => {
-      const b = row.data;
-      return {
-        id: b.id || 'bid-'+i,
-        num: String(i+1).padStart(2,'0'),
-        name: b.name || 'Unnamed Bid',
-        agency: b.agency || 'Unknown',
-        city: b.city || 'Texas',
-        scope: b.scope || 'E&I Engineering',
-        due: b.due || 'See link',
-        value: b.value || 'TBD',
-        status: b.status || 'active',
-        region: b.region || 'statewide',
-        url: b.url || '',
-        source: b.source || 'Unknown',
-        bidId: b.bidId || '',
-        userState: b.userState || 'active'
-      };
-    });
+    // Remove duplicate EnviroBidNet alert bids
+    const seen = new Set();
+    const bids = r.rows
+      .map((row, i) => {
+        const b = row.data;
+        return {
+          id: b.id || 'bid-'+i,
+          num: String(i+1).padStart(2,'0'),
+          name: b.name || 'Unnamed Bid',
+          agency: b.agency || 'Unknown',
+          city: b.city || 'Texas',
+          scope: b.scope || 'E&I Engineering',
+          due: b.due || 'See link',
+          value: b.value || 'TBD',
+          status: b.status || 'active',
+          region: b.region || 'statewide',
+          url: b.url || '',
+          source: b.source || 'Unknown',
+          bidId: b.bidId || '',
+          userState: b.userState || 'active'
+        };
+      })
+      .filter(b => {
+        // Remove exact duplicates by name+agency
+        const key = b.name + '|' + b.agency;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     const bidsJson = JSON.stringify(bids);
     // Replace any BIDS declaration with live data
     html = html
