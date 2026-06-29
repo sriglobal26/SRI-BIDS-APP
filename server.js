@@ -148,6 +148,67 @@ let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished:
 // ─── ROUTES ──────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: Math.round(process.uptime()) }));
 
+// Serve index.html with bids injected from database
+const fs = require('fs');
+app.get('/', async (req, res) => {
+  try {
+    let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+    const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
+    const bids = r.rows.map((row, i) => {
+      const b = row.data;
+      return {
+        id: b.id || 'bid-'+i,
+        num: String(i+1).padStart(2,'0'),
+        name: b.name || 'Unnamed Bid',
+        agency: b.agency || 'Unknown',
+        city: b.city || 'Texas',
+        scope: b.scope || 'E&I Engineering',
+        due: b.due || 'See link',
+        value: b.value || 'TBD',
+        status: b.status || 'active',
+        region: b.region || 'statewide',
+        url: b.url || '',
+        source: b.source || 'Unknown',
+        bidId: b.bidId || '',
+        userState: b.userState || 'active'
+      };
+    });
+    const bidsJson = JSON.stringify(bids);
+    // Replace any BIDS declaration with live data
+    html = html
+      .replace(/const BIDS=\[.*?\];/s, 'let BIDS=' + bidsJson + ';')
+      .replace(/let BIDS = \[\];/, 'let BIDS=' + bidsJson + ';')
+      .replace(/let BIDS=\[\];/, 'let BIDS=' + bidsJson + ';');
+    res.send(html);
+  } catch(e) {
+    console.error('[Serve]', e.message);
+    res.sendFile(__dirname + '/index.html');
+  }
+});
+
+// Clean up duplicate bids
+app.get('/api/cleanup', async (req, res) => {
+  try {
+    // Keep only first occurrence of each bid name
+    const r = await pool.query(`
+      DELETE FROM bids WHERE id IN (
+        SELECT id FROM (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY data->>'name' ORDER BY created_at DESC) rn
+          FROM bids
+          WHERE data->>'source' != 'EnviroBidNet' OR data->>'name' != 'EnviroBidNet — Texas E&I Bid Alert'
+        ) t WHERE rn > 1
+      )
+    `);
+    // Delete ALL duplicate EnviroBidNet Alert bids (keep none - they're useless without real URLs)
+    const r2 = await pool.query(`
+      DELETE FROM bids WHERE data->>'name' = 'EnviroBidNet — Texas E&I Bid Alert'
+    `);
+    res.json({ success: true, removed: r.rowCount + r2.rowCount });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/bids', async (req, res) => {
   try { res.json(await readBids()); }
   catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); }
