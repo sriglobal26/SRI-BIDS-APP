@@ -9,7 +9,8 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(__dirname, { index: false }));
 
 // ─── DATABASE ────────────────────────────────────────────────
@@ -236,6 +237,109 @@ app.post('/api/bids', async (req, res) => {
     await saveBid(bid);
     res.json({ success: true, bid });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Debug helpers
+let lastEmailReceived = null;
+app.get('/api/email-bids/debug', (req, res) => {
+  res.json({ status: 'email-bids endpoint is active', method: 'POST required' });
+});
+app.get('/api/email-bids/last', (req, res) => {
+  res.json(lastEmailReceived || { message: 'No data received yet' });
+});
+
+// Parse multiple bids from one EnviroBidNet (or CivCast) email
+app.post('/api/email-bids', async (req, res) => {
+  try {
+    const { html, text, subject, from } = req.body || {};
+    lastEmailReceived = {
+      subject, from,
+      hasHtml: !!html, htmlLength: (html||'').length,
+      hasText: !!text, textLength: (text||'').length,
+      htmlPreview: (html||'').slice(0,200),
+      receivedAt: new Date().toISOString()
+    };
+    if (!html && !text) return res.json({ success: false, error: 'No HTML provided' });
+
+    const rawHtml = (html || text || '').replace(/&amp;/g, '&');
+    const plainText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+    const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)[^\s"<>\)\]]*/gi;
+    const matches = [...plainText.matchAll(bidUrlPattern)];
+
+    const seen = new Set();
+    const uniqueMatches = matches.filter(m => {
+      if (seen.has(m[1])) return false;
+      seen.add(m[1]);
+      return true;
+    });
+
+    if (uniqueMatches.length === 0) {
+      const bid = {
+        id: 'ebn-' + Date.now(),
+        name: subject || 'EnviroBidNet — Texas E&I Bid Alert',
+        agency: 'EnviroBidNet',
+        city: 'Texas', region: 'statewide',
+        scope: 'E&I Engineering — See RFQ link',
+        due: 'See link', value: 'TBD', status: 'active',
+        source: 'EnviroBidNet',
+        url: 'https://www.envirobidnet.com/search_bids',
+        scrapedAt: new Date().toISOString()
+      };
+      await saveBid(bid);
+      return res.json({ success: true, created: 1, bids: [bid] });
+    }
+
+    const createdBids = [];
+    for (const match of uniqueMatches) {
+      const bidId = match[1];
+      const bidUrl = match[0];
+      let name = subject || ('EnviroBidNet Bid #' + bidId);
+      let due = 'See link';
+      let agency = 'EnviroBidNet';
+      let scope = 'E&I Engineering — See RFQ link';
+
+      const bidIdPos = plainText.indexOf(bidId);
+      if (bidIdPos > -1) {
+        const context = plainText.substring(Math.max(0, bidIdPos - 20), bidIdPos + 500);
+        const descMatch = context.match(new RegExp(bidId + '[^\\d]([^\\n]{10,300})'));
+        if (descMatch) {
+          const rawDesc = descMatch[1].trim();
+          name = rawDesc.slice(0, 200);
+          scope = rawDesc.slice(0, 500);
+        }
+        const expMatch = context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{4}-\d{2}-\d{2})/) ||
+                         context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/) ||
+                         context.match(/(\d{4}-\d{2}-\d{2})/) ||
+                         context.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
+        if (expMatch) due = expMatch[1];
+        const agencyMatch = name.match(/^([A-Za-z0-9]+(?:[\s\-][A-Za-z0-9]+)?)[:\s]/);
+        if (agencyMatch) agency = agencyMatch[1].trim();
+      }
+
+      const bid = {
+        id: 'ebn-' + bidId,
+        name: (name || 'EnviroBidNet Bid #' + bidId).slice(0, 200),
+        agency: agency || 'EnviroBidNet',
+        city: 'Texas', region: 'statewide',
+        scope: scope || 'E&I Engineering — See RFQ link',
+        due: due || 'See link',
+        value: 'TBD', status: 'active',
+        source: 'EnviroBidNet',
+        bidId: '#' + bidId,
+        url: bidUrl,
+        scrapedAt: new Date().toISOString()
+      };
+      await saveBid(bid);
+      createdBids.push(bid);
+      console.log('[Email Bid] Created: #' + bidId, name.slice(0,50), '| Due:', due, '| URL:', bidUrl.slice(0,60));
+    }
+
+    res.json({ success: true, created: createdBids.length, bids: createdBids });
+  } catch(e) {
+    console.error('[Email Bids] Error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.delete('/api/bids/:id', async (req, res) => {
