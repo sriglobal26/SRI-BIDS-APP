@@ -537,20 +537,20 @@ Best regards,
     <div class="sw"><input class="si" type="text" placeholder="Search bids…" oninput="srch(this.value)"></div>
     <span id="bids-result-count" style="font-family:var(--mono);font-size:10px;color:var(--yellow);white-space:nowrap"></span>
   </div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="bids-body"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="bids-body"></tbody></table></div>
 </div>
 
 <!-- ══ TAB: SELECTED ══ -->
 <div class="tab-pane" id="tab-selected">
   <div class="sec" style="margin-top:8px">Selected Bids — Pursuing</div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="sel-body"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="sel-body"></tbody></table></div>
   <div class="empty" id="sel-mt"><div class="empty-ico">📋</div><div class="empty-txt">No bids selected yet</div></div>
 </div>
 
 <!-- ══ TAB: DELETED ══ -->
 <div class="tab-pane" id="tab-deleted">
   <div class="sec" style="margin-top:8px">Deleted / Not Pursuing</div>
-  <div class="tw"><table><thead><tr><th>#</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="del-body"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th>#</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="del-body"></tbody></table></div>
   <div class="empty" id="del-mt"><div class="empty-ico">🗑️</div><div class="empty-txt">No deleted bids</div></div>
 </div>
 
@@ -717,16 +717,33 @@ let BIDS=[];
 const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
 const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works'];
 let bidState={};
-BIDS.forEach(b=>{
+
+function classifyBid(b){
   const srcExempt = EXEMPT_SOURCES.some(s => (b.source||'').toLowerCase().includes(s));
   const isNonDesign = !srcExempt && (
     NON_DESIGN_KEYWORDS.some(kw =>
-      b.name.toLowerCase().includes(kw) ||
-      b.scope.toLowerCase().includes(kw)
+      (b.name||'').toLowerCase().includes(kw) ||
+      (b.scope||'').toLowerCase().includes(kw)
     ) || b.status === 'pending'
   );
-  bidState[b.id] = isNonDesign ? 'deleted' : 'active';
-});
+  return isNonDesign ? 'deleted' : 'active';
+}
+
+async function fetchBids(){
+  try {
+    const res = await fetch('/api/bids');
+    const data = await res.json();
+    BIDS = (data.bids||[]);
+    bidState = {};
+    BIDS.forEach(b=>{
+      bidState[b.id] = (b.userState && b.userState !== 'active')
+        ? b.userState
+        : classifyBid(b);
+    });
+    if(typeof renderAll === 'function') renderAll();
+  } catch(e){ console.error('fetchBids error:', e.message); }
+}
+fetchBids();
 
 // ── 78 firms · 107 contacts imported from SRI_Global_Waste_water_Primes_List.xlsx ──
 let PRIMES = [
@@ -836,17 +853,18 @@ function switchTab(id,btn){
 // ═════════════════════════════════════
 function row(b,ctx){
   const dcl=(b.status==='closing'&&ctx==='active')?' style="color:var(--red)"':'';
+  const eid=encodeURIComponent(String(b.id));
   let acts='';
-  if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(${b.id},'selected')">✓ Select</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else if(ctx==='selected') acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button><button class="ab del" onclick="mark(${b.id},'deleted')">✕ Delete</button></div>`;
-  else acts=`<div class="ag"><button class="ab rst" onclick="mark(${b.id},'active')">↩ Restore</button></div>`;
+  if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent('${eid}'),'selected')">✓ Select</button><button class="ab del" onclick="mark(decodeURIComponent('${eid}'),'deleted')">✕ Delete</button></div>`;
+  else if(ctx==='selected') acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button><button class="ab del" onclick="mark(decodeURIComponent('${eid}'),'deleted')">✕ Delete</button></div>`;
+  else acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button></div>`;
   const stCl=ctx==='selected'?'selected':ctx==='deleted'?'deleted':(SL[b.status]||'active');
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
   const urlCell = b.url
-    ? `<td class="tu"><a href="${b.url}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px;display:block;margin-bottom:4px" title="${b.url}">↗ View RFQ</a><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--gray);padding:2px 6px;border-radius:2px;cursor:pointer">✎ Edit</button></td>`
-    : `<td class="tu"><button onclick="editUrl(${b.id})" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(0,200,212,.25);background:rgba(0,200,212,.06);color:var(--cyan);padding:3px 8px;border-radius:2px;cursor:pointer">+ Add Link</button></td>`;
+    ? `<td class="tu"><a href="${b.url}" target="_blank" style="color:var(--sky);text-decoration:none;font-size:10px;display:block;margin-bottom:4px" title="${b.url}">↗ View RFQ</a><button onclick="editUrl(decodeURIComponent('${eid}'))" style="font-family:var(--mono);font-size:9px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--gray);padding:2px 6px;border-radius:2px;cursor:pointer">✎ Edit Link</button></td>`
+    : `<td class="tu"><button onclick="editUrl(decodeURIComponent('${eid}'))" style="font-family:var(--mono);font-size:10px;border:1px solid rgba(0,200,212,.3);background:rgba(0,200,212,.08);color:var(--cyan);padding:5px 10px;border-radius:3px;cursor:pointer;font-weight:500">+ Add RFQ Link</button></td>`;
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
-    <td class="tn">${b.num}</td><td class="tp">${b.name}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
+    <td class="tn">${b.num}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${b.bidId||'—'}</td><td class="tp">${b.name}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
     <td class="ts">${b.scope}</td>${urlCell}<td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
     <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
   </tr>`;
@@ -863,7 +881,15 @@ function renderAll(){
   applyF(); updBadges(); updStats(); populateCampSelect();
 }
 
-function mark(id,state){bidState[id]=state;renderAll();}
+function mark(id,state){
+  bidState[id]=state;
+  renderAll();
+  fetch('/api/bids/'+encodeURIComponent(id), {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({userState:state})
+  }).catch(e=>console.warn('mark save failed:', e.message));
+}
 
 function updBadges(){
   document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active').length;
@@ -1279,11 +1305,17 @@ document.querySelectorAll('.mbg').forEach(m=>m.addEventListener('click',e=>{if(e
 // EDIT BID URL
 // ═════════════════════════════════════
 function editUrl(bidId){
-  const b = BIDS.find(x=>x.id===bidId);
+  const b = BIDS.find(x=>String(x.id)===String(bidId));
+  if(!b) return;
   const newUrl = prompt(`RFQ Link for:\n${b.name}\n\nPaste the official city/agency bid URL:`, b.url||'');
   if(newUrl===null) return;
   b.url = newUrl.trim();
   renderAll();
+  fetch('/api/bids/'+encodeURIComponent(bidId), {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url: b.url})
+  }).catch(e=>console.warn('editUrl save failed:', e.message));
 }
 
 
