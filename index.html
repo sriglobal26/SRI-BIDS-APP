@@ -514,7 +514,8 @@ Best regards,
     <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
     <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
     <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
-    <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
+    <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px;background:var(--green);color:var(--navy);margin-right:6px" onclick="openM('m-paste-email')">📧 Paste Email</button>
+    <button class="btn1" style="font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
   </div>
   <!-- Source results panels -->
   <div id="src-panel" style="display:none;background:var(--card);border:1px solid rgba(0,200,212,.2);border-radius:4px;margin-bottom:14px;overflow:hidden">
@@ -714,8 +715,8 @@ let BIDS=[];
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
 // Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
-const NON_DESIGN_KEYWORDS = ['install','overhaul','construction','replacement','rehab'];
-const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works'];
+const NON_DESIGN_KEYWORDS = ['install only','overhaul only','award pending'];
+const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works','envirobidnet','h2bid','civcast','ebn'];
 let bidState={};
 
 function classifyBid(b){
@@ -736,7 +737,7 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState && b.userState !== 'active')
+      bidState[b.id] = (b.userState === 'selected' || b.userState === 'deleted')
         ? b.userState
         : classifyBid(b);
     });
@@ -1207,31 +1208,6 @@ function pc(p){
       ${cl}
     </div>
   
-<!-- MODAL: Paste EnviroBidNet Email -->
-<div class="mbg" id="m-paste-email"><div class="modal" style="max-width:600px">
-  <div class="mhd">
-    <div>
-      <div class="mtit">📧 Paste EnviroBidNet Email</div>
-      <div class="msub">Copy email → paste here → bids added automatically</div>
-    </div>
-    <button class="mcl" onclick="closeM('m-paste-email')">✕</button>
-  </div>
-  <div class="mbd">
-    <div style="background:rgba(0,200,212,.06);border:1px solid rgba(0,200,212,.2);border-radius:4px;padding:12px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:#A8D8E8;line-height:1.8">
-      <strong style="color:var(--cyan)">Steps:</strong><br>
-      1. Open EnviroBidNet email in Outlook<br>
-      2. Press <strong>Ctrl+A</strong> then <strong>Ctrl+C</strong><br>
-      3. Click box below → Press <strong>Ctrl+V</strong><br>
-      4. Click <strong>Extract &amp; Add Bids</strong>
-    </div>
-    <textarea id="paste-email-content" style="width:100%;height:220px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:10px;color:var(--white);font-size:11px;resize:vertical;box-sizing:border-box" placeholder="Paste EnviroBidNet email text here..."></textarea>
-    <div id="paste-result" style="margin-top:10px;font-family:var(--mono);font-size:11px;display:none"></div>
-  </div>
-  <div class="mft">
-    <button class="btn2" onclick="closeM('m-paste-email')">Cancel</button>
-    <button class="btn1" onclick="extractAndAddBids()">Extract &amp; Add Bids</button>
-  </div>
-</div></div>
 </div>`;
 }
 
@@ -1601,6 +1577,14 @@ async function extractAndAddBids(){
     result.style.color='var(--red)';
     result.textContent='❌ Error: '+e.message;
   }
+}
+</script>
+<script>
+function addBidManual(){
+  const name=document.getElementById('ab-name').value.trim();
+  if(!name){alert('Bid name required.');return;}
+  const bid={name,agency:document.getElementById('ab-agency').value.trim()||'Unknown',city:document.getElementById('ab-city').value.trim()||'Texas',scope:document.getElementById('ab-scope').value.trim()||'E&I Engineering',due:document.getElementById('ab-due').value.trim()||'See link',value:document.getElementById('ab-value').value.trim()||'TBD',url:document.getElementById('ab-url').value.trim()||'',source:'Manual',status:'active'};
+  fetch('/api/bids',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bid)}).then(r=>r.json()).then(()=>{closeM('m-addbid');fetchBids();}).catch(e=>alert('Error: '+e.message));
 }
 </script>
 </body>
