@@ -6,6 +6,7 @@ if (typeof FormData === 'undefined') global.FormData = class FormData {};
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
+const https = require('https');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -14,8 +15,6 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(__dirname, { index: false }));
 
 // ─── DATABASE ────────────────────────────────────────────────
-// Use internal Railway URL (free, no egress fees)
-// SSL disabled for internal Railway connections
 const dbUrl = process.env.DATABASE_URL;
 
 let poolConfig;
@@ -35,16 +34,12 @@ try {
   console.log('[DB] Connecting to:', u.hostname + ':' + (u.port || 5432));
 } catch(e) {
   console.error('[DB] URL parse error:', e.message);
-  poolConfig = {
-    connectionString: dbUrl,
-    ssl: false
-  };
+  poolConfig = { connectionString: dbUrl, ssl: false };
 }
 
 const pool = new Pool(poolConfig);
 
 async function initDB() {
-  // Create tables if not exist
   await pool.query(`
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
@@ -71,13 +66,9 @@ async function initDB() {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `);
-  // Migration — add updated_at if missing (old deployments)
-  await pool.query(`
-    ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
-  `).catch(() => {});
+  await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(() => {});
   console.log('[DB] Ready');
 
-  // Seed known bids if DB is empty
   const { rows } = await pool.query('SELECT COUNT(*) FROM bids');
   if (parseInt(rows[0].count) === 0) {
     console.log('[DB] Seeding known bids...');
@@ -111,7 +102,18 @@ function normalizeBid(raw, idx) {
     region: raw.region || detectRegion(raw.city || raw.location || ''),
     url: raw.url || raw.link || raw.bidUrl || '',
     source: raw.source || 'Unknown',
-    scrapedAt: raw.scrapedAt || new Date().toISOString()
+    scrapedAt: raw.scrapedAt || new Date().toISOString(),
+    // EnviroBidNet detail fields
+    bidNumber: raw.bidNumber || '',
+    address: raw.address || '',
+    state: raw.state || '',
+    zip: raw.zip || '',
+    plansAvailable: raw.plansAvailable || '',
+    contactName: raw.contactName || '',
+    contactPhone: raw.contactPhone || '',
+    contactEmail: raw.contactEmail || '',
+    category: raw.category || '',
+    fullDescription: raw.fullDescription || ''
   };
 }
 
@@ -146,8 +148,88 @@ async function clearScrapedBids() {
 // ─── SCRAPE STATE ─────────────────────────────────────────────
 let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished: null };
 
+// ─── ENVIROBIDNET DETAIL SCRAPER ─────────────────────────────
+// Fetches full bid details from EnviroBidNet using your session cookies
+// Since you are logged in on your browser, we scrape the page server-side
+function fetchUrl(url, cookies) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Cookie': cookies || '',
+        'Referer': 'https://www.envirobidnet.com/'
+      },
+      timeout: 15000
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve({ html: data, status: res.statusCode, headers: res.headers }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    req.end();
+  });
+}
+
+function parseEnviroBidNetPage(html) {
+  // Extract fields from the VIEW BID page
+  const get = (label) => {
+    // Match label followed by value in table cell
+    const patterns = [
+      new RegExp(label + '[:\\s]*<\\/[^>]+>\\s*<[^>]+>([^<]{1,300})', 'i'),
+      new RegExp('<td[^>]*>' + label + '[^<]*<\\/td>\\s*<td[^>]*>([^<]{1,300})', 'i'),
+      new RegExp(label + '[^<]*<\\/[^>]+>[^<]*<[^>]+>([^<]{1,300})', 'i')
+    ];
+    for (const p of patterns) {
+      const m = html.match(p);
+      if (m && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  };
+
+  // Extract plain text for easier parsing
+  const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+  const extract = (label) => {
+    const m = plain.match(new RegExp(label + '[:\\s]+([^\\|]{2,200}?)(?:\\s{2,}|Bid |Agency|Address|City|State|Zip|Plans|Contact|Phone|Email|Fax|$)', 'i'));
+    return m ? m[1].trim().replace(/\s+/g, ' ') : '';
+  };
+
+  return {
+    bidNumber:       extract('Bid Number'),
+    category:        extract('Categor(?:y|ies)'),
+    fullDescription: extract('Bid Description'),
+    agency:          extract('Agency\\/Organization Name') || extract('Agency'),
+    address:         extract('Address'),
+    city:            extract('City'),
+    state:           extract('State(?:s)?'),
+    zip:             extract('Zip Code'),
+    plansAvailable:  extract('Plans Available'),
+    due:             extract('Bid Expiration') || extract('Expiration'),
+    contactName:     extract('Contact Name'),
+    contactPhone:    extract('Phone Number') || extract('Phone'),
+    contactEmail:    extract('Email'),
+  };
+}
+
+// Store EnviroBidNet cookies (set via API)
+let ebnCookies = process.env.EBN_COOKIES || '';
+
 // ─── ROUTES ──────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: Math.round(process.uptime()) }));
+
+// Set EnviroBidNet cookies for scraping
+app.post('/api/ebn-cookies', (req, res) => {
+  ebnCookies = req.body.cookies || '';
+  res.json({ success: true, length: ebnCookies.length });
+});
 
 // Serve index.html with bids injected from database
 const fs = require('fs');
@@ -155,7 +237,6 @@ app.get('/', async (req, res) => {
   try {
     let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
     const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
-    // Remove duplicate EnviroBidNet alert bids
     const seen = new Set();
     const bids = r.rows
       .map((row, i) => {
@@ -174,19 +255,27 @@ app.get('/', async (req, res) => {
           url: b.url || '',
           source: b.source || 'Unknown',
           bidId: b.bidId || '',
-          userState: b.userState || 'active'
+          userState: b.userState || 'active',
+          // Full detail fields
+          bidNumber: b.bidNumber || '',
+          category: b.category || '',
+          fullDescription: b.fullDescription || '',
+          address: b.address || '',
+          state: b.state || '',
+          zip: b.zip || '',
+          plansAvailable: b.plansAvailable || '',
+          contactName: b.contactName || '',
+          contactPhone: b.contactPhone || '',
+          contactEmail: b.contactEmail || ''
         };
       })
       .filter(b => {
-        // Remove exact duplicates by name+agency
         const key = b.name + '|' + b.agency;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
     const bidsJson = JSON.stringify(bids);
-    // Replace any BIDS declaration with live data
-    // Inject bids - replace the empty array
     html = html.replace('let BIDS=[];', 'let BIDS=' + bidsJson + ';');
     res.send(html);
   } catch(e) {
@@ -198,7 +287,6 @@ app.get('/', async (req, res) => {
 // Clean up duplicate bids
 app.get('/api/cleanup', async (req, res) => {
   try {
-    // Keep only first occurrence of each bid name
     const r = await pool.query(`
       DELETE FROM bids WHERE id IN (
         SELECT id FROM (
@@ -208,10 +296,7 @@ app.get('/api/cleanup', async (req, res) => {
         ) t WHERE rn > 1
       )
     `);
-    // Delete ALL duplicate EnviroBidNet Alert bids (keep none - they're useless without real URLs)
-    const r2 = await pool.query(`
-      DELETE FROM bids WHERE data->>'name' = 'EnviroBidNet — Texas E&I Bid Alert'
-    `);
+    const r2 = await pool.query(`DELETE FROM bids WHERE data->>'name' = 'EnviroBidNet — Texas E&I Bid Alert'`);
     res.json({ success: true, removed: r.rowCount + r2.rowCount });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -221,6 +306,53 @@ app.get('/api/cleanup', async (req, res) => {
 app.get('/api/bids', async (req, res) => {
   try { res.json(await readBids()); }
   catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); }
+});
+
+// ── NEW: Get full bid details for a specific EnviroBidNet bid ──
+app.get('/api/bid-detail/:bidId', async (req, res) => {
+  try {
+    const bidId = req.params.bidId;
+
+    // First check if we already have full details in DB
+    const dbResult = await pool.query("SELECT data FROM bids WHERE id = $1 OR data->>'bidId' = $2", ['ebn-' + bidId, '#' + bidId]);
+    if (dbResult.rows.length > 0) {
+      const b = dbResult.rows[0].data;
+      // If we already have full description, return it
+      if (b.fullDescription && b.fullDescription.length > 20) {
+        return res.json({ success: true, source: 'cache', data: b });
+      }
+    }
+
+    // Scrape fresh from EnviroBidNet
+    const url = `https://www.envirobidnet.com/subscriber_view_bid/${bidId}`;
+    console.log('[EBN Detail] Fetching:', url);
+
+    const result = await fetchUrl(url, ebnCookies);
+
+    if (result.status === 302 || result.html.includes('Log into Envirobidnet')) {
+      return res.json({
+        success: false,
+        error: 'login_required',
+        message: 'EnviroBidNet requires login. Please set cookies via /api/ebn-cookies',
+        url: url
+      });
+    }
+
+    const details = parseEnviroBidNetPage(result.html);
+    console.log('[EBN Detail] Parsed:', JSON.stringify(details).slice(0, 200));
+
+    // Update the bid in database with full details
+    if (dbResult.rows.length > 0) {
+      const existing = dbResult.rows[0].data;
+      const updated = { ...existing, ...details, url };
+      await saveBid(updated);
+    }
+
+    res.json({ success: true, source: 'live', data: details, url });
+  } catch(e) {
+    console.error('[EBN Detail] Error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.get('/api/scrape/status', (req, res) => res.json(scrapeStatus));
@@ -242,13 +374,13 @@ app.post('/api/bids', async (req, res) => {
 // Debug helpers
 let lastEmailReceived = null;
 app.get('/api/email-bids/debug', (req, res) => {
-  res.json({ status: 'email-bids endpoint is active', method: 'POST required' });
+  res.json({ status: 'email-bids endpoint is active', method: 'POST required', ebnCookiesSet: ebnCookies.length > 0 });
 });
 app.get('/api/email-bids/last', (req, res) => {
   res.json(lastEmailReceived || { message: 'No data received yet' });
 });
 
-// Parse multiple bids from one EnviroBidNet (or CivCast) email
+// ── Parse multiple bids from EnviroBidNet email ──
 app.post('/api/email-bids', async (req, res) => {
   try {
     const { html, text, subject, from } = req.body || {};
@@ -256,15 +388,19 @@ app.post('/api/email-bids', async (req, res) => {
       subject, from,
       hasHtml: !!html, htmlLength: (html||'').length,
       hasText: !!text, textLength: (text||'').length,
-      htmlPreview: (html||'').slice(0,200),
+      htmlPreview: (html||'').slice(0,300),
       receivedAt: new Date().toISOString()
     };
+
+    console.log('[Email Bids] Received from:', from, '| Subject:', subject);
+
     if (!html && !text) return res.json({ success: false, error: 'No HTML provided' });
 
     const rawHtml = (html || text || '').replace(/&amp;/g, '&');
     const plainText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
-    const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)[^\s"<>\)\]]*/gi;
+    // Extract all EnviroBidNet bid links
+    const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)/gi;
     const matches = [...plainText.matchAll(bidUrlPattern)];
 
     const seen = new Set();
@@ -274,65 +410,92 @@ app.post('/api/email-bids', async (req, res) => {
       return true;
     });
 
+    console.log('[Email Bids] Found', uniqueMatches.length, 'unique bid links');
+
     if (uniqueMatches.length === 0) {
-      const bid = {
-        id: 'ebn-' + Date.now(),
-        name: subject || 'EnviroBidNet — Texas E&I Bid Alert',
-        agency: 'EnviroBidNet',
-        city: 'Texas', region: 'statewide',
-        scope: 'E&I Engineering — See RFQ link',
-        due: 'See link', value: 'TBD', status: 'active',
-        source: 'EnviroBidNet',
-        url: 'https://www.envirobidnet.com/search_bids',
-        scrapedAt: new Date().toISOString()
-      };
-      await saveBid(bid);
-      return res.json({ success: true, created: 1, bids: [bid] });
+      return res.json({ success: false, error: 'No bid links found in email', preview: plainText.slice(0, 300) });
     }
 
     const createdBids = [];
+
     for (const match of uniqueMatches) {
       const bidId = match[1];
-      const bidUrl = match[0];
-      let name = subject || ('EnviroBidNet Bid #' + bidId);
+      const bidUrl = `https://www.envirobidnet.com/subscriber_view_bid/${bidId}`;
+
+      // Extract basic info from email text around bid ID
+      let name = 'EnviroBidNet Bid #' + bidId;
       let due = 'See link';
       let agency = 'EnviroBidNet';
       let scope = 'E&I Engineering — See RFQ link';
+      let city = 'Texas';
 
+      // Find context around this bid ID in the email
       const bidIdPos = plainText.indexOf(bidId);
       if (bidIdPos > -1) {
-        const context = plainText.substring(Math.max(0, bidIdPos - 20), bidIdPos + 500);
-        const descMatch = context.match(new RegExp(bidId + '[^\\d]([^\\n]{10,300})'));
+        const context = plainText.substring(Math.max(0, bidIdPos - 50), bidIdPos + 600);
+
+        // Extract description (text after bid ID)
+        const descMatch = context.match(new RegExp(bidId + '[^\\d\\s]?\\s*([A-Z][^\\n]{10,300})'));
         if (descMatch) {
-          const rawDesc = descMatch[1].trim();
-          name = rawDesc.slice(0, 200);
-          scope = rawDesc.slice(0, 500);
+          name = descMatch[1].trim().slice(0, 200);
+          scope = descMatch[1].trim().slice(0, 500);
         }
-        const expMatch = context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{4}-\d{2}-\d{2})/) ||
-                         context.match(/[Ee]xpir\w*[s]?[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/) ||
+
+        // Extract expiry date
+        const expMatch = context.match(/[Ee]xpir\w*[:\s]+(\d{4}-\d{2}-\d{2})/) ||
                          context.match(/(\d{4}-\d{2}-\d{2})/) ||
                          context.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
         if (expMatch) due = expMatch[1];
-        const agencyMatch = name.match(/^([A-Za-z0-9]+(?:[\s\-][A-Za-z0-9]+)?)[:\s]/);
+
+        // Extract city/state
+        const cityMatch = context.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),\s*([A-Z]{2})/);
+        if (cityMatch) city = cityMatch[1] + ', ' + cityMatch[2];
+
+        // Extract agency from beginning of description
+        const agencyMatch = name.match(/^([^:]{3,40}):/);
         if (agencyMatch) agency = agencyMatch[1].trim();
+      }
+
+      // Try to scrape full details from EnviroBidNet if cookies are set
+      let fullDetails = {};
+      if (ebnCookies) {
+        try {
+          console.log('[Email Bids] Scraping details for bid #' + bidId);
+          const result = await fetchUrl(bidUrl, ebnCookies);
+          if (!result.html.includes('Log into Envirobidnet')) {
+            fullDetails = parseEnviroBidNetPage(result.html);
+            if (fullDetails.agency) agency = fullDetails.agency;
+            if (fullDetails.due) due = fullDetails.due;
+            if (fullDetails.city) city = fullDetails.city;
+            if (fullDetails.fullDescription) scope = fullDetails.fullDescription;
+            console.log('[Email Bids] Got full details for #' + bidId);
+          }
+        } catch(scrapeErr) {
+          console.log('[Email Bids] Could not scrape #' + bidId + ':', scrapeErr.message);
+        }
       }
 
       const bid = {
         id: 'ebn-' + bidId,
         name: (name || 'EnviroBidNet Bid #' + bidId).slice(0, 200),
         agency: agency || 'EnviroBidNet',
-        city: 'Texas', region: 'statewide',
+        city: city || 'Texas',
+        region: detectRegion(city),
         scope: scope || 'E&I Engineering — See RFQ link',
         due: due || 'See link',
-        value: 'TBD', status: 'active',
+        value: 'TBD',
+        status: 'active',
         source: 'EnviroBidNet',
         bidId: '#' + bidId,
         url: bidUrl,
-        scrapedAt: new Date().toISOString()
+        scrapedAt: new Date().toISOString(),
+        // Full detail fields from scraping
+        ...fullDetails
       };
+
       await saveBid(bid);
       createdBids.push(bid);
-      console.log('[Email Bid] Created: #' + bidId, name.slice(0,50), '| Due:', due, '| URL:', bidUrl.slice(0,60));
+      console.log('[Email Bid] Saved: #' + bidId, '|', name.slice(0,60), '| Due:', due);
     }
 
     res.json({ success: true, created: createdBids.length, bids: createdBids });
@@ -423,19 +586,12 @@ async function runScrape() {
 }
 
 // ─── CRON ─────────────────────────────────────────────────────
-require('node-cron').schedule('0 23 * * *', () => runScrape());  // Daily 6 PM EST
-require('node-cron').schedule('0 8 * * *', async () => {          // Cleanup 8 AM EST
+require('node-cron').schedule('0 23 * * *', () => runScrape());
+require('node-cron').schedule('0 8 * * *', async () => {
   try {
-    // Remove scraped bids older than 60 days
     const r1 = await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' != 'Manual'");
     console.log('[Cleanup] Old bids removed:', r1.rowCount);
-
-    // Remove deleted/expired bids every 15 days
-    const r2 = await pool.query(`
-      DELETE FROM bids 
-      WHERE data->>'userState' = 'deleted'
-      AND updated_at < NOW() - INTERVAL '15 days'
-    `);
+    const r2 = await pool.query(`DELETE FROM bids WHERE data->>'userState' = 'deleted' AND updated_at < NOW() - INTERVAL '15 days'`);
     console.log('[Cleanup] Deleted bids purged:', r2.rowCount);
   } catch(e) { console.error('[Cleanup]', e.message); }
 });
