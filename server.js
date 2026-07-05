@@ -396,127 +396,149 @@ app.get('/api/email-bids/full', (req, res) => {
 app.post('/api/email-bids', async (req, res) => {
   try {
     const { html, text, subject, from } = req.body || {};
+    
+    // Store full debug info
     lastEmailReceived = {
       subject, from,
       hasHtml: !!html, htmlLength: (html||'').length,
       hasText: !!text, textLength: (text||'').length,
-      htmlPreview: (html||'').slice(0,500),
-      textPreview: (text||'').slice(0,500),
-      fullHtml: (html||'').slice(0,5000),
-      fullText: (text||'').slice(0,5000),
+      htmlPreview: (html||'').slice(0, 500),
+      textPreview: (text||'').slice(0, 500),
       receivedAt: new Date().toISOString()
     };
 
-    console.log('[Email Bids] Received from:', from, '| Subject:', subject);
+    console.log('[Email Bids] Received | From:', from, '| Subject:', subject);
+    console.log('[Email Bids] HTML length:', (html||'').length, '| Text length:', (text||'').length);
 
-    if (!html && !text) return res.json({ success: false, error: 'No HTML provided' });
-
-    const rawHtml = (html || text || '').replace(/&amp;/g, '&');
-    const plainText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-
-    // Extract all EnviroBidNet bid links
-    // Match direct URLs and encoded URLs
-    const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)/gi;
-    // Also search in raw HTML for encoded URLs
-    const encodedPattern = /envirobidnet\.com(?:%2F|\/|%2f)subscriber_view_bid(?:%2F|\/|%2f)(\d+)/gi;
-    const matches = [...plainText.matchAll(bidUrlPattern)];
-    // Also check raw HTML for encoded URLs
-    const encodedMatches = [...rawHtml.matchAll(encodedPattern)];
-    const allMatches = [...matches, ...encodedMatches];
-
-    const seen = new Set();
-    const uniqueMatches = allMatches.filter(m => {
-      if (seen.has(m[1])) return false;
-      seen.add(m[1]);
-      return true;
-    });
-
-    console.log('[Email Bids] Found', uniqueMatches.length, 'unique bid links');
-
-    if (uniqueMatches.length === 0) {
-      return res.json({ success: false, error: 'No bid links found in email', preview: plainText.slice(0, 300) });
+    if (!html && !text) {
+      return res.json({ success: false, error: 'No content received from Make.com' });
     }
 
+    const rawHtml = (html || '').replace(/&amp;/g, '&').replace(/&#x2F;/g, '/');
+    const rawText = (text || '');
+    const combined = rawHtml + ' ' + rawText;
+    
+    // Strip HTML tags to get plain text
+    const plainText = combined.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+    console.log('[Email Bids] Combined length:', combined.length);
+    console.log('[Email Bids] Plain text preview:', plainText.slice(0, 300));
+
+    // Strategy 1: Find direct URLs
+    const directPattern = /envirobidnet\.com\/subscriber_view_bid\/(\d+)/gi;
+    const directMatches = [...combined.matchAll(directPattern)].map(m => m[1]);
+    console.log('[Email Bids] Direct URL matches:', directMatches);
+
+    // Strategy 2: Find encoded URLs  
+    const encodedPattern = /envirobidnet\.com(?:%2F|%2f)+subscriber_view_bid(?:%2F|%2f)(\d+)/gi;
+    const encodedMatches = [...combined.matchAll(encodedPattern)].map(m => m[1]);
+    console.log('[Email Bids] Encoded URL matches:', encodedMatches);
+
+    // Strategy 3: Find any 6-digit number near "envirobidnet" or "bid"
+    const nearbyPattern = /subscriber[_\-]?view[_\-]?bid[^\d]*(\d{5,7})/gi;
+    const nearbyMatches = [...plainText.matchAll(nearbyPattern)].map(m => m[1]);
+    console.log('[Email Bids] Nearby matches:', nearbyMatches);
+
+    // Strategy 4: Find all 6-digit numbers in the email (bid IDs are typically 6 digits)
+    // Only use this if other methods fail
+    const allSixDigit = [...plainText.matchAll(/\b(8\d{5})\b/g)].map(m => m[1]);
+    console.log('[Email Bids] Six-digit numbers starting with 8:', allSixDigit.slice(0,10));
+
+    // Combine all found bid IDs - remove duplicates
+    const allBidIds = [...new Set([...directMatches, ...encodedMatches, ...nearbyMatches])];
+    console.log('[Email Bids] All unique bid IDs found:', allBidIds);
+
+    if (allBidIds.length === 0) {
+      // Last resort: use 6-digit numbers
+      const lastResort = [...new Set(allSixDigit)].slice(0, 20);
+      console.log('[Email Bids] Last resort bid IDs:', lastResort);
+      
+      if (lastResort.length === 0) {
+        return res.json({ 
+          success: false, 
+          error: 'No bid IDs found in email',
+          htmlLength: rawHtml.length,
+          textLength: rawText.length,
+          preview: plainText.slice(0, 500),
+          strategies: { direct: directMatches.length, encoded: encodedMatches.length, nearby: nearbyMatches.length }
+        });
+      }
+      
+      // Save last resort bids
+      const savedBids = [];
+      for (const bidId of lastResort) {
+        const bid = {
+          id: 'ebn-' + bidId,
+          name: subject || ('EnviroBidNet Bid #' + bidId),
+          agency: 'EnviroBidNet',
+          city: 'Texas', region: 'statewide',
+          scope: 'E&I Engineering — See RFQ link',
+          due: 'See link', value: 'TBD', status: 'active',
+          source: 'EnviroBidNet',
+          bidId: '#' + bidId,
+          url: 'https://www.envirobidnet.com/subscriber_view_bid/' + bidId,
+          scrapedAt: new Date().toISOString()
+        };
+        await saveBid(bid);
+        savedBids.push(bid);
+        console.log('[Email Bids] Saved (last resort):', bidId);
+      }
+      return res.json({ success: true, created: savedBids.length, method: 'last-resort', bids: savedBids });
+    }
+
+    // Save all found bids
     const createdBids = [];
-
-    for (const match of uniqueMatches) {
-      const bidId = match[1];
-      const bidUrl = `https://www.envirobidnet.com/subscriber_view_bid/${bidId}`;
-
-      // Extract basic info from email text around bid ID
-      let name = 'EnviroBidNet Bid #' + bidId;
+    for (const bidId of allBidIds) {
+      let name = subject || ('EnviroBidNet Bid #' + bidId);
       let due = 'See link';
       let agency = 'EnviroBidNet';
       let scope = 'E&I Engineering — See RFQ link';
       let city = 'Texas';
 
-      // Find context around this bid ID in the email
-      const bidIdPos = plainText.indexOf(bidId);
-      if (bidIdPos > -1) {
-        const context = plainText.substring(Math.max(0, bidIdPos - 50), bidIdPos + 600);
-
-        // Extract description (text after bid ID)
-        const descMatch = context.match(new RegExp(bidId + '[^\\d\\s]?\\s*([A-Z][^\\n]{10,300})'));
+      // Extract info from email text around this bid ID
+      const bidPos = plainText.indexOf(bidId);
+      if (bidPos > -1) {
+        const ctx = plainText.substring(Math.max(0, bidPos - 100), bidPos + 600);
+        
+        // Get description after the bid ID
+        const descMatch = ctx.match(new RegExp(bidId + '[^\\d]{0,5}([A-Z][^|]{10,200})'));
         if (descMatch) {
           name = descMatch[1].trim().slice(0, 200);
           scope = descMatch[1].trim().slice(0, 500);
         }
 
-        // Extract expiry date
-        const expMatch = context.match(/[Ee]xpir\w*[:\s]+(\d{4}-\d{2}-\d{2})/) ||
-                         context.match(/(\d{4}-\d{2}-\d{2})/) ||
-                         context.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
-        if (expMatch) due = expMatch[1];
+        // Get due date
+        const dateMatch = ctx.match(/(\d{4}-\d{2}-\d{2})/) || ctx.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+        if (dateMatch) due = dateMatch[1];
 
-        // Extract city/state
-        const cityMatch = context.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?),\s*([A-Z]{2})/);
+        // Get city
+        const cityMatch = ctx.match(/([A-Z][a-z]+(?: [A-Z][a-z]+)?),\s*([A-Z]{2})\b/);
         if (cityMatch) city = cityMatch[1] + ', ' + cityMatch[2];
 
-        // Extract agency from beginning of description
+        // Get agency from start of description
         const agencyMatch = name.match(/^([^:]{3,40}):/);
         if (agencyMatch) agency = agencyMatch[1].trim();
       }
 
-      // Try to scrape full details from EnviroBidNet if cookies are set
-      let fullDetails = {};
-      if (ebnCookies) {
-        try {
-          console.log('[Email Bids] Scraping details for bid #' + bidId);
-          const result = await fetchUrl(bidUrl, ebnCookies);
-          if (!result.html.includes('Log into Envirobidnet')) {
-            fullDetails = parseEnviroBidNetPage(result.html);
-            if (fullDetails.agency) agency = fullDetails.agency;
-            if (fullDetails.due) due = fullDetails.due;
-            if (fullDetails.city) city = fullDetails.city;
-            if (fullDetails.fullDescription) scope = fullDetails.fullDescription;
-            console.log('[Email Bids] Got full details for #' + bidId);
-          }
-        } catch(scrapeErr) {
-          console.log('[Email Bids] Could not scrape #' + bidId + ':', scrapeErr.message);
-        }
-      }
-
       const bid = {
         id: 'ebn-' + bidId,
-        name: (name || 'EnviroBidNet Bid #' + bidId).slice(0, 200),
-        agency: agency || 'EnviroBidNet',
-        city: city || 'Texas',
+        name: name.slice(0, 200),
+        agency,
+        city,
         region: detectRegion(city),
-        scope: scope || 'E&I Engineering — See RFQ link',
-        due: due || 'See link',
+        scope: scope.slice(0, 500),
+        due,
         value: 'TBD',
         status: 'active',
         source: 'EnviroBidNet',
         bidId: '#' + bidId,
-        url: bidUrl,
-        scrapedAt: new Date().toISOString(),
-        // Full detail fields from scraping
-        ...fullDetails
+        url: 'https://www.envirobidnet.com/subscriber_view_bid/' + bidId,
+        scrapedAt: new Date().toISOString()
       };
 
       await saveBid(bid);
       createdBids.push(bid);
-      console.log('[Email Bid] Saved: #' + bidId, '|', name.slice(0,60), '| Due:', due);
+      console.log('[Email Bids] Saved:', bidId, '|', name.slice(0, 50), '| Due:', due);
     }
 
     res.json({ success: true, created: createdBids.length, bids: createdBids });
