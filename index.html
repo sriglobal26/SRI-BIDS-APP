@@ -316,7 +316,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
 
 <div class="topbar">
   <div class="logo">SRI <span>Global</span></div>
-  <div class="topbar-r" style="text-align:right"><strong>Texas Water/WW — E&I Bids</strong><br><span class="hide-xs">Houston, TX · v2026.07.03-FINAL · Updated <span id="last-updated"></span></span></div>
+  <div class="topbar-r" style="text-align:right"><strong>Texas Water/WW — E&I Bids</strong><br><span class="hide-xs">Houston, TX · v2026.07.05-SCRAPE · Updated <span id="last-updated"></span></span></div>
 </div>
 
 <div class="tab-nav">
@@ -514,6 +514,7 @@ Best regards,
     <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
     <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
     <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
+    <button id="btn-scrape" class="btn1" style="font-size:10px;padding:6px 16px;background:var(--yellow);color:var(--navy);margin-right:6px" onclick="runScrapeNow()">🔄 Scrape Now</button>
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px;background:var(--green);color:var(--navy);margin-right:6px" onclick="openM('m-paste-email')">📧 Paste Email</button>
     <button class="btn1" style="font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
   </div>
@@ -1625,6 +1626,59 @@ function addBidManual(){
   const bid={name,agency:document.getElementById('ab-agency').value.trim()||'Unknown',city:document.getElementById('ab-city').value.trim()||'Texas',scope:document.getElementById('ab-scope').value.trim()||'E&I Engineering',due:document.getElementById('ab-due').value.trim()||'See link',value:document.getElementById('ab-value').value.trim()||'TBD',url:document.getElementById('ab-url').value.trim()||'',source:'Manual',status:'active'};
   fetch('/api/bids',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bid)}).then(r=>r.json()).then(()=>{closeM('m-addbid');['ab-name','ab-agency','ab-city','ab-scope','ab-due','ab-value','ab-url'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});fetchBids();}).catch(e=>alert('Error: '+e.message));
 }
+
+// ── SCRAPE NOW BUTTON ──────────────────────────────────────
+async function runScrapeNow(){
+  const btn = document.getElementById('btn-scrape');
+  if(btn){ btn.textContent = '⏳ Scraping...'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/scrape', {method:'POST'});
+    const d = await r.json();
+    if(btn){ btn.textContent = '✅ Scraping...'; }
+    // Poll until done
+    let tries = 0;
+    const poll = setInterval(async () => {
+      tries++;
+      const s = await fetch('/api/scrape/status').then(r=>r.json());
+      if(!s.running || tries > 30){
+        clearInterval(poll);
+        if(btn){ btn.textContent = '🔄 Scrape Now'; btn.disabled = false; }
+        await fetchBids();
+        showToast('✅ Scrape complete! Bids updated.');
+      }
+    }, 3000);
+  } catch(e){
+    if(btn){ btn.textContent = '🔄 Scrape Now'; btn.disabled = false; }
+    showToast('❌ Scrape failed: ' + e.message);
+  }
+}
+
+// ── TOAST NOTIFICATION ─────────────────────────────────────
+function showToast(msg){
+  let t = document.getElementById('sri-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'sri-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#112240;border:1px solid rgba(0,200,212,.4);color:#F0F4F8;font-family:IBM Plex Mono,monospace;font-size:12px;padding:12px 20px;border-radius:6px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.4);transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(()=>{ t.style.opacity='0'; }, 4000);
+}
+
+// ── AUTO REFRESH BIDS every 60 seconds ─────────────────────
+setInterval(()=>{ fetchBids(); }, 60000);
+
+// ── AUTO SCRAPE on first load if no bids ───────────────────
+setTimeout(async ()=>{
+  const r = await fetch('/api/bids').then(x=>x.json()).catch(()=>({bids:[]}));
+  if(!r.bids || r.bids.length === 0){
+    console.log('[Auto] No bids found — triggering scrape...');
+    runScrapeNow();
+  }
+}, 3000);
+
 </script>
 
 </body>
