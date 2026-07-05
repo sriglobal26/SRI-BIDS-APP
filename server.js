@@ -223,7 +223,9 @@ function parseEnviroBidNetPage(html) {
 let ebnCookies = process.env.EBN_COOKIES || '';
 
 // ─── ROUTES ──────────────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'ok', uptime: Math.round(process.uptime()) }));
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()), timestamp: new Date().toISOString() });
+});
 
 // Set EnviroBidNet cookies for scraping
 app.post('/api/ebn-cookies', (req, res) => {
@@ -597,12 +599,16 @@ require('node-cron').schedule('0 8 * * *', async () => {
 });
 
 // ─── START ────────────────────────────────────────────────────
+// Start server immediately - don't wait for DB
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log('[SRI Bids] Listening on port', PORT);
+});
+
+// Init DB after server is already listening
 initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('[SRI Bids] Listening on port', PORT);
-    setTimeout(runScrape, 8000);
-  });
+  console.log('[SRI Bids] DB connected - starting scraper');
+  setTimeout(runScrape, 8000);
 }).catch(err => {
   console.error('[DB] Init failed:', err.message);
-  app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Running (no DB) on port', PORT));
+  console.log('[SRI Bids] Running without DB');
 });
