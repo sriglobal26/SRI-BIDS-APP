@@ -382,6 +382,16 @@ app.get('/api/email-bids/last', (req, res) => {
   res.json(lastEmailReceived || { message: 'No data received yet' });
 });
 
+// Debug: show full email content to check what Make.com sends
+app.get('/api/email-bids/full', (req, res) => {
+  if(!lastEmailReceived) return res.json({message: 'No email received yet'});
+  res.json({
+    ...lastEmailReceived,
+    fullHtml: (lastEmailReceived.fullHtml || '').slice(0, 2000),
+    fullText: (lastEmailReceived.fullText || '').slice(0, 2000)
+  });
+});
+
 // ── Parse multiple bids from EnviroBidNet email ──
 app.post('/api/email-bids', async (req, res) => {
   try {
@@ -390,7 +400,10 @@ app.post('/api/email-bids', async (req, res) => {
       subject, from,
       hasHtml: !!html, htmlLength: (html||'').length,
       hasText: !!text, textLength: (text||'').length,
-      htmlPreview: (html||'').slice(0,300),
+      htmlPreview: (html||'').slice(0,500),
+      textPreview: (text||'').slice(0,500),
+      fullHtml: (html||'').slice(0,5000),
+      fullText: (text||'').slice(0,5000),
       receivedAt: new Date().toISOString()
     };
 
@@ -402,11 +415,17 @@ app.post('/api/email-bids', async (req, res) => {
     const plainText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
     // Extract all EnviroBidNet bid links
+    // Match direct URLs and encoded URLs
     const bidUrlPattern = /https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/(\d+)/gi;
+    // Also search in raw HTML for encoded URLs
+    const encodedPattern = /envirobidnet\.com(?:%2F|\/|%2f)subscriber_view_bid(?:%2F|\/|%2f)(\d+)/gi;
     const matches = [...plainText.matchAll(bidUrlPattern)];
+    // Also check raw HTML for encoded URLs
+    const encodedMatches = [...rawHtml.matchAll(encodedPattern)];
+    const allMatches = [...matches, ...encodedMatches];
 
     const seen = new Set();
-    const uniqueMatches = matches.filter(m => {
+    const uniqueMatches = allMatches.filter(m => {
       if (seen.has(m[1])) return false;
       seen.add(m[1]);
       return true;
