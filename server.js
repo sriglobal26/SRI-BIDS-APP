@@ -54,14 +54,7 @@ const EBN_BIDS = [
 async function seedEBN() {
   try {
     for (const b of EBN_BIDS) {
-      await saveBid({
-        id: 'ebn-' + b.id, name: b.name, agency: b.agency,
-        city: b.city, region: detectRegion(b.city), scope: b.scope,
-        due: b.due, value: 'TBD', status: 'active',
-        source: 'EnviroBidNet', bidId: '#' + b.id,
-        url: 'https://www.envirobidnet.com/subscriber_view_bid/' + b.id,
-        scrapedAt: new Date().toISOString()
-      });
+      await saveBid({ id:'ebn-'+b.id, name:b.name, agency:b.agency, city:b.city, region:detectRegion(b.city), scope:b.scope, due:b.due, value:'TBD', status:'active', source:'EnviroBidNet', bidId:'#'+b.id, url:'https://www.envirobidnet.com/subscriber_view_bid/'+b.id, scrapedAt:new Date().toISOString() });
     }
     console.log('[EBN] Seeded', EBN_BIDS.length, 'EnviroBidNet bids');
   } catch(e) { console.error('[EBN] Error:', e.message); }
@@ -77,26 +70,7 @@ function detectRegion(city) {
 }
 
 function normalizeBid(raw, idx) {
-  return {
-    id: raw.id || 'bid-' + idx,
-    num: String(idx + 1).padStart(2, '0'),
-    name: raw.name || 'Unnamed Bid',
-    agency: raw.agency || 'Unknown Agency',
-    city: raw.city || 'Texas',
-    scope: raw.scope || 'E&I Engineering',
-    due: raw.due || 'See link',
-    value: raw.value || 'TBD',
-    status: raw.status || 'active',
-    region: raw.region || detectRegion(raw.city || ''),
-    url: raw.url || '',
-    source: raw.source || 'Unknown',
-    scrapedAt: raw.scrapedAt || new Date().toISOString(),
-    bidId: raw.bidId || '',
-    bidNumber: raw.bidNumber || '',
-    contactName: raw.contactName || '',
-    contactPhone: raw.contactPhone || '',
-    fullDescription: raw.fullDescription || ''
-  };
+  return { id:raw.id||'bid-'+idx, num:String(idx+1).padStart(2,'0'), name:raw.name||'Unnamed Bid', agency:raw.agency||'Unknown Agency', city:raw.city||'Texas', scope:raw.scope||'E&I Engineering', due:raw.due||'See link', value:raw.value||'TBD', status:raw.status||'active', region:raw.region||detectRegion(raw.city||''), url:raw.url||'', source:raw.source||'Unknown', scrapedAt:raw.scrapedAt||new Date().toISOString(), bidId:raw.bidId||'', contactName:raw.contactName||'', contactPhone:raw.contactPhone||'' };
 }
 
 async function readBids() {
@@ -107,10 +81,7 @@ async function readBids() {
 }
 
 async function saveBid(bid) {
-  await pool.query(
-    'INSERT INTO bids (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()',
-    [bid.id, JSON.stringify(bid)]
-  );
+  await pool.query('INSERT INTO bids (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()', [bid.id, JSON.stringify(bid)]);
 }
 
 async function clearScrapedBids() {
@@ -122,11 +93,8 @@ let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished:
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()) }));
 
 app.get('/api/seed-ebn', async (req, res) => {
-  try {
-    await seedEBN();
-    const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='EnviroBidNet'");
-    res.json({ success: true, count: parseInt(r.rows[0].count) });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  try { await seedEBN(); const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='EnviroBidNet'"); res.json({ success: true, count: parseInt(r.rows[0].count) }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 const fs = require('fs');
@@ -135,41 +103,17 @@ app.get('/', async (req, res) => {
     let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
     const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
     const seen = new Set();
-    const bids = r.rows.map((row, i) => {
-      const b = row.data;
-      return { id: b.id || 'bid-'+i, num: String(i+1).padStart(2,'0'), name: b.name || 'Unnamed', agency: b.agency || 'Unknown', city: b.city || 'Texas', scope: b.scope || 'E&I Engineering', due: b.due || 'See link', value: b.value || 'TBD', status: b.status || 'active', region: b.region || 'statewide', url: b.url || '', source: b.source || 'Unknown', bidId: b.bidId || '', userState: b.userState || 'active', contactName: b.contactName || '', contactPhone: b.contactPhone || '' };
-    }).filter(b => { const k = b.name+'|'+b.agency; if(seen.has(k)) return false; seen.add(k); return true; });
+    const bids = r.rows.map((row, i) => { const b = row.data; return { id:b.id||'bid-'+i, num:String(i+1).padStart(2,'0'), name:b.name||'Unnamed', agency:b.agency||'Unknown', city:b.city||'Texas', scope:b.scope||'E&I Engineering', due:b.due||'See link', value:b.value||'TBD', status:b.status||'active', region:b.region||'statewide', url:b.url||'', source:b.source||'Unknown', bidId:b.bidId||'', userState:b.userState||'active' }; }).filter(b => { const k=b.name+'|'+b.agency; if(seen.has(k)) return false; seen.add(k); return true; });
     html = html.replace('let BIDS=[];', 'let BIDS=' + JSON.stringify(bids) + ';');
     res.send(html);
   } catch(e) { console.error('[Serve]', e.message); res.sendFile(__dirname + '/index.html'); }
 });
 
-app.get('/api/cleanup', async (req, res) => {
-  try {
-    const r = await pool.query(`DELETE FROM bids WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY data->>'name' ORDER BY created_at DESC) rn FROM bids) t WHERE rn > 1)`);
-    res.json({ success: true, removed: r.rowCount });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/bids', async (req, res) => {
-  try { res.json(await readBids()); }
-  catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); }
-});
-
+app.get('/api/cleanup', async (req, res) => { try { const r = await pool.query(`DELETE FROM bids WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY data->>'name' ORDER BY created_at DESC) rn FROM bids) t WHERE rn > 1)`); res.json({ success: true, removed: r.rowCount }); } catch(e) { res.status(500).json({ error: e.message }); } });
+app.get('/api/bids', async (req, res) => { try { res.json(await readBids()); } catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); } });
 app.get('/api/scrape/status', (req, res) => res.json(scrapeStatus));
-app.post('/api/scrape', (req, res) => {
-  if (scrapeStatus.running) return res.json({ status: 'already_running' });
-  res.json({ status: 'started' });
-  runScrape();
-});
-
-app.post('/api/bids', async (req, res) => {
-  try {
-    const bid = { id: 'manual-' + Date.now(), source: 'Manual', ...req.body };
-    await saveBid(bid);
-    res.json({ success: true, bid });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
+app.post('/api/scrape', (req, res) => { if (scrapeStatus.running) return res.json({ status: 'already_running' }); res.json({ status: 'started' }); runScrape(); });
+app.post('/api/bids', async (req, res) => { try { const bid = { id:'manual-'+Date.now(), source:'Manual', ...req.body }; await saveBid(bid); res.json({ success: true, bid }); } catch(e) { res.status(500).json({ success: false, error: e.message }); } });
 
 let lastEmailReceived = null;
 app.get('/api/email-bids/debug', (req, res) => res.json({ status: 'active' }));
@@ -182,7 +126,7 @@ app.post('/api/email-bids', async (req, res) => {
     const text = body.text || body.TEXT || '';
     const subject = body.subject || '';
     const from = body.from || '';
-    lastEmailReceived = { subject, from, hasHtml: !!html, htmlLength: html.length, hasText: !!text, textLength: text.length, htmlPreview: html.slice(0,300), receivedAt: new Date().toISOString() };
+    lastEmailReceived = { subject, from, hasHtml:!!html, htmlLength:html.length, hasText:!!text, textLength:text.length, htmlPreview:html.slice(0,300), receivedAt:new Date().toISOString() };
     console.log('[EBN Email] From:', from, 'Subject:', subject, 'HTML:', html.length, 'Text:', text.length);
     const combined = [html, text].join(' ').replace(/&amp;/g,'&').replace(/&#x2F;/g,'/');
     const plain = combined.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
@@ -198,7 +142,7 @@ app.post('/api/email-bids', async (req, res) => {
     }
     const saved = [];
     for (const bidId of found) {
-      let name = 'EnviroBidNet Bid #'+bidId, due = 'See link', city = 'Texas', agency = 'EnviroBidNet';
+      let name='EnviroBidNet Bid #'+bidId, due='See link', city='Texas', agency='EnviroBidNet';
       const pos = plain.indexOf(bidId);
       if (pos > -1) {
         const ctx = plain.substring(Math.max(0,pos-50), pos+400);
@@ -209,8 +153,7 @@ app.post('/api/email-bids', async (req, res) => {
         const ag = name.match(/^([^:]{3,40}):/); if(ag) agency = ag[1].trim();
       }
       const bid = { id:'ebn-'+bidId, name, agency, city, region:detectRegion(city), scope:name, due, value:'TBD', status:'active', source:'EnviroBidNet', bidId:'#'+bidId, url:'https://www.envirobidnet.com/subscriber_view_bid/'+bidId, scrapedAt:new Date().toISOString() };
-      await saveBid(bid);
-      saved.push(bid);
+      await saveBid(bid); saved.push(bid);
       console.log('[EBN Email] Saved:', bidId, name.slice(0,50));
     }
     res.json({ success: true, created: saved.length, bids: saved });
@@ -220,7 +163,6 @@ app.post('/api/email-bids', async (req, res) => {
 app.delete('/api/bids/:id', async (req, res) => { await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]); res.json({ success: true }); });
 app.patch('/api/bids/:id', async (req, res) => { await pool.query('UPDATE bids SET data = data || $1, updated_at=NOW() WHERE id=$2', [JSON.stringify(req.body), req.params.id]); res.json({ success: true }); });
 app.get('/api/scrape/log', async (req, res) => { try { const r = await pool.query('SELECT * FROM scrape_log ORDER BY ran_at DESC LIMIT 100'); res.json(r.rows); } catch(e) { res.json([]); } });
-
 app.get('/api/primes', async (req, res) => { try { const r = await pool.query('SELECT data FROM primes ORDER BY created_at ASC'); res.json({ primes: r.rows.map(r => r.data) }); } catch(e) { res.json({ primes: [] }); } });
 app.post('/api/primes', async (req, res) => { try { const prime = { ...req.body, updatedAt: new Date().toISOString() }; await pool.query('INSERT INTO primes (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()', [prime.id, JSON.stringify(prime)]); res.json({ success: true, prime }); } catch(e) { res.status(500).json({ success: false, error: e.message }); } });
 app.delete('/api/primes/:id', async (req, res) => { try { await pool.query('DELETE FROM primes WHERE id=$1', [req.params.id]); res.json({ success: true }); } catch(e) { res.status(500).json({ success: false, error: e.message }); } });
@@ -238,20 +180,13 @@ async function runScrape() {
     await seedEBN();
     for (const r of results) { await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', [r.source, r.count, r.status, r.message||'']).catch(()=>{}); }
     console.log('[Scraper] Done:', scraped.length, 'bids');
-  } catch(e) {
-    console.error('[Scraper] Error:', e.message);
-    await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', ['All', 0, 'error', e.message]).catch(()=>{});
-  }
+  } catch(e) { console.error('[Scraper] Error:', e.message); await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', ['All', 0, 'error', e.message]).catch(()=>{}); }
   scrapeStatus.running = false;
   scrapeStatus.lastFinished = new Date().toISOString();
 }
 
 require('node-cron').schedule('0 23 * * *', () => runScrape());
-require('node-cron').schedule('0 8 * * *', async () => {
-  try {
-    await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet')");
-  } catch(e) { console.error('[Cleanup]', e.message); }
-});
+require('node-cron').schedule('0 8 * * *', async () => { try { await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet')"); } catch(e) { console.error('[Cleanup]', e.message); } });
 
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
 initDB().then(() => { setTimeout(runScrape, 8000); }).catch(err => console.error('[DB] Init failed:', err.message));
