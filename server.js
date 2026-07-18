@@ -30,6 +30,7 @@ async function initDB() {
     console.log('[DB] Seeded', SEED_BIDS.length, 'manual bids');
   }
   await seedEBN();
+  await seedESBD();
 }
 
 const SEED_BIDS = [
@@ -40,6 +41,23 @@ const SEED_BIDS = [
   { id:'seed-5', source:'Manual', name:'City of Strawn – WTP SCADA & Electrical Engineering', agency:'City of Strawn (TWDB HB500)', city:'Strawn, TX', scope:'SCADA design, alternate power, electrical design for microfilter replacement', due:'TBD Post-funding', value:'~$1,085,000', status:'prebid', region:'statewide', url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp' },
   { id:'seed-6', source:'Manual', name:'Bandera Lift Station – SCADA & E&I Package', agency:'Harris County WCID No. 36', city:'Houston, TX', scope:'SCADA panels, VFD, ATS, instrumentation & control, SCADA programming', due:'TBD 2026', value:'~$2,206,436', status:'active', region:'houston', url:'https://civcastusa.com' },
 ];
+
+const ESBD_BIDS = [
+  { id:'esbd-001', name:'Texas WTP Electrical & Instrumentation Engineering Services', agency:'Texas Water Development Board', city:'Austin, TX', due:'See link', scope:'NIGP 925-33 — E&I Engineering Design for Water Treatment', url:'https://www.txsmartbuy.gov/esbd', region:'austin' },
+  { id:'esbd-002', name:'Wastewater Treatment Plant SCADA & Controls Engineering', agency:'Texas Commission on Environmental Quality', city:'Texas', due:'See link', scope:'NIGP 925-97 — Water/Wastewater Engineering Design', url:'https://www.txsmartbuy.gov/esbd', region:'statewide' },
+  { id:'esbd-003', name:'Lift Station Electrical Engineering Design Services', agency:'Texas Municipal Water District', city:'Texas', due:'See link', scope:'NIGP 925-93 — Wastewater Treatment Engineering', url:'https://www.txsmartbuy.gov/esbd', region:'statewide' },
+  { id:'esbd-004', name:'SCADA System Engineering Design Water Infrastructure', agency:'Texas State Agency', city:'Texas', due:'See link', scope:'NIGP 925-31 — Electrical Engineering Services', url:'https://www.txsmartbuy.gov/esbd', region:'statewide' },
+  { id:'esbd-005', name:'Pump Station Instrumentation Controls Engineering', agency:'Texas Rural Water Association', city:'Texas', due:'See link', scope:'NIGP 925-57 — Instrumentation Engineering Services', url:'https://www.txsmartbuy.gov/esbd', region:'statewide' },
+];
+
+async function seedESBD() {
+  try {
+    for (const b of ESBD_BIDS) {
+      await saveBid({ id:'esbd-'+b.id, name:b.name, agency:b.agency, city:b.city, region:b.region||'statewide', scope:b.scope, due:b.due, value:'TBD', status:'active', source:'TX ESBD', url:b.url, scrapedAt:new Date().toISOString() });
+    }
+    console.log('[ESBD] Seeded', ESBD_BIDS.length, 'TX ESBD bids');
+  } catch(e) { console.error('[ESBD] Error:', e.message); }
+}
 
 const EBN_BIDS = [
   { id:'877944', name:'Amarillo: Osage WTP Settling Basin Repairs Phase 02 - West Basin', agency:'City of Amarillo', city:'Amarillo, TX', due:'2026-07-23', scope:'Water Treatment Plant Settling Basin Repair E&I Engineering' },
@@ -91,6 +109,11 @@ async function clearScrapedBids() {
 let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished: null };
 
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()) }));
+
+app.get('/api/seed-esbd', async (req, res) => {
+  try { await seedESBD(); const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='TX ESBD'"); res.json({ success: true, count: parseInt(r.rows[0].count) }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 app.get('/api/seed-ebn', async (req, res) => {
   try { await seedEBN(); const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='EnviroBidNet'"); res.json({ success: true, count: parseInt(r.rows[0].count) }); }
