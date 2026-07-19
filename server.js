@@ -47,11 +47,11 @@ const EBN_BIDS = [
 ];
 
 const ESBD_BIDS = [
-  { id:'esbd-001', name:'Water Treatment Plant Electrical & Instrumentation Engineering', agency:'TX ESBD — NIGP 925-33', city:'Texas', due:'See link', scope:'NIGP 925-33 — E&I Engineering Design for Water Treatment', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-002', name:'Wastewater Treatment Plant SCADA & Controls Engineering', agency:'TX ESBD — NIGP 925-97', city:'Texas', due:'See link', scope:'NIGP 925-97 — Water/Wastewater Engineering Design Services', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-003', name:'Lift Station Electrical Engineering Design Services', agency:'TX ESBD — NIGP 925-93', city:'Texas', due:'See link', scope:'NIGP 925-93 — Wastewater Treatment Engineering Services', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-004', name:'SCADA System Engineering Design Water Infrastructure', agency:'TX ESBD — NIGP 925-31', city:'Texas', due:'See link', scope:'NIGP 925-31 — Electrical Engineering Services', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-005', name:'Pump Station Instrumentation & Controls Engineering', agency:'TX ESBD — NIGP 925-57', city:'Texas', due:'See link', scope:'NIGP 925-57 — Instrumentation Engineering Services', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-001', name:'Water Feature VFD-Controlled Pump & PLC/DMX Control Systems Engineering', agency:'TX ESBD — Texas State Agency', city:'Austin, TX', due:'2026-06-15', scope:'NIGP 90694 — Water Supply Treatment & Distribution Engineering, VFD, PLC, SCADA Controls', url:'https://www.txsmartbuy.gov/esbd/26PSS001', source:'TX ESBD' },
+  { id:'esbd-002', name:'TX ESBD — Search Water/WW E&I Engineering Bids (NIGP 925-33)', agency:'TX ESBD — NIGP 925-33', city:'Texas', due:'See link', scope:'NIGP 925-33 — Electrical & Instrumentation Engineering Design for Water Treatment', url:'https://www.txsmartbuy.gov/esbd?classItemCode=92533&status=Posted', source:'TX ESBD' },
+  { id:'esbd-003', name:'TX ESBD — Search Wastewater Engineering Bids (NIGP 925-97)', agency:'TX ESBD — NIGP 925-97', city:'Texas', due:'See link', scope:'NIGP 925-97 — Water/Wastewater Engineering Design Services', url:'https://www.txsmartbuy.gov/esbd?classItemCode=92597&status=Posted', source:'TX ESBD' },
+  { id:'esbd-004', name:'TX ESBD — Search Electrical Engineering Bids (NIGP 925-31)', agency:'TX ESBD — NIGP 925-31', city:'Texas', due:'See link', scope:'NIGP 925-31 — Electrical Engineering Services for Water/WW', url:'https://www.txsmartbuy.gov/esbd?classItemCode=92531&status=Posted', source:'TX ESBD' },
+  { id:'esbd-005', name:'TX ESBD — Search Instrumentation Engineering Bids (NIGP 925-57)', agency:'TX ESBD — NIGP 925-57', city:'Texas', due:'See link', scope:'NIGP 925-57 — Instrumentation Engineering Services', url:'https://www.txsmartbuy.gov/esbd?classItemCode=92557&status=Posted', source:'TX ESBD' },
 ];
 
 async function seedAllBids() {
