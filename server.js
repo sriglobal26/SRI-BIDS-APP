@@ -47,11 +47,11 @@ const EBN_BIDS = [
 ];
 
 const ESBD_BIDS = [
-  { id:'esbd-001', name:'TX ESBD — Electrical Instrumentation Engineering Water/WW (NIGP 925-33)', agency:'TX ESBD', city:'Texas', due:'See link', scope:'NIGP 925-33 — Electrical & Instrumentation Engineering Design', url:'https://www.txsmartbuy.gov/esbd?keyword=electrical+instrumentation+water&status=Posted', source:'TX ESBD' },
-  { id:'esbd-002', name:'TX ESBD — SCADA Engineering Water Wastewater (NIGP 925-97)', agency:'TX ESBD', city:'Texas', due:'See link', scope:'NIGP 925-97 — Water/Wastewater SCADA Engineering Design', url:'https://www.txsmartbuy.gov/esbd?keyword=scada+water+wastewater&status=Posted', source:'TX ESBD' },
-  { id:'esbd-003', name:'TX ESBD — Wastewater Treatment Engineering (NIGP 925-93)', agency:'TX ESBD', city:'Texas', due:'See link', scope:'NIGP 925-93 — Wastewater Treatment Engineering Services', url:'https://www.txsmartbuy.gov/esbd?keyword=wastewater+treatment+engineering&status=Posted', source:'TX ESBD' },
-  { id:'esbd-004', name:'TX ESBD — Lift Station Electrical Engineering (NIGP 925-31)', agency:'TX ESBD', city:'Texas', due:'See link', scope:'NIGP 925-31 — Electrical Engineering Services Water/WW', url:'https://www.txsmartbuy.gov/esbd?keyword=lift+station+electrical+engineering&status=Posted', source:'TX ESBD' },
-  { id:'esbd-005', name:'TX ESBD — Pump Station Instrumentation Engineering (NIGP 925-57)', agency:'TX ESBD', city:'Texas', due:'See link', scope:'NIGP 925-57 — Instrumentation Engineering Services', url:'https://www.txsmartbuy.gov/esbd?keyword=pump+station+instrumentation&status=Posted', source:'TX ESBD' },
+  { id:'esbd-001', name:'Water Feature VFD Pump & PLC/DMX Control Systems — UT Austin East Mall', agency:'University of Texas at Austin', city:'Austin, TX', due:'2026-06-15', scope:'VFD-controlled pumps, automated PLC/DMX control systems, Water Supply Treatment & Distribution Engineering', url:'https://www.txsmartbuy.gov/esbd/26PSS001', source:'TX ESBD' },
+  { id:'esbd-002', name:'RFQ — Engineering & Professional Services — Water/WW Infrastructure', agency:'Texas State Agency', city:'Texas', due:'2026-07-01', scope:'Engineering services for water/wastewater infrastructure — Electrical & Instrumentation', url:'https://www.txsmartbuy.gov/esbd/RFQ-731-26-004-JC', source:'TX ESBD' },
+  { id:'esbd-003', name:'TX ESBD — All Posted Water/WW Engineering Bids', agency:'TX ESBD — Texas Statewide', city:'Texas', due:'See link', scope:'All posted water/wastewater engineering solicitations on TX ESBD', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD' },
+  { id:'esbd-004', name:'TWDB Water Utilities Technical Assistance Program — Engineering', agency:'Texas Water Development Board (TWDB)', city:'Austin, TX', due:'See link', scope:'Water/Wastewater utility technical assistance engineering services', url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp', source:'TX ESBD' },
+  { id:'esbd-005', name:'TX ESBD — Wastewater System Upgrades — Lake Livingston State Park', agency:'Texas Parks & Wildlife Department', city:'Polk County, TX', due:'2025-05-22', scope:'Wastewater system upgrades engineering design services', url:'https://www.txsmartbuy.gov/esbd/1210809', source:'TX ESBD' },
 ];
 
 async function seedAllBids() {
