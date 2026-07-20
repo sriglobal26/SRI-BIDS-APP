@@ -1,3 +1,4 @@
+// SRI Bids v2026.07.19 — EBN + ESBD + Manual bids auto-seed
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
@@ -47,11 +48,11 @@ const EBN_BIDS = [
 ];
 
 const ESBD_BIDS = [
-  { id:'esbd-001', name:'San Antonio Water System — Electrical & Instrumentation Engineering Services', agency:'San Antonio Water System (SAWS)', city:'San Antonio, TX', due:'See link', scope:'E&I Engineering Design — Water/Wastewater Treatment Facilities', url:'https://apps.saws.org/business_center/contractsol/', source:'TX ESBD' },
-  { id:'esbd-002', name:'North Texas Municipal Water District — I&C Engineering Services', agency:'North Texas Municipal Water District (NTMWD)', city:'Wylie, TX', due:'See link', scope:'Instrumentation & Controls Engineering — Water Treatment Plant', url:'https://www.ntmwd.com/vendor-resources/', source:'TX ESBD' },
+  { id:'esbd-001', name:'San Antonio Water System — Electrical & Instrumentation Engineering', agency:'San Antonio Water System (SAWS)', city:'San Antonio, TX', due:'See link', scope:'E&I Engineering Design — Water/Wastewater Treatment Facilities', url:'https://apps.saws.org/business_center/contractsol/', source:'TX ESBD' },
+  { id:'esbd-002', name:'North Texas Municipal Water District — I&C Engineering', agency:'North Texas Municipal Water District', city:'Wylie, TX', due:'See link', scope:'Instrumentation & Controls Engineering — Water Treatment Plant', url:'https://www.ntmwd.com/vendor-resources/', source:'TX ESBD' },
   { id:'esbd-003', name:'City of Austin — Water/WW IDIQ E&I Engineering', agency:'City of Austin — Austin Water', city:'Austin, TX', due:'See link', scope:'IDIQ E&I Engineering Design — Multiple Water/WW Facilities', url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm', source:'TX ESBD' },
-  { id:'esbd-004', name:'Tarrant Regional Water District — SCADA Engineering Expansion', agency:'Tarrant Regional Water District (TRWD)', city:'Fort Worth, TX', due:'See link', scope:'SCADA Engineering Design — Water Treatment & Distribution Systems', url:'https://www.trwd.com/doing-business/', source:'TX ESBD' },
-  { id:'esbd-005', name:'Houston Public Works — WWTP Electrical & Instrumentation Engineering', agency:'City of Houston Public Works', city:'Houston, TX', due:'See link', scope:'WWTP E&I Engineering Design — Lift Station & Pump Station Controls', url:'https://purchasing.houstontx.gov', source:'TX ESBD' },
+  { id:'esbd-004', name:'Tarrant Regional Water District — SCADA Engineering', agency:'Tarrant Regional Water District (TRWD)', city:'Fort Worth, TX', due:'See link', scope:'SCADA Engineering Design — Water Treatment & Distribution', url:'https://www.trwd.com/doing-business/', source:'TX ESBD' },
+  { id:'esbd-005', name:'Houston Public Works — WWTP Electrical Instrumentation Engineering', agency:'City of Houston Public Works', city:'Houston, TX', due:'See link', scope:'WWTP E&I Engineering Design — Lift Station & Pump Station Controls', url:'https://purchasing.houstontx.gov', source:'TX ESBD' },
 ];
 
 async function seedAllBids() {
