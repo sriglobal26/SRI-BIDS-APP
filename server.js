@@ -1,4 +1,4 @@
-// SRI Bids v2026.07.19 — EBN + ESBD + Manual bids auto-seed
+// SRI Bids v20260720_1209 — EBN + ESBD + Manual bids auto-seed — FORCE REBUILD
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
