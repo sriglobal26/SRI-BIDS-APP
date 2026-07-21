@@ -1,4 +1,4 @@
-// SRI Bids FINAL v20260721_121243 — FORCE REDEPLOY
+// SRI Bids v20260721_143451 — 20260721_121243 — FORCE REDEPLOY
 // SRI Bids v20260720_1209 — EBN + ESBD + Manual bids auto-seed — FORCE REBUILD
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
@@ -97,7 +97,8 @@ async function saveBid(bid) {
 }
 
 async function clearScrapedBids() {
-  await pool.query("DELETE FROM bids WHERE data->>'source' NOT IN ('Manual','manual','EnviroBidNet','TX ESBD')");
+  // Keep all bids - only delete very old ones via cron
+  console.log('[ClearScraped] Keeping all bids');
 }
 
 let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished: null };
