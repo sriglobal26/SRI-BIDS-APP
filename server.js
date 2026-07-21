@@ -1,4 +1,4 @@
-// SRI Bids FINAL v20260721_115357
+// SRI Bids FINAL v20260721_121243 — FORCE REDEPLOY
 // SRI Bids v20260720_1209 — EBN + ESBD + Manual bids auto-seed — FORCE REBUILD
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
