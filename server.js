@@ -1,3 +1,4 @@
+// SRI Bids FINAL v20260721_115357
 // SRI Bids v20260720_1209 — EBN + ESBD + Manual bids auto-seed — FORCE REBUILD
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
@@ -201,7 +202,22 @@ async function runScrape() {
 }
 
 require('node-cron').schedule('0 23 * * *', () => runScrape());
-require('node-cron').schedule('0 8 * * *', async () => { try { await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet','TX ESBD')"); } catch(e) { console.error('[Cleanup]', e.message); } });
+require('node-cron').schedule('0 8 * * *', async () => {
+  try {
+    // Only delete very old non-essential bids
+    await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '90 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet','TX ESBD','manual')");
+    // Re-seed EBN and ESBD bids to make sure they are always present
+    await seedAllBids();
+    console.log('[Cleanup] Done - bids refreshed');
+  } catch(e) { console.error('[Cleanup]', e.message); }
+});
 
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
-initDB().then(() => { setTimeout(runScrape, 8000); }).catch(err => console.error('[DB] Init failed:', err.message));
+initDB().then(() => {
+  console.log('[SRI Bids] DB ready - seeding bids...');
+  setTimeout(async () => {
+    await seedAllBids();
+    console.log('[SRI Bids] Bids seeded - starting scraper...');
+    runScrape();
+  }, 3000);
+}).catch(err => console.error('[DB] Init failed:', err.message));
