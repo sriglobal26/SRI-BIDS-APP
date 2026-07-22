@@ -105,7 +105,18 @@ let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished:
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()) }));
 
 app.get('/api/seed-ebn', async (req, res) => {
-  try { await seedAllBids(); const r = await pool.query('SELECT COUNT(*) FROM bids'); res.json({ success: true, total: parseInt(r.rows[0].count) }); }
+  try {
+    await seedAllBids();
+    const r = await pool.query('SELECT COUNT(*) FROM bids');
+    const ebn = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='EnviroBidNet'");
+    const esbd = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='TX ESBD'");
+    res.json({ 
+      success: true, 
+      total: parseInt(r.rows[0].count),
+      envirobidnet: parseInt(ebn.rows[0].count),
+      txesbd: parseInt(esbd.rows[0].count)
+    });
+  }
   catch(e) { res.status(500).json({ error: e.message }); }
 });
 
