@@ -48,12 +48,12 @@ const EBN_BIDS = [
   { id:'ebn-871800', name:'Texas Lift Station Electrical Engineering Design', agency:'EnviroBidNet', city:'Texas', due:'2026-10-10', scope:'Lift Station Electrical & Instrumentation Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/871800', source:'EnviroBidNet', bidId:'#871800' },
 ]
 const ESBD_BIDS = [
-  { id:'esbd-001', name:'SAWS — Electrical & Instrumentation Engineering Services', agency:'TX ESBD', city:'San Antonio, TX', due:'See link', scope:'E&I Engineering Design — Water/Wastewater Treatment Facilities', url:'https://apps.saws.org/business_center/contractsol/', source:'TX ESBD' },
-  { id:'esbd-002', name:'NTMWD — Instrumentation & Controls Engineering Services', agency:'TX ESBD', city:'Wylie, TX', due:'See link', scope:'Instrumentation & Controls Engineering — Water Treatment Plant', url:'https://www.ntmwd.com/vendor-resources/', source:'TX ESBD' },
-  { id:'esbd-003', name:'Austin Water — IDIQ E&I Engineering Services', agency:'TX ESBD', city:'Austin, TX', due:'See link', scope:'IDIQ E&I Engineering Design — Multiple Water/WW Facilities', url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm', source:'TX ESBD' },
-  { id:'esbd-004', name:'TRWD — SCADA Engineering Expansion Services', agency:'TX ESBD', city:'Fort Worth, TX', due:'See link', scope:'SCADA Engineering Design — Water Treatment & Distribution', url:'https://www.trwd.com/doing-business/', source:'TX ESBD' },
-  { id:'esbd-005', name:'Houston Public Works — WWTP E&I Engineering Services', agency:'TX ESBD', city:'Houston, TX', due:'See link', scope:'WWTP E&I Engineering Design — Lift Station & Pump Station Controls', url:'https://purchasing.houstontx.gov', source:'TX ESBD' },
-];
+  { id:'esbd-001', name:'SAWS — Steven M. Clouse WRC Biosolids System Upgrades (RFCSP CO-00900-SM)', agency:'TX ESBD', city:'San Antonio, TX', due:'2026-09-01', scope:'Professional engineering services — Biosolids System Upgrades E&I Design, $109M project', url:'https://apps.saws.org/Business_Center/Contractsol/Drill.cfm?id=4147&View=Yes', source:'TX ESBD' },
+  { id:'esbd-002', name:'SAWS — Steven M. Clouse WRC Electrical System Improvements Phase 2B', agency:'TX ESBD', city:'San Antonio, TX', due:'See link', scope:'Electrical System Improvements Engineering Design — Water Recycling Center', url:'https://apps.saws.org/business_center/ContractSol/Drill.cfm?id=4118&View=Yes', source:'TX ESBD' },
+  { id:'esbd-003', name:'SAWS — Steven M. Clouse WRC Primary & Secondary Treatment Expansion', agency:'TX ESBD', city:'San Antonio, TX', due:'See link', scope:'Primary and Secondary Treatment Expansion Engineering Design', url:'https://apps.saws.org/business_center/ContractSol/Drill.cfm?id=4124&View=Yes', source:'TX ESBD' },
+  { id:'esbd-004', name:'NTMWD — Instrumentation & Controls Engineering Services', agency:'TX ESBD', city:'Wylie, TX', due:'See link', scope:'Instrumentation & Controls Engineering — Water Treatment Plant', url:'https://www.ntmwd.com/vendor-resources/', source:'TX ESBD' },
+  { id:'esbd-005', name:'Austin Water — IDIQ E&I Engineering Services', agency:'TX ESBD', city:'Austin, TX', due:'See link', scope:'IDIQ E&I Engineering Design — Multiple Water/WW Facilities', url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm', source:'TX ESBD' },
+]
 
 async function seedAllBids() {
   try {
