@@ -1679,5 +1679,96 @@ setTimeout(async ()=>{
 
 </script>
 
+
+<!-- ══ BID DETAIL MODAL ══ -->
+<div class="mbg" id="m-bid-detail" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto">
+  <div style="max-width:700px;margin:40px auto;background:var(--navy2);border:1px solid rgba(0,200,212,.3);border-radius:8px;padding:0;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#0A1628,#112240);padding:20px 24px;border-bottom:1px solid rgba(0,200,212,.2);display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="color:var(--cyan);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.15em;margin-bottom:6px" id="bd-source">EnviroBidNet</div>
+        <div style="color:var(--white);font-size:15px;font-weight:600;line-height:1.4;max-width:550px" id="bd-name">Bid Name</div>
+      </div>
+      <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);border:none;color:var(--gray);cursor:pointer;padding:6px 10px;border-radius:4px;font-size:16px;margin-left:16px;flex-shrink:0">✕</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
+          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Agency</div>
+          <div style="color:var(--white);font-size:13px;font-weight:500" id="bd-agency">-</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
+          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">City / Region</div>
+          <div style="color:var(--white);font-size:13px" id="bd-city">-</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
+          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Due Date</div>
+          <div style="color:var(--yellow);font-size:13px;font-weight:600" id="bd-due">-</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
+          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Est. Value</div>
+          <div style="color:var(--green);font-size:13px;font-weight:600" id="bd-value">-</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:14px;margin-bottom:16px">
+        <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">E&I Scope / Description</div>
+        <div style="color:var(--white);font-size:13px;line-height:1.7" id="bd-scope">-</div>
+      </div>
+      <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:14px;margin-bottom:20px" id="bd-url-row">
+        <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">RFQ Link</div>
+        <a id="bd-url" href="#" target="_blank" style="color:var(--cyan);font-size:12px;font-family:var(--mono);word-break:break-all">-</a>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a id="bd-open-link" href="#" target="_blank" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;text-decoration:none;font-family:var(--mono)">↗ Open Full Bid Page</a>
+        <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">✓ Select This Bid</button>
+        <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:10px 20px;border-radius:5px;font-size:13px;border:none;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentBidDetail = null;
+
+function showBidDetail(b) {
+  if(typeof b === 'string') {
+    try { b = JSON.parse(b.split('&quot;').join('"')); } catch(e) { return; }
+  }
+  currentBidDetail = b;
+  document.getElementById('bd-source').textContent = b.source || 'Unknown Source';
+  document.getElementById('bd-name').textContent = b.name || 'Unnamed Bid';
+  document.getElementById('bd-agency').textContent = b.agency || '-';
+  document.getElementById('bd-city').textContent = b.city || '-';
+  document.getElementById('bd-due').textContent = b.due || 'See link';
+  document.getElementById('bd-value').textContent = b.value || 'TBD';
+  document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
+  if(b.url) {
+    document.getElementById('bd-url').textContent = b.url;
+    document.getElementById('bd-url').href = b.url;
+    document.getElementById('bd-open-link').href = b.url;
+    document.getElementById('bd-url-row').style.display = 'block';
+  } else {
+    document.getElementById('bd-url-row').style.display = 'none';
+  }
+  document.getElementById('m-bid-detail').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBidDetail() {
+  document.getElementById('m-bid-detail').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function selectBidFromDetail() {
+  if(!currentBidDetail) return;
+  setBidState(currentBidDetail.id, 'selected');
+  closeBidDetail();
+}
+
+// Close on background click
+document.getElementById('m-bid-detail').addEventListener('click', function(e) {
+  if(e.target === this) closeBidDetail();
+});
+</script>
+
 </body>
 </html>
