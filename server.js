@@ -1,5 +1,3 @@
-// SRI Bids v20260721_143451 — 20260721_121243 — FORCE REDEPLOY
-// SRI Bids v20260720_1209 — EBN + ESBD + Manual bids auto-seed — FORCE REBUILD
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
@@ -39,23 +37,91 @@ const SEED_BIDS = [
 ];
 
 const EBN_BIDS = [
-  { id:'ebn-877944', name:'Amarillo: Osage WTP Settling Basin Repairs Phase 02 - West Basin', agency:'EnviroBidNet', city:'Amarillo, TX', due:'2026-08-30', scope:'Water Treatment Plant Settling Basin Repair E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/877944', source:'EnviroBidNet', bidId:'#877944' },
-  { id:'ebn-876195', name:'Bells: GTUA/City of Bells Tank Rehabilitation', agency:'EnviroBidNet', city:'Bells, TX', due:'2026-08-30', scope:'Water Storage Tank Rehabilitation E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/876195', source:'EnviroBidNet', bidId:'#876195' },
-  { id:'ebn-875628', name:'Texas Water Treatment Engineering Bid #875628', agency:'EnviroBidNet', city:'Texas', due:'2026-09-15', scope:'Water/Wastewater E&I Engineering Design', url:'https://www.envirobidnet.com/subscriber_view_bid/875628', source:'EnviroBidNet', bidId:'#875628' },
-  { id:'ebn-874521', name:'Texas Water Treatment Plant Engineering Services', agency:'EnviroBidNet', city:'Texas', due:'2026-09-20', scope:'Water Treatment Plant E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/874521', source:'EnviroBidNet', bidId:'#874521' },
-  { id:'ebn-873100', name:'Texas Wastewater Plant Electrical Instrumentation Design', agency:'EnviroBidNet', city:'Texas', due:'2026-09-25', scope:'Wastewater Plant Electrical & Instrumentation Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/873100', source:'EnviroBidNet', bidId:'#873100' },
-  { id:'ebn-872500', name:'Texas SCADA System Upgrade Engineering Services', agency:'EnviroBidNet', city:'Texas', due:'2026-10-01', scope:'SCADA Engineering Design Water/Wastewater', url:'https://www.envirobidnet.com/subscriber_view_bid/872500', source:'EnviroBidNet', bidId:'#872500' },
-  { id:'ebn-871800', name:'Texas Lift Station Electrical Engineering Design', agency:'EnviroBidNet', city:'Texas', due:'2026-10-10', scope:'Lift Station Electrical & Instrumentation Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/871800', source:'EnviroBidNet', bidId:'#871800' },
-]
+  { id:'ebn-877944', name:'Amarillo: Osage WTP Settling Basin Repairs Phase 02 - West Basin', agency:'City of Amarillo', city:'Amarillo, TX', due:'2026-07-23', scope:'Water Treatment Plant Settling Basin Repair E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/877944', source:'EnviroBidNet', bidId:'#877944' },
+  { id:'ebn-876195', name:'Bells: GTUA/City of Bells Tank Rehabilitation', agency:'City of Bells', city:'Bells, TX', due:'2026-07-16', scope:'Water Storage Tank Rehabilitation E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/876195', source:'EnviroBidNet', bidId:'#876195' },
+  { id:'ebn-875628', name:'Texas Water Treatment Engineering Bid #875628', agency:'EnviroBidNet', city:'Texas', due:'See link', scope:'Water/Wastewater E&I Engineering Design', url:'https://www.envirobidnet.com/subscriber_view_bid/875628', source:'EnviroBidNet', bidId:'#875628' },
+  { id:'ebn-874521', name:'Texas Water Treatment Plant Engineering Services', agency:'EnviroBidNet', city:'Texas', due:'See link', scope:'Water Treatment Plant E&I Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/874521', source:'EnviroBidNet', bidId:'#874521' },
+  { id:'ebn-873100', name:'Texas Wastewater Plant Electrical Instrumentation Design', agency:'EnviroBidNet', city:'Texas', due:'See link', scope:'Wastewater Plant Electrical & Instrumentation Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/873100', source:'EnviroBidNet', bidId:'#873100' },
+  { id:'ebn-872500', name:'Texas SCADA System Upgrade Engineering Services', agency:'EnviroBidNet', city:'Texas', due:'See link', scope:'SCADA Engineering Design Water/Wastewater', url:'https://www.envirobidnet.com/subscriber_view_bid/872500', source:'EnviroBidNet', bidId:'#872500' },
+  { id:'ebn-871800', name:'Texas Lift Station Electrical Engineering Design', agency:'EnviroBidNet', city:'Texas', due:'See link', scope:'Lift Station Electrical & Instrumentation Engineering', url:'https://www.envirobidnet.com/subscriber_view_bid/871800', source:'EnviroBidNet', bidId:'#871800' },
+];
+
 const ESBD_BIDS = [
-  { id:'esbd-001', name:'Water Treatment Plant — Electrical & Instrumentation Engineering', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-33 — Electrical & Instrumentation Engineering for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-002', name:'Wastewater Treatment Plant — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-31 — Electrical Engineering Design for Wastewater Treatment Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-003', name:'Water Distribution System — SCADA & Controls Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-57 — SCADA & Instrumentation Controls for Water Distribution Systems', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-004', name:'Pump Station & Lift Station — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-93 — Electrical Engineering Design for Pump & Lift Stations', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-005', name:'Water/Wastewater Facility — Architectural Engineering Services', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 906-04 — Architectural Engineering Services for Water/Wastewater Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-006', name:'Water Plant — Mechanical & Electrical Systems Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 925-33 — Mechanical & Electrical Systems Design for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-  { id:'esbd-007', name:'Wastewater Plant — Architecture & Civil Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-11-15', scope:'NIGP 906-04 — Architecture & Civil Engineering for Wastewater Plant Upgrades', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
-]', 'let BIDS=' + JSON.stringify(bids) + ';');
+  { id:'esbd-001', name:'Water Treatment Plant — Electrical & Instrumentation Engineering', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-33 — E&I Engineering for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-002', name:'Wastewater Treatment Plant — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-31 — Electrical Engineering for Wastewater Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-003', name:'Water Distribution System — SCADA & Controls Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-57 — SCADA & Controls for Water Distribution', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-004', name:'Pump Station & Lift Station — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-93 — Electrical Engineering for Pump & Lift Stations', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-005', name:'Water/WW Facility — Architectural Engineering Services', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 906-04 — Architectural Engineering for Water/WW Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-006', name:'Water Plant — Mechanical & Electrical Systems Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 925-33 — Mechanical & Electrical for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+  { id:'esbd-007', name:'Wastewater Plant — Architecture & Civil Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-11-15', scope:'NIGP 906-04 — Architecture & Civil Engineering for WW Plant Upgrades', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD' },
+]
+
+async function seedAllBids() {
+  try {
+    // Seed EnviroBidNet bids
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+    }
+    console.log('[EBN] Seeded', EBN_BIDS.length, 'EnviroBidNet bids');
+
+    // Seed TX ESBD bids
+    for (const b of ESBD_BIDS) {
+      await saveBid({ ...b, region:'statewide', value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+    }
+    console.log('[ESBD] Seeded', ESBD_BIDS.length, 'TX ESBD bids');
+  } catch(e) { console.error('[Seed] Error:', e.message); }
+}
+
+function detectRegion(city) {
+  const c = (city || '').toLowerCase();
+  if (['houston','pearland','baytown','katy','sugar land','conroe','galveston','pasadena','league city','friendswood'].some(h => c.includes(h))) return 'houston';
+  if (['dallas','fort worth','plano','arlington','denton','frisco','mckinney'].some(h => c.includes(h))) return 'dfw';
+  if (c.includes('austin')) return 'austin';
+  if (c.includes('san antonio')) return 'sa';
+  return 'statewide';
+}
+
+function normalizeBid(raw, idx) {
+  return { id:raw.id||'bid-'+idx, num:String(idx+1).padStart(2,'0'), name:raw.name||'Unnamed Bid', agency:raw.agency||'Unknown Agency', city:raw.city||'Texas', scope:raw.scope||'E&I Engineering', due:raw.due||'See link', value:raw.value||'TBD', status:raw.status||'active', region:raw.region||detectRegion(raw.city||''), url:raw.url||'', source:raw.source||'Unknown', scrapedAt:raw.scrapedAt||new Date().toISOString(), bidId:raw.bidId||'' };
+}
+
+async function readBids() {
+  const r = await pool.query('SELECT data, created_at FROM bids ORDER BY created_at DESC');
+  const bids = r.rows.map((row, i) => normalizeBid({ ...row.data, created_at: row.created_at }, i));
+  const logR = await pool.query('SELECT ran_at FROM scrape_log ORDER BY ran_at DESC LIMIT 1');
+  return { bids, lastUpdated: logR.rows[0]?.ran_at || null, total: bids.length };
+}
+
+async function saveBid(bid) {
+  await pool.query('INSERT INTO bids (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()', [bid.id, JSON.stringify(bid)]);
+}
+
+async function clearScrapedBids() {
+  await pool.query("DELETE FROM bids WHERE data->>'source' NOT IN ('Manual','manual','EnviroBidNet','TX ESBD')");
+}
+
+let scrapeStatus = { running: false, startedAt: null, results: [], lastFinished: null };
+
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()) }));
+
+app.get('/api/seed-ebn', async (req, res) => {
+  try { await seedAllBids(); const r = await pool.query('SELECT COUNT(*) FROM bids'); res.json({ success: true, total: parseInt(r.rows[0].count) }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/seed-esbd', async (req, res) => {
+  try { await seedAllBids(); const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='TX ESBD'"); res.json({ success: true, count: parseInt(r.rows[0].count) }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+const fs = require('fs');
+app.get('/', async (req, res) => {
+  try {
+    let html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+    const r = await pool.query('SELECT data FROM bids ORDER BY created_at DESC');
+    const seen = new Set();
+    const bids = r.rows.map((row, i) => { const b = row.data; return { id:b.id||'bid-'+i, num:String(i+1).padStart(2,'0'), name:b.name||'Unnamed', agency:b.agency||'Unknown', city:b.city||'Texas', scope:b.scope||'E&I Engineering', due:b.due||'See link', value:b.value||'TBD', status:b.status||'active', region:b.region||'statewide', url:b.url||'', source:b.source||'Unknown', bidId:b.bidId||'', userState:b.userState||'active' }; }).filter(b => { const k=b.name+'|'+b.agency; if(seen.has(k)) return false; seen.add(k); return true; });
+    html = html.replace('let BIDS=[];', 'let BIDS=' + JSON.stringify(bids) + ';');
     res.send(html);
   } catch(e) { console.error('[Serve]', e.message); res.sendFile(__dirname + '/index.html'); }
 });
@@ -136,42 +202,7 @@ async function runScrape() {
 }
 
 require('node-cron').schedule('0 23 * * *', () => runScrape());
-require('node-cron').schedule('0 8 * * *', async () => {
-  try {
-    // Only delete very old non-essential bids
-    await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '90 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet','TX ESBD','manual')");
-    // Re-seed EBN and ESBD bids to make sure they are always present
-    await seedAllBids();
-    console.log('[Cleanup] Done - bids refreshed');
-  } catch(e) { console.error('[Cleanup]', e.message); }
-});
+require('node-cron').schedule('0 8 * * *', async () => { try { await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet','TX ESBD')"); } catch(e) { console.error('[Cleanup]', e.message); } });
 
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log('[SRI Bids] Listening on port', PORT);
-  // Seed ESBD bids directly after server starts
-  setTimeout(async () => {
-    try {
-      const esbdBids = [
-        { id:'esbd-001', name:'Water Treatment Plant — Electrical & Instrumentation Engineering', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-33 — Electrical & Instrumentation Engineering for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-002', name:'Wastewater Treatment Plant — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-09-30', scope:'NIGP 925-31 — Electrical Engineering Design for Wastewater Treatment Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-003', name:'Water Distribution System — SCADA & Controls Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-57 — SCADA & Instrumentation Controls for Water Distribution Systems', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-004', name:'Pump Station & Lift Station — Electrical Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-10-15', scope:'NIGP 925-93 — Electrical Engineering Design for Pump & Lift Stations', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-005', name:'Water/Wastewater Facility — Architectural Engineering Services', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 906-04 — Architectural Engineering Services for Water/WW Facilities', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-006', name:'Water Plant — Mechanical & Electrical Systems Engineering', agency:'TX ESBD', city:'Texas', due:'2026-10-30', scope:'NIGP 925-33 — Mechanical & Electrical Systems for Water Treatment Plants', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-        { id:'esbd-007', name:'Wastewater Plant — Architecture & Civil Engineering Design', agency:'TX ESBD', city:'Texas', due:'2026-11-15', scope:'NIGP 906-04 — Architecture & Civil Engineering for WW Plant Upgrades', url:'https://www.txsmartbuy.gov/esbd', source:'TX ESBD', region:'statewide', value:'TBD', status:'active', scrapedAt:new Date().toISOString() },
-      ];
-      for (const b of esbdBids) {
-        await pool.query('INSERT INTO bids (id, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET data=$2, updated_at=NOW()', [b.id, JSON.stringify(b)]);
-      }
-      console.log('[ESBD] Seeded 7 Water/Electrical/Architecture bids directly');
-    } catch(e) { console.error('[ESBD Direct]', e.message); }
-  }, 3000);
-});
-initDB().then(() => {
-  console.log('[SRI Bids] DB ready - seeding bids...');
-  setTimeout(async () => {
-    await seedAllBids();
-    console.log('[SRI Bids] Bids seeded - starting scraper...');
-    runScrape();
-  }, 3000);
-}).catch(err => console.error('[DB] Init failed:', err.message));
+app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
+initDB().then(() => { setTimeout(runScrape, 8000); }).catch(err => console.error('[DB] Init failed:', err.message));
