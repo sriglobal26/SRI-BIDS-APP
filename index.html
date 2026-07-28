@@ -738,7 +738,7 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active';
+      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // show all
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
