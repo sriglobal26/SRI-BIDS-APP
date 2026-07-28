@@ -716,7 +716,7 @@ let BIDS=[];
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
 // Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
-const NON_DESIGN_KEYWORDS = ['install only','overhaul only','award pending'];
+const NON_DESIGN_KEYWORDS = []; // no keywords blocked - show all bids
 const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works','envirobidnet','h2bid','civcast','ebn'];
 let bidState={};
 
@@ -738,7 +738,7 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // show all
+      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // never auto-delete // show all
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
