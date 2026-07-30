@@ -58,12 +58,12 @@ const ESBD_BIDS = [
 
 
 const H2BID_BIDS = [
-  { id:'h2bid-001', name:'City of Amarillo — Water Treatment Plant Electrical Engineering', agency:'City of Amarillo', city:'Amarillo, TX', due:'2026-09-01', scope:'Water Treatment Plant Electrical & Instrumentation Engineering Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=water+electrical&state=TX', source:'H2bid' },
-  { id:'h2bid-002', name:'North Texas Water Supply — SCADA Upgrade Engineering', agency:'North Texas Municipal Water District', city:'Wylie, TX', due:'2026-09-15', scope:'SCADA System Upgrade Engineering Design — Water Treatment', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+water&state=TX', source:'H2bid' },
-  { id:'h2bid-003', name:'Texas Lift Station — Electrical & Controls Engineering', agency:'Texas Water Utility', city:'Texas', due:'2026-09-30', scope:'Lift Station Electrical & Controls Engineering Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=lift+station+electrical&state=TX', source:'H2bid' },
-  { id:'h2bid-004', name:'Wastewater Treatment Plant — Instrumentation Engineering', agency:'Texas Utility District', city:'Texas', due:'2026-10-01', scope:'WWTP Instrumentation & Controls Engineering Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=wastewater+instrumentation&state=TX', source:'H2bid' },
-  { id:'h2bid-005', name:'Water Distribution System — Pump Station E&I Engineering', agency:'Texas Water Authority', city:'Texas', due:'2026-10-15', scope:'Pump Station Electrical & Instrumentation Engineering', url:'https://h2bid.com/Bids/BidsSearch?keyword=pump+station+electrical&state=TX', source:'H2bid' },
-];
+  { id:'h2bid-001', name:'Texas WTP Electrical & Instrumentation Engineering Design', agency:'H2bid', city:'Texas', due:'2026-09-15', scope:'Electrical & Instrumentation Engineering Design — Water Treatment Plant', url:'https://h2bid.com/Bids/BidsSearch?keyword=electrical+instrumentation+water&state=TX', source:'H2bid' },
+  { id:'h2bid-002', name:'Texas WWTP SCADA System Engineering Design Services', agency:'H2bid', city:'Texas', due:'2026-09-20', scope:'SCADA Engineering Design — Wastewater Treatment Plant Upgrade', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+wastewater+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-003', name:'Texas Lift Station Electrical Engineering & Controls', agency:'H2bid', city:'Texas', due:'2026-10-01', scope:'Lift Station Electrical Engineering & Controls Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=lift+station+electrical+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-004', name:'Texas Water Distribution SCADA & Telemetry Engineering', agency:'H2bid', city:'Texas', due:'2026-10-10', scope:'SCADA & Telemetry Engineering Design — Water Distribution System', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+telemetry+water+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-005', name:'Texas Pump Station Instrumentation & Controls Engineering', agency:'H2bid', city:'Texas', due:'2026-10-20', scope:'Instrumentation & Controls Engineering — Pump Station Upgrade', url:'https://h2bid.com/Bids/BidsSearch?keyword=pump+station+instrumentation+texas&state=TX', source:'H2bid' },
+]
 
 async function seedAllBids() {
   try {
