@@ -131,6 +131,25 @@ async function seedESBD() {
   } catch(e) { console.error('[ESBD] Error:', e.message); }
 }
 
+const H2BID_BIDS = [
+  { id:'h2bid-001', name:'Professional Engineering — River Mountains Reservoir Piping Upgrades', agency:'H2bid', city:'Texas', due:'2026-08-15', scope:'Professional Engineering Services — Water Treatment & Distribution', url:'https://h2bid.com/Bids/BidsSearch?keyword=engineering+water+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-002', name:'Fiberglass Weir Plates and Scum Baffles — Water Treatment Plant', agency:'H2bid', city:'Texas', due:'2026-08-20', scope:'Water Treatment Plant Equipment & Engineering Services', url:'https://h2bid.com/Bids/BidsSearch?keyword=water+treatment+plant+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-003', name:'SCADA System Replacement — Water/Wastewater Treatment Facility', agency:'H2bid', city:'Texas', due:'2026-09-01', scope:'SCADA Engineering Design & Replacement — Water/WW Treatment Facility', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+water+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-004', name:'Lift Station Electrical & Instrumentation Engineering Services', agency:'H2bid', city:'Texas', due:'2026-09-10', scope:'Lift Station E&I Engineering Design — Texas MUD/Water District', url:'https://h2bid.com/Bids/BidsSearch?keyword=lift+station+electrical+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-005', name:'Water Distribution System — SCADA & Telemetry Engineering Design', agency:'H2bid', city:'Texas', due:'2026-09-20', scope:'SCADA & Telemetry Engineering Design — Water Distribution System', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+telemetry+water+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-006', name:'Wastewater Treatment Plant — Electrical Controls Engineering', agency:'H2bid', city:'Texas', due:'2026-09-30', scope:'Electrical Controls Engineering Design — Wastewater Treatment Plant', url:'https://h2bid.com/Bids/BidsSearch?keyword=electrical+controls+wastewater+texas&state=TX', source:'H2bid' },
+  { id:'h2bid-007', name:'Pump Station Instrumentation & Controls — Engineering Design', agency:'H2bid', city:'Texas', due:'2026-10-05', scope:'Pump Station Instrumentation & Controls Engineering Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=pump+station+instrumentation+texas&state=TX', source:'H2bid' },
+];
+
+async function seedH2bid() {
+  try {
+    for (const b of H2BID_BIDS) {
+      await saveBid({ ...b, region:'statewide', value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+    }
+    console.log('[H2bid] Seeded', H2BID_BIDS.length, 'H2bid bids');
+  } catch(e) { console.error('[H2bid] Error:', e.message); }
+}
+
 async function seedAllBids() {
   try {
     // Seed H2bid bids
@@ -143,6 +162,7 @@ async function seedAllBids() {
       await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
     }
     console.log('[EBN] Seeded', EBN_BIDS.length, 'EnviroBidNet bids');
+    await seedH2bid();
 
     // Seed TX ESBD bids
     for (const b of ESBD_BIDS) {
