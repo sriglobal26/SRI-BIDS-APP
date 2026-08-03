@@ -495,7 +495,7 @@ Best regards,
       <h1>Active E&amp;I <span>Bids — Texas</span></h1>
       <p class="subtitle">Electrical &amp; Instrumentation · SCADA · Power Systems · Instrumentation</p>
       <div style="margin-top:10px;font-family:var(--mono);font-size:10px;background:rgba(0,200,212,.07);border:1px solid rgba(0,200,212,.2);border-left:3px solid var(--cyan);padding:8px 12px;border-radius:2px;color:#A8D8E8;line-height:1.7">
-        ⚙️ <strong style="color:var(--cyan)">SRI Global Scope Filter Active</strong> — Engineering Design bids only.<br>
+        ⚙️ <strong style="color:var(--cyan)">All Bids Showing</strong> — Engineering Design bids only.<br>
         Install / Construction / Overhaul / Award Pending bids auto-moved to <strong style="color:var(--gray)">Deleted</strong> tab. Restore anytime.
       </div>
     </div>
@@ -716,7 +716,7 @@ let BIDS=[];
 // SRI Global = Engineering Design only.
 // Auto-move install / construction / overhaul / award pending bids to Deleted.
 // Exception: TWDB, Manual, BidNet, TRA, SAWS sources — keep as-is
-const NON_DESIGN_KEYWORDS = []; // no keywords blocked - show all bids
+const NON_DESIGN_KEYWORDS = []; // disabled - show all bids
 const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works','envirobidnet','h2bid','civcast','ebn'];
 let bidState={};
 
@@ -738,7 +738,7 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // never auto-delete // show all
+      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // show all
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
