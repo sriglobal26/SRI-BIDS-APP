@@ -223,6 +223,21 @@ app.get('/', async (req, res) => {
   } catch(e) { console.error('[Serve]', e.message); res.sendFile(__dirname + '/index.html'); }
 });
 
+app.get('/api/expire-bids', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await pool.query(`
+      DELETE FROM bids 
+      WHERE data->>'userState' != 'selected'
+      AND data->>'due' NOT IN ('See link','TBD','Check link','Active – TBD','Mid-2026','TBD Post-funding','TBD 2026','CMAR GMP Mid-2026')
+      AND data->>'source' != 'Manual'
+      AND data->>'due' ~ '^\d{4}-\d{2}-\d{2}$'
+      AND (data->>'due')::date < NOW()
+    `);
+    res.json({ success: true, removed: result.rowCount, message: result.rowCount + ' expired bids removed' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/cleanup', async (req, res) => { try { const r = await pool.query(`DELETE FROM bids WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY data->>'name' ORDER BY created_at DESC) rn FROM bids) t WHERE rn > 1)`); res.json({ success: true, removed: r.rowCount }); } catch(e) { res.status(500).json({ error: e.message }); } });
 app.get('/api/bids', async (req, res) => { try { res.json(await readBids()); } catch(e) { res.json({ bids: [], lastUpdated: null, total: 0, error: e.message }); } });
 app.get('/api/scrape/status', (req, res) => res.json(scrapeStatus));
@@ -299,6 +314,33 @@ async function runScrape() {
 }
 
 require('node-cron').schedule('0 23 * * *', () => runScrape());
+
+// Auto-remove expired bids every day at midnight
+require('node-cron').schedule('0 0 * * *', async () => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await pool.query(`
+      DELETE FROM bids 
+      WHERE data->>'userState' != 'selected'
+      AND data->>'due' != 'See link'
+      AND data->>'due' != 'TBD'
+      AND data->>'due' != 'Check link'
+      AND data->>'due' != 'Active – TBD'
+      AND data->>'due' != 'Mid-2026'
+      AND data->>'due' != 'TBD Post-funding'
+      AND data->>'due' != 'TBD 2026'
+      AND data->>'due' != 'CMAR GMP Mid-2026'
+      AND data->>'source' != 'Manual'
+      AND (
+        data->>'due' < $1
+        OR data->>'due' ~ '^\d{4}-\d{2}-\d{2}$' AND (data->>'due')::date < NOW()
+      )
+    `, [today]);
+    if (result.rowCount > 0) {
+      console.log('[AutoExpire] Removed', result.rowCount, 'expired bids');
+    }
+  } catch(e) { console.error('[AutoExpire]', e.message); }
+});
 require('node-cron').schedule('0 6 * * *', () => seedESBD()); // refresh ESBD bids daily at 6am
 require('node-cron').schedule('0 8 * * *', async () => { try { await pool.query("DELETE FROM bids WHERE updated_at < NOW() - INTERVAL '60 days' AND data->>'source' NOT IN ('Manual','EnviroBidNet','TX ESBD')"); } catch(e) { console.error('[Cleanup]', e.message); } });
 
