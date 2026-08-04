@@ -852,7 +852,14 @@ function switchTab(id,btn){
 // BID TABLE
 // ═════════════════════════════════════
 function row(b,ctx){
-  const dcl=(b.status==='closing'&&ctx==='active')?' style="color:var(--red)"':'';
+  const today = new Date();
+  const dueDate = b.due && b.due.match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(b.due) : null;
+  const daysLeft = dueDate ? Math.ceil((dueDate - today) / (1000*60*60*24)) : null;
+  const isExpired = daysLeft !== null && daysLeft < 0;
+  const isExpiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+  const dcl = isExpired ? ' style="color:var(--red);text-decoration:line-through"' 
+             : isExpiringSoon ? ' style="color:var(--orange);font-weight:700"' 
+             : (b.status==='closing'&&ctx==='active') ? ' style="color:var(--red)"' : '';
   const eid=encodeURIComponent(String(b.id));
   let acts='';
   if(ctx==='active') acts=`<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent('${eid}'),'selected')">✓ Select</button><button class="ab del" onclick="mark(decodeURIComponent('${eid}'),'deleted')">✕ Delete</button></div>`;
