@@ -128,14 +128,14 @@ async function seedESBD() {
 }
 
 const H2BID_BIDS = [
-  { id:'h2bid-001', name:'Professional Engineering — River Mountains Reservoir Piping Upgrades', agency:'H2bid', city:'Texas', due:'2026-08-15', scope:'Professional Engineering Services — Water Treatment & Distribution', url:'https://h2bid.com/Bids/BidsSearch?keyword=engineering+water+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-002', name:'Fiberglass Weir Plates and Scum Baffles — Water Treatment Plant', agency:'H2bid', city:'Texas', due:'2026-08-20', scope:'Water Treatment Plant Equipment & Engineering Services', url:'https://h2bid.com/Bids/BidsSearch?keyword=water+treatment+plant+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-003', name:'SCADA System Replacement — Water/Wastewater Treatment Facility', agency:'H2bid', city:'Texas', due:'2026-09-01', scope:'SCADA Engineering Design & Replacement — Water/WW Treatment Facility', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+water+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-004', name:'Lift Station Electrical & Instrumentation Engineering Services', agency:'H2bid', city:'Texas', due:'2026-09-10', scope:'Lift Station E&I Engineering Design — Texas MUD/Water District', url:'https://h2bid.com/Bids/BidsSearch?keyword=lift+station+electrical+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-005', name:'Water Distribution System — SCADA & Telemetry Engineering Design', agency:'H2bid', city:'Texas', due:'2026-09-20', scope:'SCADA & Telemetry Engineering Design — Water Distribution System', url:'https://h2bid.com/Bids/BidsSearch?keyword=scada+telemetry+water+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-006', name:'Wastewater Treatment Plant — Electrical Controls Engineering', agency:'H2bid', city:'Texas', due:'2026-09-30', scope:'Electrical Controls Engineering Design — Wastewater Treatment Plant', url:'https://h2bid.com/Bids/BidsSearch?keyword=electrical+controls+wastewater+texas&state=TX', source:'H2bid' },
-  { id:'h2bid-007', name:'Pump Station Instrumentation & Controls — Engineering Design', agency:'H2bid', city:'Texas', due:'2026-10-05', scope:'Pump Station Instrumentation & Controls Engineering Design', url:'https://h2bid.com/Bids/BidsSearch?keyword=pump+station+instrumentation+texas&state=TX', source:'H2bid' },
-];
+  { id:'h2bid-001', name:'SAWS — Steven M. Clouse WRC Biosolids System Upgrades Engineering', agency:'H2bid', city:'San Antonio, TX', due:'2026-09-01', scope:'Wastewater Treatment Plant Biosolids System Upgrades — E&I Engineering Design', url:'https://apps.saws.org/business_center/contractsol/', source:'H2bid' },
+  { id:'h2bid-002', name:'City of Houston — WWTP Electrical & Instrumentation Engineering Services', agency:'H2bid', city:'Houston, TX', due:'2026-09-15', scope:'Wastewater Treatment Plant E&I Engineering Design Services — City of Houston', url:'https://purchasing.houstontx.gov', source:'H2bid' },
+  { id:'h2bid-003', name:'NTMWD — Water Treatment Plant SCADA Engineering Services', agency:'H2bid', city:'Wylie, TX', due:'2026-09-20', scope:'SCADA Engineering Design — North Texas Municipal Water District Water Treatment Plant', url:'https://www.ntmwd.com/vendor-resources/', source:'H2bid' },
+  { id:'h2bid-004', name:'TRWD — Water Distribution SCADA & Telemetry Engineering', agency:'H2bid', city:'Fort Worth, TX', due:'2026-10-01', scope:'SCADA & Telemetry Engineering Design — Tarrant Regional Water District', url:'https://www.trwd.com/doing-business/', source:'H2bid' },
+  { id:'h2bid-005', name:'Austin Water — Lift Station Electrical Engineering Design', agency:'H2bid', city:'Austin, TX', due:'2026-10-10', scope:'Lift Station Electrical Engineering Design — City of Austin Water Utility', url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm', source:'H2bid' },
+  { id:'h2bid-006', name:'TWDB — Water System Electrical & Instrumentation Engineering', agency:'H2bid', city:'Texas', due:'2026-10-20', scope:'TWDB Funded Water System E&I Engineering — Texas Water Development Board Grant Program', url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp', source:'H2bid' },
+  { id:'h2bid-007', name:'CivCast TX — Pump Station Instrumentation & Controls Engineering', agency:'H2bid', city:'Texas', due:'2026-10-30', scope:'Pump Station Instrumentation & Controls Engineering Design — Texas Municipal Projects', url:'https://www.civcastusa.com/bids', source:'H2bid' },
+]
 
 async function seedH2bid() {
   try {
