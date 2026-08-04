@@ -738,7 +738,7 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : 'active'; // show all
+      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
@@ -855,10 +855,8 @@ function row(b,ctx){
   const today = new Date();
   const dueDate = b.due && b.due.match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(b.due) : null;
   const daysLeft = dueDate ? Math.ceil((dueDate - today) / (1000*60*60*24)) : null;
-  const isExpired = daysLeft !== null && daysLeft < 0;
   const isExpiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
-  const dcl = isExpired ? ' style="color:var(--red);text-decoration:line-through"' 
-             : isExpiringSoon ? ' style="color:var(--orange);font-weight:700"' 
+  const dcl = isExpiringSoon ? ' style="color:var(--orange);font-weight:700"' 
              : (b.status==='closing'&&ctx==='active') ? ' style="color:var(--red)"' : '';
   const eid=encodeURIComponent(String(b.id));
   let acts='';
