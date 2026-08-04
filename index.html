@@ -865,7 +865,7 @@ function row(b,ctx){
     : `<td class="tu"><button onclick="editUrl(decodeURIComponent('${eid}'))" style="font-family:var(--mono);font-size:10px;border:1px solid rgba(0,200,212,.3);background:rgba(0,200,212,.08);color:var(--cyan);padding:5px 10px;border-radius:3px;cursor:pointer;font-weight:500">+ Add RFQ Link</button></td>`;
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
     <td class="tn">${b.num}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${b.bidId||'—'}</td><td class="tp">${b.name}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
-    <td class="ts">${b.scope}</td>${urlCell}<td style="font-family:var(--mono);font-size:10px;color:var(--gray);white-space:nowrap">${b.scrapedAt ? b.scrapedAt.slice(0,10) : new Date().toISOString().slice(0,10)}</td><td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
+    <td class="ts">${b.scope}</td>${urlCell}<td style="font-family:var(--mono);font-size:10px;color:var(--white);white-space:nowrap;font-weight:700"><strong>${b.scrapedAt ? b.scrapedAt.slice(0,10) : new Date().toISOString().slice(0,10)}</strong></td><td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
     <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
   </tr>`;
 }
