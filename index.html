@@ -514,7 +514,7 @@ Best regards,
     <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
     <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
     <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
-    <button id="btn-scrape" class="btn1" style="font-size:10px;padding:6px 16px;background:var(--yellow);color:var(--navy);margin-right:6px" onclick="runScrapeNow()">🔄 Scrape Now</button>
+    <button id="btn-scrape" class="btn1" style="font-size:10px;padding:6px 16px;background:var(--yellow);color:var(--navy);margin-right:6px" onclick="runScrapeNow()">🔄 Refresh</button>
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px;background:var(--green);color:var(--navy);margin-right:6px" onclick="openM('m-paste-email')">📧 Paste Email</button>
     <button class="btn1" style="font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
   </div>
@@ -1628,11 +1628,11 @@ function addBidManual(){
 // ── SCRAPE NOW BUTTON ──────────────────────────────────────
 async function runScrapeNow(){
   const btn = document.getElementById('btn-scrape');
-  if(btn){ btn.textContent = '⏳ Scraping...'; btn.disabled = true; }
+  if(btn){ btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   try {
     const r = await fetch('/api/scrape', {method:'POST'});
     const d = await r.json();
-    if(btn){ btn.textContent = '✅ Scraping...'; }
+    if(btn){ btn.textContent = '✅ Refreshing...'; }
     // Poll until done
     let tries = 0;
     const poll = setInterval(async () => {
@@ -1640,13 +1640,13 @@ async function runScrapeNow(){
       const s = await fetch('/api/scrape/status').then(r=>r.json());
       if(!s.running || tries > 30){
         clearInterval(poll);
-        if(btn){ btn.textContent = '🔄 Scrape Now'; btn.disabled = false; }
+        if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
         await fetchBids();
         showToast('✅ Scrape complete! Bids updated.');
       }
     }, 3000);
   } catch(e){
-    if(btn){ btn.textContent = '🔄 Scrape Now'; btn.disabled = false; }
+    if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
     showToast('❌ Scrape failed: ' + e.message);
   }
 }
