@@ -148,6 +148,24 @@ async function seedH2bid() {
 
 async function seedAllBids() {
   try {
+    // First delete any expired EBN bids so they get re-seeded with new dates
+    await pool.query(`
+      DELETE FROM bids 
+      WHERE id IN ('ebn-877944', 'ebn-876195')
+      AND (data->>'due' < $1 OR data->>'due' IN ('2026-07-23','2026-07-16'))
+    `, [new Date().toISOString().split('T')[0]]);
+    
+    // Also delete ANY bid with an expired due date from database
+    await pool.query(`
+      DELETE FROM bids
+      WHERE data->>'source' != 'Manual'
+      AND data->>'userState' != 'selected'
+      AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      AND (data->>'due')::date < CURRENT_DATE
+    `);
+    console.log('[Cleanup] Removed expired bids from database');
+  } catch(e) { console.error('[Cleanup] Error:', e.message); }
+  try {
     // Seed H2bid bids
     for (const b of H2BID_BIDS) {
       await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
@@ -221,6 +239,23 @@ app.get('/', async (req, res) => {
     html = html.replace('let BIDS=[];', 'let BIDS=' + JSON.stringify(bids) + ';');
     res.send(html);
   } catch(e) { console.error('[Serve]', e.message); res.sendFile(__dirname + '/index.html'); }
+});
+
+app.get('/api/fix-expired', async (req, res) => {
+  try {
+    // Delete specific expired bids
+    const r1 = await pool.query(`
+      DELETE FROM bids
+      WHERE data->>'source' != 'Manual'
+      AND data->>'userState' != 'selected'  
+      AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      AND (data->>'due')::date < CURRENT_DATE
+    `);
+    // Re-seed with fresh dates
+    await seedAllBids();
+    const r2 = await pool.query('SELECT COUNT(*) FROM bids');
+    res.json({ success: true, removed: r1.rowCount, total: parseInt(r2.rows[0].count) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/expire-bids', async (req, res) => {
