@@ -326,7 +326,7 @@ app.post('/api/email-bids', async (req, res) => {
         const ct = ctx.match(/([A-Z][a-z]+(?: [A-Z][a-z]+)?),\s*([A-Z]{2})\b/); if(ct) city = ct[1]+', '+ct[2];
         const ag = name.match(/^([^:]{3,40}):/); if(ag) agency = ag[1].trim();
       }
-      const bid = { id:'ebn-'+bidId, name, agency, city, region:detectRegion(city), scope:name, due, value:'TBD', status:'active', source:'EnviroBidNet', bidId:'#'+bidId, url:'https://www.envirobidnet.com/subscriber_view_bid/'+bidId, scrapedAt:new Date().toISOString() };
+      const bid = { id:'ebn-'+bidId, name, agency, city, region:detectRegion(city), scope:name, due, value:'TBD', status:'active', source:'EnviroBidNet', bidId:'#'+bidId, url:'https://www.envirobidnet.com', scrapedAt:new Date().toISOString() };
       await saveBid(bid); saved.push(bid);
     }
     res.json({ success: true, created: saved.length, bids: saved });
