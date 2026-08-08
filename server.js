@@ -154,7 +154,15 @@ async function seedH2bid() {
 }
 
 async function seedAllBids() {
-  // Remove expired bids from database
+  // Remove expired bids and old H2bid/ESBD bids with wrong URLs
+    try {
+      // Delete old H2bid bids with login-required URLs
+      await pool.query(`DELETE FROM bids WHERE data->>'source'='H2bid' AND data->>'url' NOT LIKE '%publicbidtracker%'`);
+      // Delete old ESBD bids with login-required URLs
+      await pool.query(`DELETE FROM bids WHERE data->>'source'='TX ESBD' AND data->>'url' NOT LIKE '%publicbidtracker%' AND data->>'url' NOT LIKE '%txsmartbuy%'`);
+      console.log('[Cleanup] Removed old H2bid/ESBD bids with login-required URLs');
+    } catch(e) { console.error('[Cleanup]', e.message); }
+    // Remove expired bids from database
   try { await pool.query(`DELETE FROM bids WHERE id IN ('ebn-877944','ebn-876195','ebn-875628','ebn-874521','ebn-873100','ebn-872500','ebn-871800')`); } catch(e) {}
   try {
     // First delete any expired EBN bids so they get re-seeded with new dates
@@ -185,6 +193,8 @@ async function seedAllBids() {
       await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
     }
     console.log('[EBN] Seeded', EBN_BIDS.length, 'EnviroBidNet bids');
+    // Force delete and re-seed H2bid with publicbidtracker URLs
+    try { await pool.query(`DELETE FROM bids WHERE data->>'source'='H2bid'`); } catch(e) {}
     await seedH2bid();
 
     // Seed TX ESBD bids
