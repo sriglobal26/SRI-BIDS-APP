@@ -155,7 +155,7 @@ async function seedH2bid() {
 
 async function seedAllBids() {
   // Remove expired bids from database
-  try { await pool.query(`DELETE FROM bids WHERE id IN ('ebn-877944','ebn-876195','ebn-875628')`); } catch(e) {}
+  try { await pool.query(`DELETE FROM bids WHERE id IN ('ebn-877944','ebn-876195','ebn-875628','ebn-874521','ebn-873100','ebn-872500','ebn-871800')`); } catch(e) {}
   try {
     // First delete any expired EBN bids so they get re-seeded with new dates
     await pool.query(`
