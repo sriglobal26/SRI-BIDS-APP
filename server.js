@@ -29,6 +29,16 @@ async function initDB() {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
     console.log('[Init] Cleared old H2bid and TX ESBD bids');
   } catch(e) { console.error('[Init]', e.message); }
+  // One-time fix: update all H2bid bids in DB to use publicbidtracker URL
+  try {
+    await pool.query(`
+      UPDATE bids 
+      SET data = jsonb_set(data, '{url}', '"https://publicbidtracker.com/texas/open-bids/"')
+      WHERE data->>'source' = 'H2bid'
+      AND data->>'url' != 'https://publicbidtracker.com/texas/open-bids/'
+    `);
+    console.log('[Migration] Updated H2bid URLs to publicbidtracker.com');
+  } catch(e) { console.error('[Migration]', e.message); }
   await seedAllBids();
 }
 
@@ -281,6 +291,16 @@ app.get('/api/fix-expired', async (req, res) => {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
     console.log('[Init] Cleared old H2bid and TX ESBD bids');
   } catch(e) { console.error('[Init]', e.message); }
+  // One-time fix: update all H2bid bids in DB to use publicbidtracker URL
+  try {
+    await pool.query(`
+      UPDATE bids 
+      SET data = jsonb_set(data, '{url}', '"https://publicbidtracker.com/texas/open-bids/"')
+      WHERE data->>'source' = 'H2bid'
+      AND data->>'url' != 'https://publicbidtracker.com/texas/open-bids/'
+    `);
+    console.log('[Migration] Updated H2bid URLs to publicbidtracker.com');
+  } catch(e) { console.error('[Migration]', e.message); }
   await seedAllBids();
     const r2 = await pool.query('SELECT COUNT(*) FROM bids');
     res.json({ success: true, removed: r1.rowCount, total: parseInt(r2.rows[0].count) });
@@ -374,6 +394,16 @@ async function runScrape() {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
     console.log('[Init] Cleared old H2bid and TX ESBD bids');
   } catch(e) { console.error('[Init]', e.message); }
+  // One-time fix: update all H2bid bids in DB to use publicbidtracker URL
+  try {
+    await pool.query(`
+      UPDATE bids 
+      SET data = jsonb_set(data, '{url}', '"https://publicbidtracker.com/texas/open-bids/"')
+      WHERE data->>'source' = 'H2bid'
+      AND data->>'url' != 'https://publicbidtracker.com/texas/open-bids/'
+    `);
+    console.log('[Migration] Updated H2bid URLs to publicbidtracker.com');
+  } catch(e) { console.error('[Migration]', e.message); }
   await seedAllBids();
     for (const r of results) { await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', [r.source, r.count, r.status, r.message||'']).catch(()=>{}); }
     console.log('[Scraper] Done:', scraped.length, 'bids');
