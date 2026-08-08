@@ -24,6 +24,11 @@ async function initDB() {
     for (const bid of SEED_BIDS) await saveBid(bid);
     console.log('[DB] Seeded', SEED_BIDS.length, 'manual bids');
   }
+  // Force delete ALL H2bid and ESBD bids and reseed with no-login URLs
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
+    console.log('[Init] Cleared old H2bid and TX ESBD bids');
+  } catch(e) { console.error('[Init]', e.message); }
   await seedAllBids();
 }
 
@@ -271,7 +276,12 @@ app.get('/api/fix-expired', async (req, res) => {
       AND (data->>'due')::date < CURRENT_DATE
     `);
     // Re-seed with fresh dates
-    await seedAllBids();
+    // Force delete ALL H2bid and ESBD bids and reseed with no-login URLs
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
+    console.log('[Init] Cleared old H2bid and TX ESBD bids');
+  } catch(e) { console.error('[Init]', e.message); }
+  await seedAllBids();
     const r2 = await pool.query('SELECT COUNT(*) FROM bids');
     res.json({ success: true, removed: r1.rowCount, total: parseInt(r2.rows[0].count) });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -359,7 +369,12 @@ async function runScrape() {
     scrapeStatus.results = results;
     await clearScrapedBids();
     for (const bid of scraped) { try { await saveBid(bid); } catch(e) {} }
-    await seedAllBids();
+    // Force delete ALL H2bid and ESBD bids and reseed with no-login URLs
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
+    console.log('[Init] Cleared old H2bid and TX ESBD bids');
+  } catch(e) { console.error('[Init]', e.message); }
+  await seedAllBids();
     for (const r of results) { await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', [r.source, r.count, r.status, r.message||'']).catch(()=>{}); }
     console.log('[Scraper] Done:', scraped.length, 'bids');
   } catch(e) { console.error('[Scraper] Error:', e.message); await pool.query('INSERT INTO scrape_log (source, count, status, message) VALUES ($1,$2,$3,$4)', ['All', 0, 'error', e.message]).catch(()=>{}); }
