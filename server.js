@@ -39,6 +39,13 @@ async function initDB() {
     `);
     console.log('[Migration] Updated H2bid URLs to publicbidtracker.com');
   } catch(e) { console.error('[Migration]', e.message); }
+  // FORCE: Delete ALL H2bid bids and reseed with CivCast direct URLs
+  try {
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'H2bid'");
+    console.log('[Init] Deleted', del.rowCount, 'old H2bid bids');
+    await seedH2bid(); // Reseed with new CivCast URLs
+    console.log('[Init] Reseeded H2bid bids with CivCast URLs');
+  } catch(e) { console.error('[Init H2bid]', e.message); }
   await seedAllBids();
 }
 
@@ -273,6 +280,15 @@ app.get('/', async (req, res) => {
     html = html.replace('let BIDS=[];', 'let BIDS=' + JSON.stringify(bids) + ';');
     res.send(html);
   } catch(e) { console.error('[Serve]', e.message); res.sendFile(__dirname + '/index.html'); }
+});
+
+app.get('/api/fix-h2bid', async (req, res) => {
+  try {
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'H2bid'");
+    await seedH2bid();
+    const r = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source' = 'H2bid'");
+    res.json({ success: true, deleted: del.rowCount, reseeded: parseInt(r.rows[0].count) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/fix-expired', async (req, res) => {
