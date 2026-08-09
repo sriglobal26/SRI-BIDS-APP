@@ -740,6 +740,10 @@ async function fetchBids(){
     BIDS.forEach(b=>{
       bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
     });
+    // H2bid always opens civcastusa.com - no login needed
+    BIDS.forEach(b => {
+      if (b.source === 'H2bid') b.url = 'https://www.civcastusa.com/bids';
+    });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
 }
