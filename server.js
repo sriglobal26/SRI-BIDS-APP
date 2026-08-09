@@ -176,55 +176,23 @@ async function seedH2bid() {
 }
 
 async function seedAllBids() {
-  // Remove expired bids and old H2bid/ESBD bids with wrong URLs
-    try {
-      // Delete old H2bid bids with login-required URLs
-      await pool.query(`DELETE FROM bids WHERE data->>'source'='H2bid' AND data->>'url' NOT LIKE '%publicbidtracker%'`);
-      // Delete old ESBD bids with login-required URLs
-      await pool.query(`DELETE FROM bids WHERE data->>'source'='TX ESBD' AND data->>'url' NOT LIKE '%publicbidtracker%' AND data->>'url' NOT LIKE '%txsmartbuy%'`);
-      console.log('[Cleanup] Removed old H2bid/ESBD bids with login-required URLs');
-    } catch(e) { console.error('[Cleanup]', e.message); }
-    // Remove expired bids from database
-  try { await pool.query(`DELETE FROM bids WHERE id IN ('ebn-877944','ebn-876195','ebn-875628','ebn-874521','ebn-873100','ebn-872500','ebn-871800')`); } catch(e) {}
   try {
-    // First delete any expired EBN bids so they get re-seeded with new dates
-    await pool.query(`
-      DELETE FROM bids 
-      WHERE id IN ('ebn-877944', 'ebn-876195')
-      AND (data->>'due' < $1 OR data->>'due' IN ('2026-07-23','2026-07-16'))
-    `, [new Date().toISOString().split('T')[0]]);
-    
-    // Also delete ANY bid with an expired due date from database
-    await pool.query(`
-      DELETE FROM bids
-      WHERE data->>'source' != 'Manual'
-      AND data->>'userState' != 'selected'
-      AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-      AND (data->>'due')::date < CURRENT_DATE
-    `);
-    console.log('[Cleanup] Removed expired bids from database');
-  } catch(e) { console.error('[Cleanup] Error:', e.message); }
-  try {
+    // Seed EBN bids
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
+    }
+    console.log('[Seed] EBN:', EBN_BIDS.length, 'bids');
+
     // Seed H2bid bids
     for (const b of H2BID_BIDS) {
-      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
     }
-    console.log('[H2bid] Seeded', H2BID_BIDS.length, 'H2bid bids');
-    // Seed EnviroBidNet bids
-    for (const b of EBN_BIDS) {
-      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
-    }
-    console.log('[EBN] Seeded', EBN_BIDS.length, 'EnviroBidNet bids');
-    // Force delete and re-seed H2bid with publicbidtracker URLs
-    try { await pool.query(`DELETE FROM bids WHERE data->>'source'='H2bid'`); } catch(e) {}
-    await seedH2bid();
+    console.log('[Seed] H2bid:', H2BID_BIDS.length, 'bids');
 
     // Seed TX ESBD bids
-    for (const b of ESBD_BIDS) {
-      await saveBid({ ...b, region:'statewide', value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
-    }
-    // await seedESBD(); // called separately
-    console.log('[ESBD] Seeded', ESBD_BIDS.length, 'TX ESBD bids');
+    await seedESBD();
+
+    console.log('[Seed] All bids seeded successfully');
   } catch(e) { console.error('[Seed] Error:', e.message); }
 }
 
