@@ -740,9 +740,11 @@ async function fetchBids(){
     BIDS.forEach(b=>{
       bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
     });
-    // H2bid always opens civcastusa.com - no login needed
+    // Fix all bid URLs to open directly without login
     BIDS.forEach(b => {
       if (b.source === 'H2bid') b.url = 'https://www.civcastusa.com/bids';
+      if (b.source === 'TX ESBD') b.url = 'https://publicbidtracker.com/texas/open-bids/';
+      if (b.source === 'EnviroBidNet') b.url = 'https://www.envirobidnet.com/bid-results/?mains_cat=1';
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
