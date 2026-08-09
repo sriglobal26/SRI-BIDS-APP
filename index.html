@@ -740,12 +740,6 @@ async function fetchBids(){
     BIDS.forEach(b=>{
       bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
     });
-    // Fix all bid URLs to open directly without login
-    BIDS.forEach(b => {
-      if (b.source === 'H2bid') b.url = 'https://www.civcastusa.com/bids';
-      if (b.source === 'TX ESBD') b.url = 'https://publicbidtracker.com/texas/open-bids/';
-      if (b.source === 'EnviroBidNet') b.url = 'https://www.envirobidnet.com/bid-results/?mains_cat=1';
-    });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
 }
@@ -1764,13 +1758,17 @@ function showBidDetail(b) {
   document.getElementById('bd-due').textContent = b.due || 'See link';
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
-  if(b.url) {
+  // Show external link only for sources that have direct pages
+  const noDirectLink = ['H2bid'];
+  if(b.url && !noDirectLink.includes(b.source)) {
     document.getElementById('bd-url').textContent = b.url;
     document.getElementById('bd-url').href = b.url;
     document.getElementById('bd-open-link').href = b.url;
+    document.getElementById('bd-open-link').style.display = 'inline-block';
     document.getElementById('bd-url-row').style.display = 'block';
   } else {
     document.getElementById('bd-url-row').style.display = 'none';
+    document.getElementById('bd-open-link').style.display = 'none';
   }
   document.getElementById('m-bid-detail').style.display = 'block';
   document.body.style.overflow = 'hidden';
