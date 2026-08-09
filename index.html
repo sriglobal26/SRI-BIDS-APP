@@ -1757,7 +1757,7 @@ function showBidDetail(b) {
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
   // Show external link only for sources that have direct pages
-  const noDirectLink = ['H2bid', 'TX ESBD'];
+  const noDirectLink = []; // Show Open Full Bid Page button for all sources
   if(b.url && !noDirectLink.includes(b.source)) {
     document.getElementById('bd-url').textContent = b.url;
     document.getElementById('bd-url').href = b.url;
