@@ -740,6 +740,14 @@ async function fetchBids(){
     BIDS.forEach(b=>{
       bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
     });
+    // Override URLs based on source for direct no-login access
+    BIDS.forEach(b => {
+      if(b.source === 'H2bid') b.url = 'https://www.civcastusa.com/bids';
+      if(b.source === 'TX ESBD') b.url = 'https://publicbidtracker.com/texas/open-bids/';
+      if(b.source === 'EnviroBidNet' && (!b.url || b.url.includes('subscriber_view_bid'))) {
+        b.url = 'https://www.envirobidnet.com/bids/water-and-wastewater-treatment';
+      }
+    });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
 }
