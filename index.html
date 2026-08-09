@@ -1733,7 +1733,7 @@ setTimeout(async ()=>{
         <a id="bd-url" href="#" target="_blank" style="color:var(--cyan);font-size:12px;font-family:var(--mono);word-break:break-all">-</a>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a id="bd-open-link" href="#" target="_blank" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;text-decoration:none;font-family:var(--mono)">↗ Open Full Bid Page</a>
+        <a id="bd-open-link" href="#" onclick="handleBidPageOpen(event)" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;text-decoration:none;font-family:var(--mono)">↗ Open Full Bid Page</a>
         <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">✓ Select This Bid</button>
         <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:10px 20px;border-radius:5px;font-size:13px;border:none;cursor:pointer">Close</button>
       </div>
@@ -1775,6 +1775,20 @@ function showBidDetail(b) {
 function closeBidDetail() {
   document.getElementById('m-bid-detail').style.display = 'none';
   document.body.style.overflow = '';
+}
+
+function handleBidPageOpen(e) {
+  const link = document.getElementById('bd-open-link');
+  const url = link.href;
+  // Block publicbidtracker and h2bid from opening
+  const blocked = ['publicbidtracker.com', 'h2bid.com', 'civcastusa.com'];
+  if(blocked.some(b => url.includes(b))) {
+    e.preventDefault();
+    alert('Direct bid page not available for this source. Please use the bid details shown above.');
+    return false;
+  }
+  window.open(url, '_blank');
+  e.preventDefault();
 }
 
 function selectBidFromDetail() {
