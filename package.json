@@ -1,6 +1,6 @@
 {
   "name": "sri-bids-app",
-  "version": "2026.08.04.1454",
+  "version": "2026.08.09.135307",
   "description": "SRI Global \u2014 Texas Water/WW E&I Bids Dashboard",
   "main": "server.js",
   "scripts": {
