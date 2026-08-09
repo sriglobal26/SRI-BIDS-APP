@@ -869,7 +869,13 @@ function row(b,ctx){
   else acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button></div>`;
   const stCl=ctx==='selected'?'selected':ctx==='deleted'?'deleted':(SL[b.status]||'active');
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
-  const urlCell = `<td class="tu"><button onclick="showBidDetail(BIDS.find(x=>x.id==='${b.id}'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;margin-bottom:4px;text-align:left">↗ View RFQ</button></td>`
+  const rfqUrl = b.source === 'TX ESBD' ? 'https://www.txsmartbuy.gov/esbd'
+    : b.source === 'H2bid' ? 'https://www.civcastusa.com/bids'
+    : b.source === 'EnviroBidNet' ? 'https://www.envirobidnet.com/bid-results/?mains_cat=1'
+    : b.url || '';
+  const urlCell = rfqUrl
+    ? `<td class="tu"><a href="${rfqUrl}" target="_blank" style="color:var(--cyan);text-decoration:none;font-size:10px;display:block;margin-bottom:4px;font-family:var(--mono)">↗ View RFQ</a></td>`
+    : `<td><span style="color:var(--gray);font-size:10px">No link</span></td>`
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
     <td class="tn">${b.num}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${
     b.bidId ? b.bidId :
@@ -1777,19 +1783,7 @@ function closeBidDetail() {
   document.body.style.overflow = '';
 }
 
-function handleBidPageOpen(e) {
-  const link = document.getElementById('bd-open-link');
-  const url = link.href;
-  // Block publicbidtracker and h2bid from opening
-  const blocked = ['publicbidtracker.com', 'h2bid.com', 'civcastusa.com'];
-  if(blocked.some(b => url.includes(b))) {
-    e.preventDefault();
-    alert('Direct bid page not available for this source. Please use the bid details shown above.');
-    return false;
-  }
-  window.open(url, '_blank');
-  e.preventDefault();
-}
+
 
 function selectBidFromDetail() {
   if(!currentBidDetail) return;
