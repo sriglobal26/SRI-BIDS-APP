@@ -51,6 +51,11 @@ async function initDB() {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
     console.log('[Init] Cleared old seeded bids for fresh reseed');
   } catch(e) { console.error('[Init]', e.message); }
+  // DELETE ALL seeded bids on every startup - forces fresh reseed with correct URLs
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
+    console.log('[Init] Cleared all seeded bids for fresh reseed');
+  } catch(e) { console.error('[Init clear]', e.message); }
   await seedAllBids();
 }
 
