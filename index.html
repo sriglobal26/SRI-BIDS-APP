@@ -755,7 +755,20 @@ const DIRECT_BID_URLS = {
   'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
 };
-function getDirectUrl(b) { return DIRECT_BID_URLS[b.id] || b.url || ''; }
+function getDirectUrl(b) {
+  // 1. Check ID map first
+  if(DIRECT_BID_URLS[b.id]) return DIRECT_BID_URLS[b.id];
+  // 2. If URL is publicbidtracker or civcastusa generic, use source fallback
+  const badUrls = ['publicbidtracker','civcastusa.com/bids','txsmartbuy.gov/esbd'','txsmartbuy.gov/esbd"'];
+  const urlIsBad = !b.url || badUrls.some(bad => b.url.includes(bad));
+  if(urlIsBad) {
+    if(b.source==='TX ESBD') return 'https://www.txsmartbuy.gov/esbd/3202600155';
+    if(b.source==='H2bid') return 'https://app.civcast.com/bid-opportunities/projects';
+    if(b.source==='EnviroBidNet') return 'https://www.envirobidnet.com/bids/water-and-wastewater-treatment';
+  }
+  // 3. Use bid's own URL if it's a real direct URL
+  return b.url || '';
+}
 
 async function fetchBids(){
   try {
