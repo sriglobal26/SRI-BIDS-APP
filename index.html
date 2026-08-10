@@ -1788,6 +1788,12 @@ function showBidDetail(b) {
   document.body.style.overflow = 'hidden';
 }
 
+function handleBidPageOpen(e) {
+  e.preventDefault();
+  const link = document.getElementById('bd-open-link');
+  const url = link.href;
+  if(url && url !== '#') window.location.href = url;
+}
 function closeBidDetail() {
   document.getElementById('m-bid-detail').style.display = 'none';
   document.body.style.overflow = '';
