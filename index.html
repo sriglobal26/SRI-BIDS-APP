@@ -1772,11 +1772,8 @@ function showBidDetail(b) {
   document.getElementById('bd-due').textContent = b.due || 'See link';
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
-  // Set correct URL for each source and show Open Full Bid Page button
+  // Use the bid's own direct URL for Open Full Bid Page
   let openUrl = b.url || '';
-  if(b.source === 'H2bid') openUrl = 'https://www.civcastusa.com/bids';
-  if(b.source === 'EnviroBidNet') openUrl = 'https://www.envirobidnet.com/bid-results/';
-  // TX ESBD: use the bid's own direct URL (specific solicitation page)
   if(openUrl) {
     document.getElementById('bd-url').textContent = openUrl;
     document.getElementById('bd-url').href = openUrl;
