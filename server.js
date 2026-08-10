@@ -29,17 +29,7 @@ async function initDB() {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('H2bid','TX ESBD')");
     console.log('[Init] Cleared old H2bid and TX ESBD bids');
   } catch(e) { console.error('[Init]', e.message); }
-  // One-time fix: update all H2bid bids in DB to use publicbidtracker URL
-  try {
-    await pool.query(`
-      UPDATE bids 
-      SET data = jsonb_set(data, '{url}', '"https://publicbidtracker.com/texas/open-bids/"')
-      WHERE data->>'source' = 'H2bid'
-      AND data->>'url' != 'https://publicbidtracker.com/texas/open-bids/'
-    `);
-    console.log('[Migration] Updated H2bid URLs to publicbidtracker.com');
-  } catch(e) { console.error('[Migration]', e.message); }
-  // FORCE: Delete ALL H2bid bids and reseed with CivCast direct URLs
+    // FORCE: Delete ALL H2bid bids and reseed with CivCast direct URLs
   try {
     const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'H2bid'");
     console.log('[Init] Deleted', del.rowCount, 'old H2bid bids');
