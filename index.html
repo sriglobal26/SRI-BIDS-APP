@@ -1772,12 +1772,15 @@ function showBidDetail(b) {
   document.getElementById('bd-due').textContent = b.due || 'See link';
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
-  // Show external link only for sources that have direct pages
-  const hideExternal = ['H2bid', 'TX ESBD'];
-  if(b.url && !hideExternal.includes(b.source)) {
-    document.getElementById('bd-url').textContent = b.url;
-    document.getElementById('bd-url').href = b.url;
-    document.getElementById('bd-open-link').href = b.url;
+  // Set correct URL for each source and show Open Full Bid Page button
+  let openUrl = b.url || '';
+  if(b.source === 'H2bid') openUrl = 'https://www.civcastusa.com/bids';
+  if(b.source === 'TX ESBD') openUrl = 'https://www.txsmartbuy.gov/esbd';
+  if(b.source === 'EnviroBidNet') openUrl = 'https://www.envirobidnet.com/bid-results/?mains_cat=1';
+  if(openUrl) {
+    document.getElementById('bd-url').textContent = openUrl;
+    document.getElementById('bd-url').href = openUrl;
+    document.getElementById('bd-open-link').href = openUrl;
     document.getElementById('bd-open-link').style.display = 'inline-block';
     document.getElementById('bd-url-row').style.display = 'block';
   } else {
