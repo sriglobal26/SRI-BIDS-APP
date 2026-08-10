@@ -80,6 +80,44 @@ const EBN_BIDS = (function() {
   ];
 })()
 
+const H2BID_BIDS = (function() {
+  const dates = [];
+  for (let i = 9; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0] + 'T09:00:00.000Z');
+  }
+  return [
+    { id:'h2bid-001', name:'City of Pflugerville — Gilleland Creek WW Interceptor Engineering', agency:'H2bid', city:'Pflugerville, TX', due:'2026-09-15', scope:'RFP No. 2026-023 — Gilleland Creek WW Interceptor Engineering Design Services.', url:'https://app.civcast.com/bid-opportunities/projects', source:'H2bid', scrapedAt:dates[0] },
+    { id:'h2bid-002', name:'Trinity River Authority — Water/WW Electrical Engineering', agency:'H2bid', city:'Arlington, TX', due:'2026-09-20', scope:'Trinity River Authority — E&I Engineering for Water/WW Treatment Facilities.', url:'https://www.civcastusa.com/publishers/5d6017908289a31a1c7febe1', source:'H2bid', scrapedAt:dates[2] },
+    { id:'h2bid-003', name:'Quiddity Engineering — Water Treatment E&I Engineering TX', agency:'H2bid', city:'Texas', due:'2026-09-30', scope:'Quiddity Engineering Texas — Water Treatment E&I Engineering Services.', url:'https://www.civcastusa.com/publishers/5867827b01ec5a264c779277', source:'H2bid', scrapedAt:dates[3] },
+    { id:'h2bid-004', name:'BidNet TX — Wastewater Treatment Plant Improvements', agency:'H2bid', city:'Texas', due:'2026-10-10', scope:'Wastewater Treatment Plant Improvements Engineering — Texas.', url:'https://www.bidnetdirect.com/texas/solicitations/open-bids/statewide/Wastewater-Treatment-Plants-Improvements/444120606309', source:'H2bid', scrapedAt:dates[5] },
+    { id:'h2bid-005', name:'NTMWD — Water Treatment Plant Instrumentation Engineering', agency:'H2bid', city:'Wylie, TX', due:'2026-10-15', scope:'North Texas Municipal Water District — WTP Instrumentation & Controls Engineering.', url:'https://app.civcast.com/bid-opportunities/projects', source:'H2bid', scrapedAt:dates[6] },
+    { id:'h2bid-006', name:'City of Midland — Pump Station SCADA Engineering', agency:'H2bid', city:'Midland, TX', due:'2026-10-20', scope:'City of Midland — Pump Station SCADA & Controls Engineering Design Services.', url:'https://app.civcast.com/bid-opportunities/projects', source:'H2bid', scrapedAt:dates[8] },
+    { id:'h2bid-007', name:'City of Amarillo — WTP Electrical Engineering Services', agency:'H2bid', city:'Amarillo, TX', due:'2026-10-30', scope:'City of Amarillo — Water Treatment Plant Electrical Engineering Design Services.', url:'https://app.civcast.com/bid-opportunities/projects', source:'H2bid', scrapedAt:dates[9] },
+  ];
+})()
+
+async function fetchESBDbids() {
+  return [];
+}
+
+async function seedESBD() {
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source'='TX ESBD'");
+    const bids = [
+      { id:'esbd-001', name:'TDCJ — Wainwright Unit Wastewater Treatment Plant Construction', agency:'TX ESBD', city:'Lovelady, TX', due:'2026-10-15', scope:'TDCJ seeking proposals to construct a new 2 MGD Wastewater Treatment Plant. Solicitation: 696-FD-26-P007', url:'https://www.txsmartbuy.gov/esbd/696-FD-26-P007', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+      { id:'esbd-002', name:'TWC — Engineering & Professional Services Water/WW Infrastructure', agency:'TX ESBD', city:'Austin, TX', due:'2026-11-24', scope:'Engineering & Professional Services for Water/WW Infrastructure. Solicitation: 3202600155', url:'https://www.txsmartbuy.gov/esbd/3202600155', source:'TX ESBD', value:'TBD', status:'active', region:'austin' },
+      { id:'esbd-003', name:'UT Austin — Water Feature VFD Pump PLC/DMX Control Systems', agency:'TX ESBD', city:'Austin, TX', due:'2026-09-30', scope:'VFD-controlled pumps, PLC/DMX control systems, filtration, UV infrastructure. Solicitation: 26PSS001', url:'https://www.txsmartbuy.gov/esbd/26PSS001', source:'TX ESBD', value:'TBD', status:'active', region:'austin' },
+      { id:'esbd-004', name:'TX Military Dept — Marshall Facility Water Service Line Repair', agency:'TX ESBD', city:'Marshall, TX', due:'2026-09-15', scope:'Texas Military Department — repair of Marshall Facility Water service line. Solicitation: TMD26-FMO-0043352', url:'https://www.txsmartbuy.gov/esbd/TMD26-FMO-0043352', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+      { id:'esbd-005', name:'Texas A&M — Professional Services RFP Engineering', agency:'TX ESBD', city:'College Station, TX', due:'2026-10-01', scope:'Texas A&M University System — Professional Services RFP for Engineering. Solicitation: TAMUS-RFP-02-3452', url:'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+      { id:'esbd-006', name:'TX ESBD — Water/WW Electrical Engineering Bids', agency:'TX ESBD', city:'Texas', due:'2026-12-01', scope:'TX ESBD Water/WW Electrical Engineering solicitations. Solicitation: 3202600155', url:'https://www.txsmartbuy.gov/esbd/3202600155', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+      { id:'esbd-007', name:'TX ESBD — SCADA & Instrumentation Engineering Bids', agency:'TX ESBD', city:'Texas', due:'2026-12-01', scope:'TX ESBD SCADA & Instrumentation Engineering solicitations. Solicitation: 696-FD-26-P007', url:'https://www.txsmartbuy.gov/esbd/696-FD-26-P007', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+    ];
+    for (const b of bids) await saveBid({ ...b, scrapedAt: new Date().toISOString() });
+    console.log('[ESBD] Seeded', bids.length, 'bids');
+  } catch(e) { console.error('[ESBD]', e.message); }
+}
+
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
