@@ -510,10 +510,10 @@ Best regards,
   <!-- Source quick-links -->
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
     <span style="font-family:var(--mono);font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.1em">View Bids On:</span>
-    <button onclick="toggleSrc('envirobidnet')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
-    <button onclick="toggleSrc('h2bid')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
-    <button onclick="toggleSrc('civcast')" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">CivCast ▾</button>
-    <button onclick="toggleSrc('txesbd')" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
+    <button onclick="toggleSrc('envirobidnet')" data-src="envirobidnet" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--green);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">EnviroBidNet ▾</button>
+    <button onclick="toggleSrc('h2bid')" data-src="h2bid" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--yellow);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">H2bid ▾</button>
+    <button onclick="toggleSrc('civcast')" data-src="civcast" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">CivCast ▾</button>
+    <button onclick="toggleSrc('txesbd')" data-src="txesbd" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
     <button id="btn-scrape" class="btn1" style="font-size:10px;padding:6px 16px;background:var(--yellow);color:var(--navy);margin-right:6px" onclick="runScrapeNow()">🔄 Refresh</button>
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px;background:var(--green);color:var(--navy);margin-right:6px" onclick="openM('m-paste-email')">📧 Paste Email</button>
     <button class="btn1" style="font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
@@ -816,7 +816,7 @@ let PRIMES = [
 let cPrime=null, ePrime=null;
 const SN={closing:'Closing Soon',active:'Active Bid',prebid:'Pre-Bid',pending:'Award Pending'};
 const SL={closing:'closing',active:'active',prebid:'prebid',pending:'pending'};
-let curF='all', curS='';
+let curF='all', curS='', curSrcFilter=null;
 
 // ═════════════════════════════════════
 // TABS
@@ -959,7 +959,9 @@ function applyF(){
     else if(curF==='houston') mf=b.region==='houston';
     else if(curF==='texas') mf=['austin','sa','dfw','statewide'].includes(b.region);
     const ms=!curS||[b.name,b.agency,b.city,b.scope,b.due,b.value,b.region].join(' ').toLowerCase().includes(curS);
-    return mf&&ms;
+    // Source filter
+    const msrc=!curSrcFilter||(b.source||'').toLowerCase()===curSrcFilter.toLowerCase();
+    return mf&&ms&&msrc;
   });
   document.getElementById('bids-body').innerHTML=filtered.map(b=>row(b,'active')).join('');
   const lbl=document.getElementById('bids-result-count');
@@ -1529,17 +1531,30 @@ const SRC_CONFIG = {
 };
 let curSrc = null;
 function toggleSrc(key){
-  const panel = document.getElementById('src-panel');
-  const iframe = document.getElementById('src-iframe');
-  const title = document.getElementById('src-panel-title');
-  if(curSrc === key){ closeSrc(); return; }
-  curSrc = key;
-  const cfg = SRC_CONFIG[key];
-  title.textContent = cfg.label;
-  iframe.src = cfg.url;
-  panel.style.display = 'block';
-  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  // Map key to source name
+  const sourceMap = {
+    'envirobidnet': 'EnviroBidNet',
+    'h2bid': 'H2bid',
+    'civcast': 'CivCast',
+    'txesbd': 'TX ESBD'
+  };
+  const sourceName = sourceMap[key];
+  // Toggle: if same source clicked again, show all
+  if(curSrc === key){ 
+    curSrc = null;
+    curSrcFilter = null;
+  } else {
+    curSrc = key;
+    curSrcFilter = sourceName;
+  }
+  // Update button styles
+  document.querySelectorAll('.src-btn').forEach(btn => {
+    btn.style.opacity = (!curSrc || btn.dataset.src === curSrc) ? '1' : '0.4';
+  });
+  applyF();
 }
+
+function closeSrc(){ curSrc = null; curSrcFilter = null; applyF(); }
 function closeSrc(){
   curSrc = null;
   document.getElementById('src-panel').style.display = 'none';
