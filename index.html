@@ -895,11 +895,10 @@ function row(b,ctx){
   else acts=`<div class="ag"><button class="ab rst" onclick="mark(decodeURIComponent('${eid}'),'active')">↩ Restore</button></div>`;
   const stCl=ctx==='selected'?'selected':ctx==='deleted'?'deleted':(SL[b.status]||'active');
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
-  // Use global DIRECT_BID_URLS map
-  const bidDirectUrl = getDirectUrl(b);
+  // Use onclick with bid ID so URL is always looked up fresh from DIRECT_BID_URLS
   const urlCell = `<td class="tu">
     <button onclick="showBidDetail(BIDS.find(x=>x.id==='${b.id}'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">↗ View RFQ</button>
-    ${bidDirectUrl ? `<a href="${bidDirectUrl}" target="_blank" style="color:var(--yellow);font-size:9px;font-family:var(--mono);text-decoration:none">🔗 Bid Link</a>` : ''}
+    <button onclick="openBidLink('${b.id}')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">🔗 Bid Link</button>
   </td>`
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
     <td class="tn">${b.num}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${
@@ -1822,6 +1821,10 @@ function handleBidPageOpen(e) {
   const link = document.getElementById('bd-open-link');
   const url = link.href;
   if(url && url !== '#') window.open(url, '_blank');
+}
+function openBidLink(bidId) {
+  const url = getDirectUrl(BIDS.find(b=>b.id===bidId)||{id:bidId});
+  if(url) window.open(url, '_blank');
 }
 function closeBidDetail() {
   document.getElementById('m-bid-detail').style.display = 'none';
