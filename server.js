@@ -46,6 +46,16 @@ async function initDB() {
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
     console.log('[Init] Cleared all seeded bids for fresh reseed');
   } catch(e) { console.error('[Init clear]', e.message); }
+  // Fix all publicbidtracker URLs in database
+  try {
+    // Update TX ESBD bids
+    await pool.query(`UPDATE bids SET data = jsonb_set(data, '{url}', '"https://www.txsmartbuy.gov/esbd/3202600155"') WHERE data->>'source'='TX ESBD' AND data->>'url' LIKE '%publicbidtracker%'`);
+    // Update H2bid bids
+    await pool.query(`UPDATE bids SET data = jsonb_set(data, '{url}', '"https://app.civcast.com/bid-opportunities/projects"') WHERE data->>'source'='H2bid' AND data->>'url' LIKE '%publicbidtracker%'`);
+    // Update EnviroBidNet bids
+    await pool.query(`UPDATE bids SET data = jsonb_set(data, '{url}', '"https://www.envirobidnet.com/bids/water-and-wastewater-treatment"') WHERE data->>'source'='EnviroBidNet' AND data->>'url' LIKE '%publicbidtracker%'`);
+    console.log('[Migration] Fixed all publicbidtracker URLs in database');
+  } catch(e) { console.error('[Migration fix]', e.message); }
   await seedAllBids();
 }
 
