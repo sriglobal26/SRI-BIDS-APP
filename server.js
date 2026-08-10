@@ -46,6 +46,11 @@ async function initDB() {
     await seedH2bid(); // Reseed with new CivCast URLs
     console.log('[Init] Reseeded H2bid bids with CivCast URLs');
   } catch(e) { console.error('[Init H2bid]', e.message); }
+  // Delete all seeded bids and reseed fresh on every startup
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
+    console.log('[Init] Cleared old seeded bids for fresh reseed');
+  } catch(e) { console.error('[Init]', e.message); }
   await seedAllBids();
 }
 
@@ -133,7 +138,7 @@ async function fetchESBDbids() {
     return [
       // VERIFIED: Opens publicly without login
       { id:'esbd-001', name:'TWC — Engineering & Professional Services Water/WW Infrastructure', agency:'TX ESBD', city:'Austin, TX', due:'2026-11-24', scope:'Engineering & Professional Services — Water/Wastewater Infrastructure E&I Design. Contact: Meghan Osborn (737) 295-0326', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD', value:'TBD', status:'active', region:'austin' },
-      { id:'esbd-002', name:'Texas Military Dept — Marshall Facility Water Service Line Repair', agency:'TX ESBD', city:'Marshall, TX', due:'2026-08-10', scope:'Water Service Line Repair Engineering — Texas Military Department Marshall Facility. Class/Item: 91468-Plumbing', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
+      { id:'esbd-002', name:'Texas Military Dept — Marshall Facility Water Service Line Repair', agency:'TX ESBD', city:'Marshall, TX', due:'2026-10-10', scope:'Water Service Line Repair Engineering — Texas Military Department Marshall Facility. Class/Item: 91468-Plumbing', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
       // TX ESBD search pages - always open without login
       { id:'esbd-003', name:'TX ESBD — Water/WW Electrical Engineering Open Solicitations', agency:'TX ESBD', city:'Texas', due:d1, scope:'All open water/wastewater electrical & instrumentation engineering solicitations on TX ESBD', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
       { id:'esbd-004', name:'TX ESBD — SCADA & Controls Engineering Open Bids', agency:'TX ESBD', city:'Texas', due:d2, scope:'All open SCADA & controls engineering solicitations — Water/Wastewater Systems Texas', url:'https://publicbidtracker.com/texas/open-bids/', source:'TX ESBD', value:'TBD', status:'active', region:'statewide' },
@@ -157,7 +162,7 @@ async function seedESBD() {
 }
 
 const H2BID_BIDS = [
-  { id:'h2bid-001', name:'SAWS — Steven M. Clouse WRC Biosolids System Upgrades Engineering', agency:'H2bid', city:'San Antonio, TX', due:'2026-09-01', scope:'Wastewater Treatment Plant Biosolids System Upgrades — E&I Engineering Design', url:'https://publicbidtracker.com/texas/open-bids/', source:'H2bid' },
+  { id:'h2bid-001', name:'SAWS — Steven M. Clouse WRC Biosolids System Upgrades Engineering', agency:'H2bid', city:'San Antonio, TX', due:'2026-11-01', scope:'Wastewater Treatment Plant Biosolids System Upgrades — E&I Engineering Design', url:'https://publicbidtracker.com/texas/open-bids/', source:'H2bid' },
   { id:'h2bid-002', name:'City of Houston — WWTP Electrical & Instrumentation Engineering Services', agency:'H2bid', city:'Houston, TX', due:'2026-09-15', scope:'Wastewater Treatment Plant E&I Engineering Design Services — City of Houston', url:'https://publicbidtracker.com/texas/open-bids/', source:'H2bid' },
   { id:'h2bid-003', name:'NTMWD — Water Treatment Plant SCADA Engineering Services', agency:'H2bid', city:'Wylie, TX', due:'2026-09-20', scope:'SCADA Engineering Design — North Texas Municipal Water District Water Treatment Plant', url:'https://publicbidtracker.com/texas/open-bids/', source:'H2bid' },
   { id:'h2bid-004', name:'TRWD — Water Distribution SCADA & Telemetry Engineering', agency:'H2bid', city:'Fort Worth, TX', due:'2026-10-01', scope:'SCADA & Telemetry Engineering Design — Tarrant Regional Water District', url:'https://publicbidtracker.com/texas/open-bids/', source:'H2bid' },
