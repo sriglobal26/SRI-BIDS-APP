@@ -1772,8 +1772,34 @@ function showBidDetail(b) {
   document.getElementById('bd-due').textContent = b.due || 'See link';
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
-  // Use the bid's own direct URL for Open Full Bid Page
-  let openUrl = b.url || '';
+  // URL lookup by bid ID - always correct regardless of DB
+  const URL_MAP = {
+    // EnviroBidNet
+    'ebn-874521': 'https://www.envirobidnet.com/bids/water-and-wastewater-treatment',
+    'ebn-873100': 'https://www.envirobidnet.com/bids/scada-and-environmental-technology',
+    'ebn-872500': 'https://www.envirobidnet.com/bids/scada-and-environmental-technology',
+    'ebn-871800': 'https://envirobidnet.com/bids/environmental-engineering/all',
+    'ebn-870500': 'https://www.envirobidnet.com/bids/water-and-wastewater-treatment',
+    'ebn-869800': 'https://envirobidnet.com/bids/environmental-engineering/all',
+    'ebn-869200': 'https://www.envirobidnet.com/environmental-bids-and-rfp',
+    // H2bid
+    'h2bid-001': 'https://app.civcast.com/bid-opportunities/projects',
+    'h2bid-002': 'https://www.civcastusa.com/publishers/5d6017908289a31a1c7febe1',
+    'h2bid-003': 'https://www.civcastusa.com/publishers/5867827b01ec5a264c779277',
+    'h2bid-004': 'https://www.bidnetdirect.com/texas/solicitations/open-bids/statewide/Wastewater-Treatment-Plants-Improvements/444120606309',
+    'h2bid-005': 'https://www.bidnetdirect.com/public/supplier/solicitations/statewide/444028207150/abstract?purchasingGroupId=8407551&origin=1',
+    'h2bid-006': 'https://app.civcast.com/bid-opportunities/projects',
+    'h2bid-007': 'https://app.civcast.com/bid-opportunities/projects',
+    // TX ESBD
+    'esbd-001': 'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
+    'esbd-002': 'https://www.txsmartbuy.gov/esbd/3202600155',
+    'esbd-003': 'https://www.txsmartbuy.gov/esbd/26PSS001',
+    'esbd-004': 'https://www.txsmartbuy.gov/esbd/TMD26-FMO-0043352',
+    'esbd-005': 'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
+    'esbd-006': 'https://www.txsmartbuy.gov/esbd/3202600155',
+    'esbd-007': 'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
+  };
+  let openUrl = URL_MAP[b.id] || b.url || '';
   if(openUrl) {
     document.getElementById('bd-url').textContent = openUrl;
     document.getElementById('bd-url').href = openUrl;
