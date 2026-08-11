@@ -128,3 +128,93 @@ async function seedESBD() {
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+app.get('/', async (req, res) => {
+  try { res.sendFile(path.join(__dirname, 'index.html')); }
+  catch(e) { res.status(500).send('Error'); }
+});
+
+app.get('/api/bids', async (req, res) => {
+  try {
+    const r = await pool.query("SELECT data FROM bids ORDER BY created_at ASC");
+    res.json({ bids: r.rows.map(r => r.data) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/seed-ebn', async (req, res) => {
+  try {
+    await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
+    await seedAllBids();
+    const r = await pool.query('SELECT COUNT(*) FROM bids');
+    res.json({ success: true, total: parseInt(r.rows[0].count) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/fix-expired', async (req, res) => {
+  try {
+    const r1 = await pool.query("DELETE FROM bids WHERE data->>'source' != 'Manual' AND data->>'userState' != 'selected' AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND (data->>'due')::date < CURRENT_DATE");
+    await seedAllBids();
+    const r2 = await pool.query('SELECT COUNT(*) FROM bids');
+    res.json({ success: true, removed: r1.rowCount, total: parseInt(r2.rows[0].count) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/bids/:id/state', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { state } = req.body;
+    await pool.query("UPDATE bids SET data = jsonb_set(data, '{userState}', $1) WHERE id=$2", [JSON.stringify(state), id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/bids/:id/url', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { url } = req.body;
+    await pool.query("UPDATE bids SET data = jsonb_set(data, '{url}', $1) WHERE id=$2", [JSON.stringify(url), id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/bids', async (req, res) => {
+  try {
+    const bid = req.body;
+    bid.source = bid.source || 'Manual';
+    bid.status = bid.status || 'active';
+    await saveBid(bid);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/bids/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/email-bids', async (req, res) => {
+  try {
+    const body = req.body;
+    await pool.query('INSERT INTO emails(data) VALUES($1) ON CONFLICT DO NOTHING', [JSON.stringify(body)]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/email-bids/last', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data FROM emails ORDER BY created_at DESC LIMIT 1');
+    res.json(r.rows[0]?.data || {});
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.use(express.static(__dirname));
+
+app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
+initDB().then(() => { setTimeout(seedAllBids, 3000); }).catch(err => console.error('[DB] Init failed:', err.message));
