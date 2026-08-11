@@ -758,7 +758,10 @@ const DIRECT_BID_URLS = {
 function getDirectUrl(b) {
   if(b.source==='TX ESBD') return 'https://www.txsmartbuy.gov/esbd/3202600155';
   if(b.source==='H2bid') return 'https://app.civcast.com/bid-opportunities/projects';
-  if(b.source==='EnviroBidNet') return 'https://www.envirobidnet.com/bid-center/';
+  if(b.source==='EnviroBidNet') {
+    const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
+    return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
+  }
   return b.url || '';
 }
 
