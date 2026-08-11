@@ -13,6 +13,18 @@ app.use(express.static(__dirname, { index: false }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
+async function seedAllBids() {
+  try {
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
+    }
+    console.log('[EBN] Seeded', EBN_BIDS.length, 'bids');
+    await seedH2bid();
+    await seedESBD();
+    console.log('[Seed] All bids seeded');
+  } catch(e) { console.error('[Seed]', e.message); }
+}
+
 async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
   await pool.query(`CREATE TABLE IF NOT EXISTS scrape_log (id SERIAL PRIMARY KEY, ran_at TIMESTAMP DEFAULT NOW(), source TEXT, count INTEGER, status TEXT, message TEXT)`);
@@ -152,17 +164,6 @@ async function seedH2bid() {
   } catch(e) { console.error('[H2bid]', e.message); }
 }
 
-async function seedAllBids() {
-  try {
-    for (const b of EBN_BIDS) {
-      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
-    }
-    console.log('[EBN] Seeded', EBN_BIDS.length, 'bids');
-    await seedH2bid();
-    await seedESBD();
-    console.log('[Seed] All bids seeded');
-  } catch(e) { console.error('[Seed]', e.message); }
-}
 
 
 if (typeof File === 'undefined') global.File = class File {};
