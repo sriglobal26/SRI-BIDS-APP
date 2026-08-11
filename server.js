@@ -7,9 +7,9 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.static(__dirname));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(express.static(__dirname, { index: false }));
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
@@ -170,14 +170,14 @@ if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
 
+app.use(express.static(__dirname));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.get('/', async (req, res) => {
-  try { res.sendFile(path.join(__dirname, 'index.html')); }
-  catch(e) { res.status(500).send('Error'); }
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/api/bids', async (req, res) => {
@@ -255,7 +255,6 @@ app.get('/api/email-bids/last', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.use(express.static(__dirname));
 
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
 initDB().then(() => { setTimeout(seedAllBids, 3000); }).catch(err => console.error('[DB] Init failed:', err.message));
