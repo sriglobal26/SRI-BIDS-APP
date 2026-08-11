@@ -125,6 +125,46 @@ async function seedESBD() {
   } catch(e) { console.error('[ESBD]', e.message); }
 }
 
+async function saveBid(bid) {
+  const id = bid.id || ('bid-' + Date.now());
+  bid.id = id;
+  await pool.query(
+    'INSERT INTO bids(id, data) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET data=$2, updated_at=NOW()',
+    [id, JSON.stringify(bid)]
+  );
+}
+
+function detectRegion(city) {
+  if (!city) return 'statewide';
+  const c = city.toLowerCase();
+  if (c.includes('houston')) return 'houston';
+  if (c.includes('austin')) return 'austin';
+  if (c.includes('dallas') || c.includes('fort worth')) return 'dfw';
+  return 'statewide';
+}
+
+async function seedH2bid() {
+  try {
+    for (const b of H2BID_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
+    }
+    console.log('[H2bid] Seeded', H2BID_BIDS.length, 'bids');
+  } catch(e) { console.error('[H2bid]', e.message); }
+}
+
+async function seedAllBids() {
+  try {
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: b.scrapedAt || new Date().toISOString() });
+    }
+    console.log('[EBN] Seeded', EBN_BIDS.length, 'bids');
+    await seedH2bid();
+    await seedESBD();
+    console.log('[Seed] All bids seeded');
+  } catch(e) { console.error('[Seed]', e.message); }
+}
+
+
 if (typeof File === 'undefined') global.File = class File {};
 if (typeof Blob === 'undefined') global.Blob = class Blob {};
 if (typeof FormData === 'undefined') global.FormData = class FormData {};
