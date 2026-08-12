@@ -756,8 +756,11 @@ const DIRECT_BID_URLS = {
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
 };
 function getDirectUrl(b) {
-  if(b.source==='TX ESBD') return 'https://www.txsmartbuy.gov/esbd/3202600155';
-  if(b.source==='H2bid') return 'https://app.civcast.com/bid-opportunities/projects';
+  // TX ESBD - use specific solicitation URL from bid, fallback to search
+  if(b.source==='TX ESBD') return b.url && !b.url.includes('publicbidtracker') ? b.url : 'https://www.txsmartbuy.gov/esbd/3202600155';
+  // H2bid - use bid's own URL directly (govcb.com or purchasing.houstontx.gov)
+  if(b.source==='H2bid') return b.url && !b.url.includes('publicbidtracker') && !b.url.includes('civcastusa') ? b.url : 'https://purchasing.houstontx.gov';
+  // EnviroBidNet - open subscriber direct bid page
   if(b.source==='EnviroBidNet') {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
