@@ -189,7 +189,10 @@ app.get('/api/bids', async (req, res) => {
 
 app.get('/api/seed-ebn', async (req, res) => {
   try {
+    // Force delete ALL seeded bids to ensure fresh correct URLs
     await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
+    // Also update any remaining civcast URLs
+    await pool.query("UPDATE bids SET data = jsonb_set(data, '{url}', to_jsonb(REPLACE(data->>'url', 'civcastusa.com', 'govcb.com'))) WHERE data->>'source'='H2bid' AND data->>'url' LIKE '%civcastusa%'");
     await seedAllBids();
     const r = await pool.query('SELECT COUNT(*) FROM bids');
     res.json({ success: true, total: parseInt(r.rows[0].count) });
