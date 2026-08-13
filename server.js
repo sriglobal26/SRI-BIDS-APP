@@ -31,8 +31,9 @@ async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS primes (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
   await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(() => {});
   console.log('[DB] Ready');
-  const { rows } = await pool.query('SELECT COUNT(*) FROM bids');
-  if (parseInt(rows[0].count) === 0) {
+  // Always delete seeded bids and reseed fresh on every startup
+  await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','TX ESBD')");
+  {
     for (const bid of SEED_BIDS) await saveBid(bid);
     console.log('[DB] Seeded', SEED_BIDS.length, 'manual bids');
   }
