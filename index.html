@@ -722,6 +722,8 @@ const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public
 let bidState={};
 
 function classifyBid(b){
+  // TWDB/prebid bids never expire — always keep active
+  if(b.source==='TWDB' || b.status==='prebid') return 'active';
   // Auto-remove expired bids — if due date passed, move to deleted
   if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
     const due = new Date(b.due);
@@ -986,6 +988,9 @@ function applyF(){
   checkExpired();
   const active=BIDS.filter(b=>bidState[b.id]==='active');
   const filtered=active.filter(b=>{
+    // TWDB/post-funding bids ONLY show in TWDB tab
+    if(b.source==='TWDB' && curSrcFilter !== 'TWDB') return false;
+    if(b.status==='prebid' && curSrcFilter !== 'TWDB') return false;
     let mf=false;
     if(curF==='all') mf=true;
     else if(curF==='closing') mf=isReallyClosing(b);
