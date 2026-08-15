@@ -250,7 +250,38 @@ app.delete('/api/bids/:id', async (req, res) => {
 
 // ─── CRON ────────────────────────────────────────────────────
 cron.schedule('0 */2 * * *', () => autoFetchNewBids()); // every 2 hours
+cron.schedule('0 */2 * * *', () => autoExpireAndClean()); // expire + clean every 2 hours
 
 // ─── START ───────────────────────────────────────────────────
+// Auto-expire completed bids and clean 14-day-old deleted bids
+async function autoExpireAndClean() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    // Step 1: Move expired bids to deleted — set userState='deleted' and deletedAt=today
+    const expired = await pool.query(
+      `UPDATE bids 
+       SET data = jsonb_set(jsonb_set(data, '{userState}', '"deleted"'), '{deletedAt}', to_jsonb($1::text))
+       WHERE data->>'status' != 'prebid'
+       AND data->>'source' != 'TWDB'
+       AND data->>'userState' != 'deleted'
+       AND data->>'userState' != 'selected'
+       AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       AND (data->>'due')::date < CURRENT_DATE`,
+      [today]
+    );
+    if (expired.rowCount > 0) console.log('[AutoExpire] Moved', expired.rowCount, 'expired bids to deleted');
+
+    // Step 2: Permanently delete bids that have been deleted for 14+ days
+    const cleaned = await pool.query(
+      `DELETE FROM bids
+       WHERE data->>'userState' = 'deleted'
+       AND data->>'source' != 'Manual'
+       AND data->>'deletedAt' IS NOT NULL
+       AND (data->>'deletedAt')::date <= CURRENT_DATE - INTERVAL '14 days'`
+    );
+    if (cleaned.rowCount > 0) console.log('[AutoClean] Permanently deleted', cleaned.rowCount, 'bids older than 14 days');
+  } catch(e) { console.error('[AutoExpire]', e.message); }
+}
+
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
-initDB().then(() => { setTimeout(autoFetchNewBids, 15000); }).catch(err => console.error('[DB] Init failed:', err.message));
+initDB().then(() => { setTimeout(autoFetchNewBids, 15000); setTimeout(autoExpireAndClean, 20000); }).catch(err => console.error('[DB] Init failed:', err.message));
