@@ -924,7 +924,7 @@ function row(b,ctx){
     b.id && b.id.startsWith('manual-') ? 'MNL-' + b.id.replace('manual-','').slice(-4) :
     '—'
   }</td><td class="tp">${b.name}${b.bidId ? `<br><span style="font-family:var(--mono);font-size:9px;color:var(--cyan);opacity:0.8;font-weight:600">${b.bidId}</span>` : ''}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
-    <td class="ts">${b.scope}</td>${urlCell}<td style="font-family:var(--mono);font-size:10px;color:var(--white);white-space:nowrap;font-weight:700"><strong>${b.scrapedAt ? b.scrapedAt.slice(0,10) : new Date().toISOString().slice(0,10)}</strong></td><td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
+    <td class="ts">${b.scope}</td>${urlCell}<td style="font-family:var(--mono);font-size:10px;color:var(--white);white-space:nowrap;font-weight:700"><strong>${b.posted || (b.scrapedAt ? b.scrapedAt.slice(0,10) : new Date().toISOString().slice(0,10))}</strong></td><td class="td"${dcl}>${b.due}</td><td class="tv">${b.value}</td>
     <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
   </tr>`;
 }
