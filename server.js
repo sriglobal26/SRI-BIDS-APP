@@ -260,4 +260,4 @@ app.get('/api/email-bids/last', async (req, res) => {
 
 
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
-initDB().then(() => { setTimeout(seedAllBids, 3000); }).catch(err => console.error('[DB] Init failed:', err.message));
+initDB().then(() => { setTimeout(seedAllBids, 3000); setTimeout(autoFetchNewBids, 15000); }).catch(err => console.error('[DB] Init failed:', err.message));
