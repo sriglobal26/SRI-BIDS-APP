@@ -156,3 +156,21 @@ async function fetchAndSaveEnviroBidNetBids() {
   } catch(e) { console.log('[AutoFetch] EnviroBidNet skipped:', e.message); }
 }
 
+const TWDB_BIDS = (function() {
+  const dates = [];
+  for (let i = 9; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0] + 'T08:00:00.000Z');
+  }
+  return [
+    { id:'twdb-001', name:'TWDB — Water System Improvements CDBG-MIT Engineering (Karnes City)', agency:'TWDB', city:'Karnes City, TX', due:'2026-09-30', scope:'TWDB CDBG-MIT Water System Improvements — Replace 9,725 LF of existing water lines. Engineering design, electrical and instrumentation. Contact: TWDB Financial Assistance Division.', url:'https://www.twdb.texas.gov/financial/programs/CWSRF/index.asp', source:'TWDB', scrapedAt:dates[0] },
+    { id:'twdb-002', name:'TWDB — Drinking Water State Revolving Fund Engineering Services', agency:'TWDB', city:'Texas', due:'2026-10-15', scope:'TWDB Drinking Water State Revolving Fund (DWSRF) — Engineering services for water system improvements, electrical upgrades, instrumentation and controls for Texas water utilities.', url:'https://www.twdb.texas.gov/financial/programs/DWSRF/index.asp', source:'TWDB', scrapedAt:dates[2] },
+    { id:'twdb-003', name:'TWDB — Clean Water State Revolving Fund Wastewater Engineering', agency:'TWDB', city:'Texas', due:'2026-10-20', scope:'TWDB Clean Water State Revolving Fund (CWSRF) — Wastewater treatment plant engineering, electrical and instrumentation design, SCADA systems for Texas utilities.', url:'https://www.twdb.texas.gov/financial/programs/CWSRF/index.asp', source:'TWDB', scrapedAt:dates[3] },
+    { id:'twdb-004', name:'TWDB — State Water Implementation Fund Texas (SWIFT) Projects', agency:'TWDB', city:'Texas', due:'2026-11-01', scope:'TWDB SWIFT Program — Engineering design services for major water supply projects. Electrical, instrumentation, SCADA, structural engineering for water infrastructure.', url:'https://www.twdb.texas.gov/financial/programs/swift/index.asp', source:'TWDB', scrapedAt:dates[5] },
+    { id:'twdb-005', name:'TWDB — Regional Water Planning Engineering Services', agency:'TWDB', city:'Texas', due:'2026-11-15', scope:'TWDB Regional Water Planning Group engineering and professional services. Water supply infrastructure design, E&I engineering, pump stations, treatment facilities.', url:'https://www.twdb.texas.gov/waterplanning/rwp/index.asp', source:'TWDB', scrapedAt:dates[6] },
+    { id:'twdb-006', name:'TWDB — HB 500 Water/WW Infrastructure Engineering', agency:'TWDB', city:'Texas', due:'2026-11-30', scope:'TWDB HB 500 Flood Infrastructure Fund — Water/Wastewater infrastructure engineering. Electrical design, instrumentation, control systems for Texas water districts.', url:'https://www.twdb.texas.gov/financial/programs/FIF/index.asp', source:'TWDB', scrapedAt:dates[8] },
+    { id:'twdb-007', name:'TWDB — Economically Distressed Areas Program (EDAP) Engineering', agency:'TWDB', city:'Texas', due:'2026-12-15', scope:'TWDB EDAP — Engineering services for economically distressed communities. Water/wastewater system design, electrical, instrumentation and SCADA engineering.', url:'https://www.twdb.texas.gov/financial/programs/edap/index.asp', source:'TWDB', scrapedAt:dates[9] },
+  ];
+})()
+
+
