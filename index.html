@@ -780,7 +780,12 @@ async function fetchBids(){
     BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
-      bidState[b.id] = (b.userState === 'selected') ? 'selected' : (b.userState === 'deleted') ? 'deleted' : classifyBid(b); // auto-remove expired
+      // Always check if expired first — expired bids go to deleted even if userState is 'active'
+      const autoState = classifyBid(b);
+      if(b.userState === 'selected') bidState[b.id] = 'selected'; // selected is always protected
+      else if(autoState === 'deleted') bidState[b.id] = 'deleted'; // expired → deleted
+      else if(b.userState === 'deleted') bidState[b.id] = 'deleted'; // manually deleted
+      else bidState[b.id] = 'active';
     });
     if(typeof renderAll === 'function') renderAll();
   } catch(e){ console.error('fetchBids error:', e.message); }
