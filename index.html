@@ -957,10 +957,10 @@ function row(b,ctx){
 function renderAll(){
   document.getElementById('bids-body').innerHTML=BIDS.filter(b=>bidState[b.id]==='active').map(b=>row(b,'active')).join('');
   const sel=BIDS.filter(b=>bidState[b.id]==='selected');
-  document.getElementById('sel-body').innerHTML=sel.map(b=>row(b,'selected')).join('');
+  document.getElementById('sel-body').innerHTML=sel.map((b,i)=>{ b._sno=i+1; return row(b,'selected'); }).join('');
   document.getElementById('sel-mt').style.display=sel.length?'none':'block';
   const del=BIDS.filter(b=>bidState[b.id]==='deleted');
-  document.getElementById('del-body').innerHTML=del.map(b=>row(b,'deleted')).join('');
+  document.getElementById('del-body').innerHTML=del.map((b,i)=>{ b._sno=i+1; return row(b,'deleted'); }).join('');
   document.getElementById('del-mt').style.display=del.length?'none':'block';
   applyF(); updBadges(); updStats(); populateCampSelect();
 }
