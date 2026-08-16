@@ -319,6 +319,10 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
   <div class="topbar-r" style="text-align:right"><strong>Texas Water/WW — E&I Bids</strong><br><span class="hide-xs">Houston, TX · v2026.08.10-FIXED · Updated <span id="last-updated"></span></span></div>
 </div>
 
+<div style="background:rgba(0,0,0,0.2);padding:4px 16px;display:flex;justify-content:flex-end;gap:8px;align-items:center">
+  <button id="btn-scrape" onclick="runScrapeNow()" style="font-size:10px;padding:4px 14px;background:var(--yellow);color:var(--navy);border:none;border-radius:3px;cursor:pointer;font-family:var(--mono);font-weight:600">🔄 Refresh Bids</button>
+</div>
+
 <div class="tab-nav">
   <button class="tab-btn sri-tab active" onclick="switchTab('sri',this)">⬡ SRI Global</button>
   <button class="tab-btn" onclick="switchTab('bids',this)">Active Bids <span class="tbadge g" id="badge-bids">2</span></button>
@@ -515,7 +519,7 @@ Best regards,
     <button onclick="toggleSrc('civcast')" data-src="civcast" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--navy);background:var(--cyan);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">CivCast ▾</button>
     <button onclick="toggleSrc('txesbd')" data-src="txesbd" class="fb src-btn" style="font-family:var(--mono);font-size:10px;color:var(--white);background:var(--blue);padding:5px 12px;border-radius:2px;border:none;cursor:pointer;font-weight:600">TX ESBD ▾</button>
           <button onclick="toggleSrc('twdb',this)" data-src="twdb" class="fb src-btn" style="font-family:var(--mono);font-size:11px;padding:6px 14px;border-radius:3px;border:1px solid #f59e0b;background:rgba(245,158,11,0.15);color:#f59e0b;cursor:pointer;transition:.2s;font-weight:600">TWDB ▾</button>
-    <button id="btn-scrape" class="btn1" style="font-size:10px;padding:6px 16px;background:var(--yellow);color:var(--navy);margin-right:6px" onclick="runScrapeNow()">🔄 Refresh</button>
+
     <button class="btn1" style="margin-left:auto;font-size:10px;padding:6px 16px;background:var(--green);color:var(--navy);margin-right:6px" onclick="openM('m-paste-email')">📧 Paste Email</button>
     <button class="btn1" style="font-size:10px;padding:6px 16px" onclick="openM('m-addbid')">+ Add Bid</button>
   </div>
