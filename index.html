@@ -1733,10 +1733,20 @@ async async function runScrapeNow(){
   const btn = document.getElementById('btn-scrape') || document.querySelector('[onclick="runScrapeNow()"]');
   if(btn){ btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   try {
-    // Save current scroll position
+    // Save current tab and scroll position before refresh
+    const activeTab = document.querySelector('.tab-pane.active');
+    const activeTabId = activeTab ? activeTab.id : null;
+    const activeTabBtn = document.querySelector('.tab-btn.active');
     const scrollY = window.scrollY;
-    // Just reload bids from DB - no page reload, no reseed
+    // Reload bids from DB silently
     await fetchBids();
+    // Restore the same tab that was active before refresh
+    if(activeTabId) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(activeTabId).classList.add('active');
+      if(activeTabBtn) activeTabBtn.classList.add('active');
+    }
     // Restore scroll position
     window.scrollTo(0, scrollY);
     if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
