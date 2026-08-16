@@ -1733,17 +1733,17 @@ async async function runScrapeNow(){
   const btn = document.getElementById('btn-scrape') || document.querySelector('[onclick="runScrapeNow()"]');
   if(btn){ btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   try {
-    // Call seed-ebn to delete and reseed all bids fresh
-    const r = await fetch('/api/seed-ebn');
-    const d = await r.json();
+    // Save current scroll position
+    const scrollY = window.scrollY;
+    // Just reload bids from DB - no page reload, no reseed
     await fetchBids();
+    // Restore scroll position
+    window.scrollTo(0, scrollY);
     if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
-    if(typeof showToast === 'function') showToast('✅ Bids refreshed! ' + (d.total||'') + ' bids loaded.');
-    else alert('✅ Bids refreshed! ' + (d.total||'') + ' bids loaded.');
+    if(typeof showToast === 'function') showToast('✅ Bids updated!');
   } catch(e){
     if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
     if(typeof showToast === 'function') showToast('❌ Refresh failed: ' + e.message);
-    else alert('❌ Refresh failed: ' + e.message);
   }
 }
 
