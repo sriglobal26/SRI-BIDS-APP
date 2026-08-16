@@ -989,7 +989,16 @@ function updStats(){
   document.getElementById('sn-cl').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&b.status==='closing').length;
   document.getElementById('sn-sel').textContent=BIDS.filter(b=>bidState[b.id]==='selected').length;
 }
-function filt(f,btn){curF=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyF();}
+function filt(f,btn){
+  curF=f;
+  // Reset source filter when clicking All/filter buttons — hide TWDB bids
+  curSrcFilter=null;
+  curSrc=null;
+  document.querySelectorAll('.src-btn').forEach(b=>b.style.opacity='1');
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyF();
+}
 function srch(q){curS=q.toLowerCase().trim();applyF();}
 function isReallyClosing(b){
   // Only show in Closing Soon if due date is real and in the future (within 14 days)
