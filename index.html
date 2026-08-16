@@ -1730,30 +1730,31 @@ function addBidManual(){
 
 // ── SCRAPE NOW BUTTON ──────────────────────────────────────
 async async function runScrapeNow(){
-  const btn = document.getElementById('btn-scrape') || document.querySelector('[onclick="runScrapeNow()"]');
-  if(btn){ btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
+  const btn = document.getElementById('btn-scrape');
+  if(!btn) return;
+  btn.textContent = '⏳ Refreshing...';
+  btn.disabled = true;
   try {
-    // Save current tab and scroll position before refresh
-    const activeTab = document.querySelector('.tab-pane.active');
-    const activeTabId = activeTab ? activeTab.id : null;
-    const activeTabBtn = document.querySelector('.tab-btn.active');
-    const scrollY = window.scrollY;
-    // Reload bids from DB silently
-    await fetchBids();
-    // Restore the same tab that was active before refresh
-    if(activeTabId) {
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(activeTabId).classList.add('active');
-      if(activeTabBtn) activeTabBtn.classList.add('active');
-    }
-    // Restore scroll position
-    window.scrollTo(0, scrollY);
-    if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
-    if(typeof showToast === 'function') showToast('✅ Bids updated!');
+    const res = await fetch('/api/bids');
+    const data = await res.json();
+    BIDS = (data.bids||[]);
+    bidState = {};
+    BIDS.forEach(b=>{
+      const autoState = classifyBid(b);
+      if(b.userState==='selected') bidState[b.id]='selected';
+      else if(autoState==='deleted') bidState[b.id]='deleted';
+      else if(b.userState==='deleted') bidState[b.id]='deleted';
+      else bidState[b.id]='active';
+    });
+    if(typeof renderAll==='function') renderAll();
+    btn.textContent = '🔄 Refresh';
+    btn.disabled = false;
+    if(typeof showToast==='function') showToast('✅ Bids updated!');
   } catch(e){
-    if(btn){ btn.textContent = '🔄 Refresh'; btn.disabled = false; }
-    if(typeof showToast === 'function') showToast('❌ Refresh failed: ' + e.message);
+    btn.textContent = '🔄 Refresh';
+    btn.disabled = false;
+    if(typeof showToast==='function') showToast('❌ Refresh failed');
+    console.error('Refresh error:', e.message);
   }
 }
 
