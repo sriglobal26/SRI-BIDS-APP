@@ -727,11 +727,20 @@ function classifyBid(b){
   // If already marked deleted by server, keep in deleted
   if(b.userState === 'deleted') return 'deleted';
   // Auto-move to deleted if due date passed
-  if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
-    const due = new Date(b.due);
-    const now = new Date();
-    now.setHours(0,0,0,0);
-    if(due < now) return 'deleted'; // expired — move to deleted tab
+  // Handle both YYYY-MM-DD and MM/DD/YYYY formats
+  if(b.due) {
+    let dueDate = null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
+      dueDate = new Date(b.due); // YYYY-MM-DD
+    } else if(/^\d{2}\/\d{2}\/\d{4}$/.test(b.due)) {
+      const [m, d, y] = b.due.split('/');
+      dueDate = new Date(y + '-' + m + '-' + d); // MM/DD/YYYY → YYYY-MM-DD
+    }
+    if(dueDate) {
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      if(dueDate < now) return 'deleted'; // expired — move to deleted tab
+    }
   }
   return 'active';
 }
