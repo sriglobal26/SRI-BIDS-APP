@@ -922,7 +922,7 @@ function row(b,ctx){
     <button onclick="openBidLink('${b.id}')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">🔗 Bid Link</button>
   </td>`
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
-    <td class="tn">${b.num}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${
+    <td class="tn">${b._sno||b.num||""}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${
     b.bidId ? b.bidId :
     b.id && b.id.startsWith('ebn-') ? '#' + b.id.replace('ebn-','') :
     b.id && b.id.startsWith('h2bid-') ? 'H2-' + b.id.replace('h2bid-','') :
@@ -1010,7 +1010,7 @@ function applyF(){
     const msrc=!curSrcFilter||(b.source||'').toLowerCase()===curSrcFilter.toLowerCase();
     return mf&&ms&&msrc;
   });
-  document.getElementById('bids-body').innerHTML=filtered.map(b=>row(b,'active')).join('');
+  document.getElementById('bids-body').innerHTML=filtered.map((b,i)=>{ b._sno=i+1; return row(b,'active'); }).join('');
   const lbl=document.getElementById('bids-result-count');
   if(lbl) lbl.textContent=curS||curF!=='all'?`${filtered.length} of ${active.length} bids`:'';
 }
