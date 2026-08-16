@@ -502,7 +502,7 @@ Best regards,
     <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, Texas<br>Electrical & Instrumentation Engineering<br><span style="color:var(--cyan)">Water / Wastewater</span></div>
   </div>
   <div class="stats">
-    <div class="stat"><div class="n" id="sn-act">12</div><div class="l">Open<br>Bids</div></div>
+    <div class="stat" onclick="filt('all',document.querySelector('.fb.active'))" style="cursor:pointer" title="Show all open bids"><div class="n" id="sn-act">12</div><div class="l">Open<br>Bids</div></div>
     <div class="stat"><div class="n" style="color:var(--red)" id="sn-cl">2</div><div class="l">Closing<br>This Week</div></div>
     <div class="stat"><div class="n" style="color:var(--purple)" id="sn-sel">0</div><div class="l">Selected<br>Bids</div></div>
 
@@ -533,7 +533,7 @@ Best regards,
     <span class="fl">Filter:</span>
     <button class="fb active" onclick="filt('all',this)">All</button>
     <button class="fb" onclick="filt('closing',this)">🔴 Closing Soon</button>
-    <button class="fb" onclick="filt('active',this)">🟢 Active</button>
+
     <button class="fb" onclick="filt('prebid',this)">🟡 Pre-Bid</button>
     <button class="fb" onclick="filt('houston',this)">📍 Houston</button>
     <button class="fb" onclick="filt('texas',this)">🤠 Texas</button>
