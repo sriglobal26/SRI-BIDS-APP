@@ -326,7 +326,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
 <div class="tab-nav">
   <button class="tab-btn sri-tab active" onclick="switchTab('sri',this)">⬡ SRI Global</button>
   <button class="tab-btn" onclick="switchTab('bids',this)">Active Bids <span class="tbadge g" id="badge-bids">2</span></button>
-  <button class="tab-btn" onclick="window.open('https://fedbids.com','_blank')" style="color:#a78bfa;border-bottom:2px solid transparent" onmouseover="this.style.color='#c4b5fd';this.style.borderBottomColor='#a78bfa'" onmouseout="this.style.color='#a78bfa';this.style.borderBottomColor='transparent'">FedBids ↗</button>
+  <button class="tab-btn" onclick="switchTab('fedbids',this)" style="color:#a78bfa">FedBids <span class="tbadge" id="badge-fedbids" style="background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa55">0</span></button>
   <button class="tab-btn" onclick="switchTab('selected',this)">Selected <span class="tbadge p" id="badge-sel">0</span></button>
   <button class="tab-btn" onclick="switchTab('deleted',this)">Deleted <span class="tbadge gr" id="badge-del">0</span></button>
   <button class="tab-btn" onclick="switchTab('primes',this)">Prime Contractors</button>
@@ -560,6 +560,32 @@ Best regards,
   <div class="sec" style="margin-top:8px">Deleted / Not Pursuing</div>
   <div class="tw"><table><thead><tr><th>S.No</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Posted Date</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="del-body"></tbody></table></div>
   <div class="empty" id="del-mt"><div class="empty-ico">🗑️</div><div class="empty-txt">No deleted bids</div></div>
+</div>
+
+<!-- ══ TAB: FEDBIDS ══ -->
+<div class="tab-pane" id="tab-fedbids">
+  <div class="ph">
+    <div>
+      <div class="badge">// FedBids — Federal Bid Opportunities</div>
+      <h1>FedBids <span>Opportunities</span></h1>
+      <p class="subtitle">Federal &amp; Government Bids — Electrical · Instrumentation · SCADA · Controls</p>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:10px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);border-left:3px solid #a78bfa;padding:8px 12px;border-radius:2px;color:#c4b5fd;line-height:1.7">
+        ⚡ <strong style="color:#a78bfa">FedBids Only</strong> — Bids received from system@fedbidspeed.com auto-appear here.<br>
+        These bids do not show in Active Bids tab.
+      </div>
+    </div>
+    <div class="hqtag"><strong>SRI GLOBAL</strong><br>Houston, Texas<br>FedBids Channel<br><span style="color:#a78bfa">Federal Opportunities</span></div>
+  </div>
+  <div class="sec">FedBids Opportunities</div>
+  <div class="fbar">
+    <span class="fl">Filter:</span>
+    <button class="fb active" onclick="filtFed('all',this)">All</button>
+    <button class="fb" onclick="filtFed('closing',this)">🔴 Closing Soon</button>
+    <div class="sw"><input class="si" type="text" placeholder="Search FedBids…" oninput="srchFed(this.value)"></div>
+    <span id="fedbids-result-count" style="font-family:var(--mono);font-size:10px;color:#a78bfa;white-space:nowrap"></span>
+  </div>
+  <div class="tw"><table><thead><tr><th>S.No</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Posted Date</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="fedbids-body"></tbody></table></div>
+  <div class="empty" id="fedbids-mt"><div class="empty-ico">📡</div><div class="empty-txt">No FedBids yet — emails from system@fedbidspeed.com will appear here automatically</div></div>
 </div>
 
 <!-- ══ TAB: PRIMES ══ -->
@@ -916,6 +942,7 @@ function switchTab(id,btn){
   btn.classList.add('active');
   if(id==='primes'){ setTimeout(renderPrimes,0); }
   if(id==='sri'){ setTimeout(()=>{renderSRIDir();buildFirmSelector();setTimeout(restoreTemplates,50);},0); }
+  if(id==='fedbids'){ setTimeout(renderFedBids,0); }
 }
 
 // ═════════════════════════════════════
@@ -1030,6 +1057,8 @@ function applyF(){
     // TWDB/post-funding bids ONLY show in TWDB tab
     if(b.source==='TWDB' && curSrcFilter !== 'TWDB') return false;
     if(b.status==='prebid' && curSrcFilter !== 'TWDB') return false;
+    // FedBids ONLY show in FedBids tab
+    if(b.source==='FedBids' && curSrcFilter !== 'FedBids') return false;
     let mf=false;
     if(curF==='all') mf=true;
     else if(curF==='closing') mf=isReallyClosing(b);
@@ -1616,7 +1645,8 @@ function toggleSrc(key){
     'h2bid': 'H2bid',
     'civcast': 'CivCast',
     'txesbd': 'TX ESBD',
-    'twdb': 'TWDB'
+    'twdb': 'TWDB',
+    'fedbids': 'FedBids'
   };
   const sourceName = sourceMap[key];
   // Toggle: if same source clicked again, show all
@@ -1635,6 +1665,44 @@ function toggleSrc(key){
 }
 
 function closeSrc(){ curSrc = null; curSrcFilter = null; applyF(); }
+
+// ═════════════════════════════════════
+// FEDBIDS TAB RENDER
+// ═════════════════════════════════════
+let curFedF='all', curFedS='';
+function renderFedBids(){
+  const fedBids = BIDS.filter(b => (b.source||'').toLowerCase() === 'fedbids');
+  const tbody = document.getElementById('fedbids-body');
+  const mt = document.getElementById('fedbids-mt');
+  const cnt = document.getElementById('fedbids-result-count');
+  const badge = document.getElementById('badge-fedbids');
+  if(!tbody) return;
+
+  let filtered = fedBids.filter(b => {
+    let mf = false;
+    if(curFedF==='all') mf = true;
+    else if(curFedF==='closing') mf = isReallyClosing(b);
+    const ms = !curFedS || JSON.stringify(b).toLowerCase().includes(curFedS.toLowerCase());
+    return mf && ms;
+  });
+
+  tbody.innerHTML = filtered.map((b,i) => row(b,'active',i+1)).join('');
+  mt.style.display = filtered.length ? 'none' : 'block';
+  cnt.textContent = filtered.length ? filtered.length + ' bid' + (filtered.length>1?'s':'') + ' found' : '';
+  if(badge) badge.textContent = fedBids.length;
+}
+
+function filtFed(f, btn){
+  curFedF = f;
+  document.querySelectorAll('#tab-fedbids .fb').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderFedBids();
+}
+
+function srchFed(v){
+  curFedS = v;
+  renderFedBids();
+}
 function closeSrc(){
   curSrc = null;
   document.getElementById('src-panel').style.display = 'none';
