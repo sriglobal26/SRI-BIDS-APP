@@ -242,14 +242,11 @@ app.post('/api/bids', async (req, res) => {
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
     const body = req.body;
-    // Extract fields from Make.com email payload
     const subject = body.subject || body.name || 'FedBid Opportunity';
     const emailBody = body.body || body.text || body.content || '';
-    // Try to parse due date from email body
+    // Parse due date
     const dateMatch = emailBody.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
-    const urlMatch = emailBody.match(/https?:\/\/[^\s<>"]+/);
     const dueRaw = dateMatch ? dateMatch[1] : (body.due || '');
-    // Normalize date to YYYY-MM-DD
     let due = dueRaw;
     if (dueRaw && dueRaw.includes('/')) {
       const parts = dueRaw.split('/');
@@ -257,6 +254,18 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
         const yr = parts[2].length === 2 ? '20'+parts[2] : parts[2];
         due = yr+'-'+parts[0].padStart(2,'0')+'-'+parts[1].padStart(2,'0');
       }
+    }
+    // Build clean SAM.gov public search URL (no login required)
+    const solMatch = subject.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    const urlFromEmail = (emailBody.match(/https?:\/\/[^\s<>"]+/) || [])[0] || '';
+    let rfqUrl;
+    if (solMatch) {
+      rfqUrl = 'https://sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true';
+    } else if (urlFromEmail && !urlFromEmail.includes('sam.gov/opp/') && !urlFromEmail.includes('sam.gov/workspace/')) {
+      rfqUrl = urlFromEmail;
+    } else {
+      const kw = subject.split('—')[0].trim().split(' ').slice(0,4).join(' ');
+      rfqUrl = 'https://sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
     }
     const bid = {
       id: 'fedbid-' + Date.now(),
@@ -266,7 +275,7 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       posted: new Date().toISOString().split('T')[0],
       due: due || body.due || '',
       scope: emailBody.substring(0, 400) || subject,
-      url: body.url || urlMatch || 'https://sam.gov',
+      url: rfqUrl,
       source: 'FedBids',
       value: body.value || 'TBD',
       status: 'active',
