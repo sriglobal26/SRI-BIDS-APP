@@ -110,7 +110,7 @@ async function seedAllBids() {
     // FedBids test bid
     // FedBids — verified OPEN bids only (checked Aug 21 2026)
     // fedbid-001: NAVFAC IDIQ A-E MEP — verified open on SAM.gov
-    await saveBid({ id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Multi-Discipline Engineering (N40085-26-R-0012)', agency:'NAVFAC Mid-Atlantic / US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', scope:'IDIQ A-E multi-discipline engineering: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing at military installations. Includes SCADA design, fiber optic, telecom & physical security. 5-year IDIQ.', url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view', source:'FedBids', value:'IDIQ / TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() })
+    await saveBid({ id:'fedbid-001', name:'IDIQ A-E Multi-Discipline Engineering Services — MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic — US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', scope:'IDIQ Architect-Engineer multi-discipline contract for construction, repair, renovation at NAVFAC Mid-Atlantic Marine Corps installations. Scope includes SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic, telecom, physical security. 5-year IDIQ term. NAVFAC worldwide task orders possible.', url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view', source:'FedBids', value:'IDIQ / TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() })
   }
 }
 
