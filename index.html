@@ -799,6 +799,9 @@ const DIRECT_BID_URLS = {
   'esbd-005':'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
   'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
+  'fedbid-001':'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view',
+  'fedbid-002':'https://www.bidnetdirect.com/texas/solicitations/open-bids/Professional-Services-for-SCADA-System-Migration-and-Modernization/0000415612',
+  'fedbid-003':'https://morganhill.ca.gov/bids.aspx?bidID=485',
 };
 function formatDate(d) {
   if (!d || d === 'Post-Funding' || d === 'Check link' || d === 'See link') return d || '';
@@ -819,6 +822,8 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
+  // FedBids — always use the direct URL stored on the bid
+  if(b.source==='FedBids') return DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/opportunities';
   return b.url || '';
 }
 
