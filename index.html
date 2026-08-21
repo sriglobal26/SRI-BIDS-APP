@@ -753,8 +753,8 @@ const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public
 let bidState={};
 
 function classifyBid(b){
-  // TWDB/prebid bids never expire — always keep active
-  if(b.source==='TWDB' || b.status==='prebid') return 'active';
+  // TWDB/prebid/FedBids bids never auto-expire
+  if(b.source==='TWDB' || b.status==='prebid' || (b.source||'').toLowerCase()==='fedbids') return 'active';
   // If already marked deleted by server, keep in deleted
   if(b.userState === 'deleted') return 'deleted';
   // Auto-move to deleted if due date passed
@@ -1066,8 +1066,8 @@ function applyF(){
     // TWDB/post-funding bids ONLY show in TWDB tab
     if(b.source==='TWDB' && curSrcFilter !== 'TWDB') return false;
     if(b.status==='prebid' && curSrcFilter !== 'TWDB') return false;
-    // FedBids ONLY show in FedBids tab
-    if(b.source==='FedBids' && curSrcFilter !== 'FedBids') return false;
+    // FedBids ONLY show in FedBids tab — case-insensitive check
+    if((b.source||'').toLowerCase()==='fedbids') return false;
     let mf=false;
     if(curF==='all') mf=true;
     else if(curF==='closing') mf=isReallyClosing(b);
