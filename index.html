@@ -996,7 +996,8 @@ function row(b,ctx){
 }
 
 function renderAll(){
-  document.getElementById('bids-body').innerHTML=BIDS.filter(b=>bidState[b.id]==='active').map(b=>row(b,'active')).join('');
+  // FedBids excluded from Active Bids — show only in FedBids tab
+  document.getElementById('bids-body').innerHTML=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').map(b=>row(b,'active')).join('');
   const sel=BIDS.filter(b=>bidState[b.id]==='selected');
   document.getElementById('sel-body').innerHTML=sel.map((b,i)=>{ b._sno=i+1; return row(b,'selected'); }).join('');
   document.getElementById('sel-mt').style.display=sel.length?'none':'block';
@@ -1017,13 +1018,13 @@ function mark(id,state){
 }
 
 function updBadges(){
-  document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active').length;
+  document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
   document.getElementById('badge-sel').textContent=BIDS.filter(b=>bidState[b.id]==='selected').length;
   document.getElementById('badge-del').textContent=BIDS.filter(b=>bidState[b.id]==='deleted').length;
 }
 function updStats(){
-  document.getElementById('sn-act').textContent=BIDS.filter(b=>bidState[b.id]==='active').length;
-  document.getElementById('sn-cl').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&b.status==='closing').length;
+  document.getElementById('sn-act').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
+  document.getElementById('sn-cl').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&b.status==='closing'&&(b.source||'').toLowerCase()!=='fedbids').length;
   document.getElementById('sn-sel').textContent=BIDS.filter(b=>bidState[b.id]==='selected').length;
 }
 function filt(f,btn){
