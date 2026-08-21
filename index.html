@@ -979,7 +979,11 @@ function row(b,ctx){
     b.id && b.id.startsWith('esbd-') ? 'TX-' + b.id.replace('esbd-','') :
     b.id && b.id.startsWith('seed-') ? 'MNL-' + b.id.replace('seed-','') :
     b.id && b.id.startsWith('manual-') ? 'MNL-' + b.id.replace('manual-','').slice(-4) :
-    '—'
+    b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-4) :
+    b.id && b.id.startsWith('twdb-') ? 'TWDB-' + b.id.replace('twdb-','') :
+    b.id && b.id.startsWith('civcast-') ? 'CC-' + b.id.replace('civcast-','') :
+    b.id && b.id.startsWith('bid-') ? 'BID-' + b.id.replace('bid-','').slice(-4) :
+    b.id ? b.id.slice(-6).toUpperCase() : '—'
   }</td><td class="tp">${b.name}${b.bidId ? `<br><span style="font-family:var(--mono);font-size:9px;color:var(--cyan);opacity:0.8;font-weight:600">${b.bidId}</span>` : ''}</td><td class="ta">${b.agency}</td><td class="tc">${b.city}</td>
     <td class="ts">${b.scope}</td>${urlCell}<td style="font-family:var(--mono);font-size:10px;color:var(--white);white-space:nowrap;font-weight:700"><strong>${formatDate(b.posted || (b.scrapedAt ? b.scrapedAt.slice(0,10) : new Date().toISOString().slice(0,10)))}</strong></td><td class="td"${dcl}>${formatDate(b.due)}</td><td class="tv">${b.value}</td>
     <td><span class="st ${stCl}">${stNm}</span></td><td>${acts}</td>
@@ -1686,7 +1690,7 @@ function renderFedBids(){
     return mf && ms;
   });
 
-  tbody.innerHTML = filtered.map((b,i) => row(b,'active',i+1)).join('');
+  tbody.innerHTML = filtered.map((b,i) => { b._sno=i+1; return row(b,'active'); }).join('');
   mt.style.display = filtered.length ? 'none' : 'block';
   cnt.textContent = filtered.length ? filtered.length + ' bid' + (filtered.length>1?'s':'') + ' found' : '';
   if(badge) badge.textContent = fedBids.length;
