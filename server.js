@@ -107,6 +107,8 @@ async function seedAllBids() {
     for (const b of TWDB_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
     // Manual bids — seed-5 is TWDB post-funding
     for (const b of MANUAL_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
+    // FedBids test bid
+    await saveBid({ id:'fedbid-test-001', name:'FedBids — USACE Water Treatment Plant SCADA Upgrade (Test Bid)', agency:'US Army Corps of Engineers', city:'Houston, TX', posted:'2026-08-21', due:'2026-09-30', scope:'USACE — SCADA system upgrade, PLC replacement, HMI programming and commissioning at water treatment facility. E&I engineering services.', url:'https://sam.gov/opp/search?keywords=SCADA+water+treatment', source:'FedBids', value:'~00,000', status:'active', region:'houston', scrapedAt:new Date().toISOString() });
     console.log('[Seed] All bids seeded successfully');
   } catch(e) { console.error('[Seed]', e.message); }
 }
@@ -238,6 +240,46 @@ app.post('/api/bids', async (req, res) => {
     bid.status = bid.status || 'active';
     await saveBid(bid);
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// FedBids email ingest endpoint — accepts raw email data from Make.com
+app.post('/api/bids/fedbids-ingest', async (req, res) => {
+  try {
+    const body = req.body;
+    // Extract fields from Make.com email payload
+    const subject = body.subject || body.name || 'FedBid Opportunity';
+    const emailBody = body.body || body.text || body.content || '';
+    // Try to parse due date from email body
+    const dateMatch = emailBody.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+    const urlMatch = emailBody.match(/https?:\/\/[^\s<>"]+/);
+    const dueRaw = dateMatch ? dateMatch[1] : (body.due || '');
+    // Normalize date to YYYY-MM-DD
+    let due = dueRaw;
+    if (dueRaw && dueRaw.includes('/')) {
+      const parts = dueRaw.split('/');
+      if (parts.length === 3) {
+        const yr = parts[2].length === 2 ? '20'+parts[2] : parts[2];
+        due = yr+'-'+parts[0].padStart(2,'0')+'-'+parts[1].padStart(2,'0');
+      }
+    }
+    const bid = {
+      id: 'fedbid-' + Date.now(),
+      name: subject,
+      agency: body.agency || body.from || 'FedBidSpeed',
+      city: body.city || 'Texas',
+      posted: new Date().toISOString().split('T')[0],
+      due: due || body.due || '',
+      scope: emailBody.substring(0, 400) || subject,
+      url: body.url || urlMatch || 'https://sam.gov',
+      source: 'FedBids',
+      value: body.value || 'TBD',
+      status: 'active',
+      region: 'texas',
+      scrapedAt: new Date().toISOString()
+    };
+    await saveBid(bid);
+    res.json({ success: true, bid });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
