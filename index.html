@@ -1900,6 +1900,10 @@ setTimeout(async ()=>{
           <div style="color:var(--white);font-size:13px" id="bd-city">-</div>
         </div>
         <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
+          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Posted Date</div>
+          <div style="color:var(--white);font-size:13px;font-weight:600" id="bd-posted">-</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
           <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Due Date</div>
           <div style="color:var(--yellow);font-size:13px;font-weight:600" id="bd-due">-</div>
         </div>
@@ -1917,7 +1921,7 @@ setTimeout(async ()=>{
         <a id="bd-url" href="#" target="_blank" style="color:var(--cyan);font-size:12px;font-family:var(--mono);word-break:break-all">-</a>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a id="bd-open-link" href="#" target="_blank" onclick="handleBidPageOpen(event)" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;text-decoration:none;font-family:var(--mono)">↗ Open Full Bid Page</a>
+        <button id="bd-open-link" onclick="window.open(document.getElementById('bd-url').href,'_blank')" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">↗ Open Full Bid Page</button>
         <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">✓ Select This Bid</button>
         <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:10px 20px;border-radius:5px;font-size:13px;border:none;cursor:pointer">Close</button>
       </div>
@@ -1937,6 +1941,7 @@ function showBidDetail(b) {
   document.getElementById('bd-name').textContent = b.name || 'Unnamed Bid';
   document.getElementById('bd-agency').textContent = b.agency || '-';
   document.getElementById('bd-city').textContent = b.city || '-';
+  document.getElementById('bd-posted').textContent = formatDate(b.posted) || formatDate((b.scrapedAt||'').slice(0,10)) || '-';
   document.getElementById('bd-due').textContent = formatDate(b.due) || 'See link';
   document.getElementById('bd-value').textContent = b.value || 'TBD';
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
@@ -1944,7 +1949,8 @@ function showBidDetail(b) {
   if(openUrl) {
     document.getElementById('bd-url').textContent = openUrl;
     document.getElementById('bd-url').href = openUrl;
-    document.getElementById('bd-open-link').href = openUrl;
+    document.getElementById('bd-open-link').dataset.url = openUrl;
+    document.getElementById('bd-open-link').onclick = function(){ window.open(openUrl,'_blank'); };
     document.getElementById('bd-open-link').style.display = 'inline-block';
     document.getElementById('bd-url-row').style.display = 'block';
   } else {
