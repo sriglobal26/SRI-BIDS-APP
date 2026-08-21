@@ -108,17 +108,9 @@ async function seedAllBids() {
     // Manual bids — seed-5 is TWDB post-funding
     for (const b of MANUAL_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
     // FedBids test bid
-    // Real FedBids — verified from SAM.gov Aug 2026
-    await saveBid({ id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering Services', agency:'NAVFAC Mid-Atlantic / US Navy', city:'TX / Nationwide', posted:'2026-07-15', due:'2026-09-15', scope:'IDIQ multi-discipline A-E contract covering SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing at military installations. SCADA design, fiber optic, telecom, physical security. 5-year IDIQ term.', url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view', source:'FedBids', value:'IDIQ / TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() });
-    await saveBid({ id:'fedbid-002', name:'BidNet Direct TX — SCADA System Migration & Modernization Professional Services', agency:'Texas State Agency', city:'Texas', posted:'2026-03-06', due:'2026-09-30', scope:'Professional services for SCADA system migration and modernization. PLC/HMI upgrades, historian migration, cybersecurity hardening, system integration, commissioning and operator training.', url:'https://www.bidnetdirect.com/texas/solicitations/open-bids/Professional-Services-for-SCADA-System-Migration-and-Modernization/0000415612', source:'FedBids', value:'TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() });
-    await saveBid({ id:'fedbid-003', name:'City of Morgan Hill — SCADA HMI Application Upgrades RFP (UD-RFP-2026-49)', agency:'City of Morgan Hill Public Utilities', city:'CA (Federal Portal)', posted:'2026-07-01', due:'2026-09-05', scope:'RFP for SCADA HMI system upgrade — Wonderware InTouch migration or alternative HMI. PLC integration, cybersecurity compliance, SCADA architecture, licensing, operator training, commissioning. Ref: UD-RFP-2026-49.', url:'https://morganhill.ca.gov/bids.aspx?bidID=485', source:'FedBids', value:'TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() })
-    console.log('[Seed] All bids seeded successfully');
-  } catch(e) { console.error('[Seed]', e.message); }
-}
-
-async function seedESBD() {
-  for (const b of ESBD_BIDS) {
-    await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+    // FedBids — verified OPEN bids only (checked Aug 21 2026)
+    // fedbid-001: NAVFAC IDIQ A-E MEP — verified open on SAM.gov
+    await saveBid({ id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Multi-Discipline Engineering (N40085-26-R-0012)', agency:'NAVFAC Mid-Atlantic / US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', scope:'IDIQ A-E multi-discipline engineering: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing at military installations. Includes SCADA design, fiber optic, telecom & physical security. 5-year IDIQ.', url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view', source:'FedBids', value:'IDIQ / TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() })
   }
 }
 
