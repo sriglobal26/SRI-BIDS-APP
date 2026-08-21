@@ -1005,6 +1005,10 @@ function renderAll(){
   document.getElementById('del-body').innerHTML=del.map((b,i)=>{ b._sno=i+1; return row(b,'deleted'); }).join('');
   document.getElementById('del-mt').style.display=del.length?'none':'block';
   applyF(); updBadges(); updStats(); populateCampSelect();
+  // Auto-refresh FedBids tab if currently open
+  if(document.getElementById('tab-fedbids') && document.getElementById('tab-fedbids').classList.contains('active')){
+    renderFedBids();
+  }
 }
 
 function mark(id,state){
@@ -1021,6 +1025,9 @@ function updBadges(){
   document.getElementById('badge-bids').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
   document.getElementById('badge-sel').textContent=BIDS.filter(b=>bidState[b.id]==='selected').length;
   document.getElementById('badge-del').textContent=BIDS.filter(b=>bidState[b.id]==='deleted').length;
+  // Always update FedBids badge — even when tab is not open
+  const fb=document.getElementById('badge-fedbids');
+  if(fb) fb.textContent=BIDS.filter(b=>(b.source||'').toLowerCase()==='fedbids').length;
 }
 function updStats(){
   document.getElementById('sn-act').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
