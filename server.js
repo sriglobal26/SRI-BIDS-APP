@@ -303,12 +303,23 @@ cron.schedule('0 */2 * * *', () => autoExpireAndClean()); // expire + clean ever
 async function autoExpireAndClean() {
   try {
     const today = new Date().toISOString().split('T')[0];
-    // Step 1: Move expired bids to deleted — set userState='deleted' and deletedAt=today
+
+    // Step 1a: FedBids only — permanently delete if due date is 4+ days past
+    const fedExpired = await pool.query(
+      `DELETE FROM bids
+       WHERE data->>'source' = 'FedBids'
+       AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       AND (data->>'due')::date < CURRENT_DATE - INTERVAL '4 days'`
+    );
+    if (fedExpired.rowCount > 0) console.log('[FedBids] Auto-deleted', fedExpired.rowCount, 'FedBids expired 4+ days ago');
+
+    // Step 1b: All other sources — move expired bids to deleted tab
     const expired = await pool.query(
       `UPDATE bids 
-       SET data = jsonb_set(jsonb_set(data, '{userState}', '"deleted"'), '{deletedAt}', to_jsonb($1::text))
+       SET data = jsonb_set(jsonb_set(data, '{userState}', 'deleted'), '{deletedAt}', to_jsonb($1::text))
        WHERE data->>'status' != 'prebid'
        AND data->>'source' != 'TWDB'
+       AND data->>'source' != 'FedBids'
        AND data->>'userState' != 'deleted'
        AND data->>'userState' != 'selected'
        AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -317,7 +328,7 @@ async function autoExpireAndClean() {
     );
     if (expired.rowCount > 0) console.log('[AutoExpire] Moved', expired.rowCount, 'expired bids to deleted');
 
-    // Step 2: Permanently delete bids that have been deleted for 14+ days
+    // Step 2: Permanently purge deleted bids after 14 days
     const cleaned = await pool.query(
       `DELETE FROM bids
        WHERE data->>'userState' = 'deleted'
