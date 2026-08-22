@@ -804,11 +804,20 @@ const DIRECT_BID_URLS = {
   'fedbid-003':'https://morganhill.ca.gov/bids.aspx?bidID=485',
 };
 function formatDate(d) {
-  if (!d || d === 'Post-Funding' || d === 'Check link' || d === 'See link') return d || '';
+  if (!d) return '—';
+  // Known special labels — pass through as-is
+  if (d === 'Post-Funding') return '📋 Post-Funding';
+  if (d === 'Check link')   return '🔗 Check Link';
+  if (d === 'See link')     return '🔗 See Link';
+  if (d === 'TBD')          return 'TBD';
+  // Standard YYYY-MM-DD format → MM/DD/YYYY
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     const [y, m, day] = d.split('-');
     return m + '/' + day + '/' + y;
   }
+  // MM/DD/YYYY already — return as-is
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d)) return d;
+  // Any other string — show it
   return d;
 }
 
