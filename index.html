@@ -801,7 +801,7 @@ const DIRECT_BID_URLS = {
   'esbd-005':'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
   'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
-  'fedbid-001':'https://sam.gov/search?index=opp&keywords=N4008524R2674&is_active=true',
+  'fedbid-001':'https://beta.sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view',
   'fedbid-002':'https://www.bidnetdirect.com/texas/solicitations/open-bids/Professional-Services-for-SCADA-System-Migration-and-Modernization/0000415612',
   'fedbid-003':'https://morganhill.ca.gov/bids.aspx?bidID=485',
 };
@@ -833,19 +833,28 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-  // FedBids — always build a clean public URL (no login required)
+  // FedBids — use beta.sam.gov (opens without login) or direct stored URL
   if((b.source||'').toLowerCase()==='fedbids'){
-    // 1. Try to extract solicitation number from bid name e.g. N4008524R2674, W912PL-26-R-0018
-    const solFromName = (b.name||'').match(/([A-Z]{1,6}[-]?[0-9]{2,6}[-][A-Z]{1,2}[-]?[0-9]{4,6})/);
-    if(solFromName) return 'https://sam.gov/search?index=opp&keywords='+encodeURIComponent(solFromName[1])+'&is_active=true';
-    // 2. If url is already a clean search/non-opp link, use it directly
-    const u = DIRECT_BID_URLS[b.id] || b.url || '';
-    if(u && !u.includes('sam.gov/opp/') && !u.includes('sam.gov/workspace/')) return u;
-    // 3. Extract keywords from bid name for SAM search
-    const kw = (b.name||'').split('—')[0].trim().split(' ').slice(0,4).join(' ');
-    if(kw) return 'https://sam.gov/search?index=opp&keywords='+encodeURIComponent(kw)+'&is_active=true';
-    // 4. Final fallback — SAM opportunities page
-    return 'https://sam.gov/opportunities';
+    // 1. Check DIRECT_BID_URLS first (most accurate)
+    const directU = DIRECT_BID_URLS[b.id];
+    if(directU) {
+      // Convert sam.gov/opp/ → beta.sam.gov/opp/ (no login needed)
+      return directU.replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/');
+    }
+    // 2. Use stored bid URL — convert sam.gov → beta.sam.gov
+    const storedU = b.url || '';
+    if(storedU) {
+      return storedU
+        .replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/')
+        .replace('https://sam.gov/search', 'https://beta.sam.gov/search')
+        .replace('https://sam.gov/workspace/', 'https://beta.sam.gov/workspace/');
+    }
+    // 3. Extract solicitation number from name → beta.sam.gov search
+    const sol = (b.name||'').match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    if(sol) return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(sol[1])+'&is_active=true';
+    // 4. Keyword search fallback
+    const kw = (b.name||'').split('—')[0].trim().split(' ').slice(0,5).join('+');
+    return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(kw)+'&is_active=true';
   }
   return b.url || '';
 }
