@@ -243,38 +243,70 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
     const body = req.body;
     const subject = body.subject || body.name || 'FedBid Opportunity';
-    const emailBody = body.body || body.text || body.content || '';
-    // Parse due date
-    const dateMatch = emailBody.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
-    const dueRaw = dateMatch ? dateMatch[1] : (body.due || '');
-    let due = dueRaw;
-    if (dueRaw && dueRaw.includes('/')) {
-      const parts = dueRaw.split('/');
-      if (parts.length === 3) {
-        const yr = parts[2].length === 2 ? '20'+parts[2] : parts[2];
-        due = yr+'-'+parts[0].padStart(2,'0')+'-'+parts[1].padStart(2,'0');
+    const emailBody = body.body || body.text || body.snippet || body.content || '';
+    const allText = subject + ' ' + emailBody;
+
+    // ── BULLETPROOF DATE PARSER ──────────────────────────────
+    const MONTHS = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+      january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
+    function parseDate(str) {
+      if (!str) return '';
+      str = str.trim();
+      // YYYY-MM-DD
+      let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return str;
+      // MM/DD/YYYY or MM-DD-YYYY
+      m = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+      if (m) { const yr = m[3].length===2?'20'+m[3]:m[3]; return yr+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      // "Month DD, YYYY" or "Month DD YYYY"
+      m = str.match(/([a-zA-Z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
+      if (m) { const mo = MONTHS[m[1].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      // "DD Month YYYY"
+      m = str.match(/(\d{1,2})\s+([a-zA-Z]+)\.?\s+(\d{4})/i);
+      if (m) { const mo = MONTHS[m[2].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'); }
+      return '';
+    }
+
+    // Try to find due date — check body.due first, then search email text
+    let due = '';
+    if (body.due) { due = parseDate(body.due); }
+    if (!due) {
+      // Look for "Due:" "Deadline:" "Response Date:" "Closing:" "Due Date:" patterns
+      const duePat = allText.match(/(?:due\s*(?:date)?|deadline|response\s*date|closing\s*(?:date)?|solicitation\s*closes?)[:\s]+([^
+<]{4,30})/i);
+      if (duePat) due = parseDate(duePat[1].trim());
+    }
+    if (!due) {
+      // Scan all text for any date pattern
+      const allDates = allText.match(/(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4})/gi);
+      if (allDates && allDates.length > 0) {
+        // Pick the latest date (most likely to be the due date)
+        const parsed = allDates.map(d => parseDate(d)).filter(Boolean).sort();
+        due = parsed[parsed.length - 1] || '';
       }
     }
-    // Build clean SAM.gov public search URL (no login required)
+
+    // ── URL BUILDER ─────────────────────────────────────────
     const solMatch = subject.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     const urlFromEmail = (emailBody.match(/https?:\/\/[^\s<>"]+/) || [])[0] || '';
     let rfqUrl;
     if (solMatch) {
-      rfqUrl = 'https://sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true';
+      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true';
     } else if (urlFromEmail && !urlFromEmail.includes('sam.gov/opp/') && !urlFromEmail.includes('sam.gov/workspace/')) {
-      rfqUrl = urlFromEmail;
+      rfqUrl = urlFromEmail.replace('https://sam.gov/', 'https://beta.sam.gov/');
     } else {
-      const kw = subject.split('—')[0].trim().split(' ').slice(0,4).join(' ');
-      rfqUrl = 'https://sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
+      const kw = subject.split(/[—\-]/)[0].trim().split(' ').slice(0,5).join(' ');
+      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
     }
+
     const bid = {
       id: 'fedbid-' + Date.now(),
       name: subject,
-      agency: body.agency || body.from || 'FedBidSpeed',
+      agency: body.agency || body.from || body.sender || 'FedBidSpeed',
       city: body.city || 'Texas',
-      posted: new Date().toISOString().split('T')[0],
-      due: due || body.due || '',
-      scope: emailBody.substring(0, 400) || subject,
+      posted: body.posted || new Date().toISOString().split('T')[0],
+      due: due || 'Check Link',
+      scope: (emailBody || subject).substring(0, 500),
       url: rfqUrl,
       source: 'FedBids',
       value: body.value || 'TBD',
