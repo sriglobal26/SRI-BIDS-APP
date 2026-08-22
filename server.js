@@ -319,6 +319,19 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Fix existing FedBids with missing due dates — set to 'Check Link'
+app.get('/api/fix-fedbids-dates', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE bids
+       SET data = jsonb_set(data, '{due}', '"Check Link"')
+       WHERE data->>'source' = 'FedBids'
+       AND (data->>'due' IS NULL OR data->>'due' = '' OR data->>'due' = 'undefined')`
+    );
+    res.json({ success: true, fixed: result.rowCount, message: result.rowCount + ' FedBids due dates fixed' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/bids/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]);
