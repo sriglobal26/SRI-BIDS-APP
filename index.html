@@ -242,6 +242,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
   tbody td{padding:9px 10px}
   .tp{min-width:130px;max-width:160px;font-size:11px}
   #tab-fedbids .tp{min-width:200px;max-width:360px;font-size:11px;white-space:normal;word-wrap:break-word;line-height:1.4}
+  #tab-fedbids .ts{min-width:200px;max-width:400px;font-size:11px;white-space:normal;word-wrap:break-word;line-height:1.5;color:#C8D8E8}
   .ts{min-width:140px;max-width:180px;font-size:10px}
   .ta{min-width:100px;font-size:9px}
 
@@ -1727,7 +1728,7 @@ function rowFed(b){
     + '<td style="font-weight:600;min-width:220px;max-width:380px;white-space:normal;word-wrap:break-word;line-height:1.5;font-size:12px;color:var(--white);padding:8px 10px">' + (b.name||'\u2014') + '</td>'
     + '<td class="ta">' + (b.agency||'\u2014') + '</td>'
     + '<td class="tc">' + (b.city||'\u2014') + '</td>'
-    + '<td class="ts">' + (b.scope||'\u2014') + '</td>'
+    + '<td style="font-size:11px;color:#C8D8E8;min-width:200px;max-width:420px;white-space:normal;word-wrap:break-word;line-height:1.6;padding:8px 10px">' + (b.scope||'\u2014') + '</td>'
     + urlCell
     + '<td style="font-family:var(--mono);font-size:10px;color:var(--white);white-space:nowrap;font-weight:700">' + formatDate(b.posted||new Date().toISOString().slice(0,10)) + '</td>'
     + '<td' + dcl + '>' + formatDate(b.due) + '</td>'
