@@ -1792,7 +1792,8 @@ function rowFed(b){
 }
 
 function renderFedBids(){
-  const fedBids = BIDS.filter(b => (b.source||'').toLowerCase() === 'fedbids');
+  // Only show active FedBids — exclude deleted/expired/selected
+  const fedBids = BIDS.filter(b => (b.source||'').toLowerCase() === 'fedbids' && bidState[b.id] === 'active');
   const tbody = document.getElementById('fedbids-body');
   const mt = document.getElementById('fedbids-mt');
   const cnt = document.getElementById('fedbids-result-count');
