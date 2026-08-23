@@ -1961,50 +1961,59 @@ setTimeout(async ()=>{
 
 
 <!-- ══ BID DETAIL MODAL ══ -->
-<div class="mbg" id="m-bid-detail" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto">
-  <div style="max-width:700px;margin:40px auto;background:var(--navy2);border:1px solid rgba(0,200,212,.3);border-radius:8px;padding:0;overflow:hidden">
+<div class="mbg" id="m-bid-detail" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:9999;overflow-y:auto">
+  <div style="max-width:780px;margin:30px auto 60px;background:var(--navy2);border:1px solid rgba(0,200,212,.3);border-radius:10px;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)">
     <div style="background:linear-gradient(135deg,#0A1628,#112240);padding:20px 24px;border-bottom:1px solid rgba(0,200,212,.2);display:flex;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div style="color:var(--cyan);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.15em;margin-bottom:6px" id="bd-source">EnviroBidNet</div>
-        <div style="color:var(--white);font-size:15px;font-weight:600;line-height:1.4;max-width:550px" id="bd-name">Bid Name</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <span id="bd-source-badge" style="background:rgba(0,200,212,.15);color:var(--cyan);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.15em;padding:3px 8px;border-radius:3px;border:1px solid rgba(0,200,212,.3)">FedBids</span>
+          <span id="bd-solno" style="background:rgba(167,139,250,.12);color:#a78bfa;font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid rgba(167,139,250,.3)"></span>
+          <span id="bd-status-badge" style="background:rgba(0,230,118,.12);color:var(--green);font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid rgba(0,230,118,.3)">● ACTIVE</span>
+        </div>
+        <div style="color:var(--white);font-size:16px;font-weight:700;line-height:1.5;max-width:640px" id="bd-name">Bid Name</div>
       </div>
-      <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);border:none;color:var(--gray);cursor:pointer;padding:6px 10px;border-radius:4px;font-size:16px;margin-left:16px;flex-shrink:0">✕</button>
+      <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:var(--gray);cursor:pointer;padding:6px 12px;border-radius:4px;font-size:16px;margin-left:16px;flex-shrink:0">✕</button>
     </div>
-    <div style="padding:20px 24px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
-          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Agency</div>
-          <div style="color:var(--white);font-size:13px;font-weight:500" id="bd-agency">-</div>
+    <div style="padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid var(--cyan)">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Agency / Owner</div>
+          <div style="color:var(--white);font-size:12px;font-weight:600;line-height:1.4" id="bd-agency">-</div>
         </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
-          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">City / Region</div>
-          <div style="color:var(--white);font-size:13px" id="bd-city">-</div>
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid #a78bfa">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">City / Region</div>
+          <div style="color:var(--white);font-size:12px;line-height:1.4" id="bd-city">-</div>
         </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
-          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Posted Date</div>
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid var(--green)">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Est. Value</div>
+          <div style="color:var(--green);font-size:13px;font-weight:700" id="bd-value">-</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid rgba(255,255,255,.2)">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Posted Date</div>
           <div style="color:var(--white);font-size:13px;font-weight:600" id="bd-posted">-</div>
         </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
-          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Due Date</div>
-          <div style="color:var(--yellow);font-size:13px;font-weight:600" id="bd-due">-</div>
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid var(--yellow)">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Due Date</div>
+          <div style="color:var(--yellow);font-size:13px;font-weight:700" id="bd-due">-</div>
         </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:12px">
-          <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Est. Value</div>
-          <div style="color:var(--green);font-size:13px;font-weight:600" id="bd-value">-</div>
+        <div style="background:rgba(0,0,0,.25);border-radius:8px;padding:14px;border-left:3px solid var(--orange)">
+          <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Days Remaining</div>
+          <div style="font-size:13px;font-weight:700" id="bd-days">-</div>
         </div>
       </div>
-      <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:14px;margin-bottom:16px">
-        <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">E&I Scope / Description</div>
-        <div style="color:var(--white);font-size:13px;line-height:1.7" id="bd-scope">-</div>
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,.06)">
+        <div style="color:var(--cyan);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;font-family:var(--mono)">&#128203; E&I Scope / Bid Description</div>
+        <div style="color:#C8D8E8;font-size:13px;line-height:1.8;white-space:pre-wrap" id="bd-scope">-</div>
       </div>
-      <div style="background:rgba(0,0,0,.2);border-radius:6px;padding:14px;margin-bottom:20px" id="bd-url-row">
-        <div style="color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">RFQ Link</div>
-        <a id="bd-url" href="#" target="_blank" style="color:var(--cyan);font-size:12px;font-family:var(--mono);word-break:break-all">-</a>
+      <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:14px;margin-bottom:20px;border:1px solid rgba(255,255,255,.06)" id="bd-url-row">
+        <div style="color:var(--gray);font-size:9px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;font-family:var(--mono)">&#128279; Source / RFQ Portal Link</div>
+        <a id="bd-url" href="#" target="_blank" style="color:var(--cyan);font-size:11px;font-family:var(--mono);word-break:break-all;text-decoration:none">-</a>
+        <div style="color:var(--gray);font-size:10px;margin-top:6px" id="bd-login-note"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button id="bd-open-link" onclick="window.open(document.getElementById('bd-url').href,'_blank')" style="background:var(--cyan);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">↗ Open Full Bid Page</button>
-        <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">✓ Select This Bid</button>
-        <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:10px 20px;border-radius:5px;font-size:13px;border:none;cursor:pointer">Close</button>
+        <button id="bd-open-link" style="background:var(--cyan);color:var(--navy);padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">&#8599; Open Bid Portal</button>
+        <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">&#10003; Select This Bid</button>
+        <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:11px 22px;border-radius:6px;font-size:13px;border:1px solid rgba(255,255,255,.1);cursor:pointer">Close</button>
       </div>
     </div>
   </div>
