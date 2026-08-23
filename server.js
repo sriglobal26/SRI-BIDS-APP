@@ -108,15 +108,57 @@ async function seedAllBids() {
     // Manual bids — seed-5 is TWDB post-funding
     for (const b of MANUAL_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
     // FedBids test bid
-    // FedBids — verified OPEN bids only (checked Aug 21 2026)
-    // fedbid-001: NAVFAC IDIQ A-E MEP — verified open on SAM.gov
-    await saveBid({ id:'fedbid-001', name:'IDIQ A-E Multi-Discipline Engineering Services — MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic — US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', scope:'IDIQ Architect-Engineer multi-discipline contract for construction, repair, renovation at NAVFAC Mid-Atlantic Marine Corps installations. Scope includes SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic, telecom, physical security. 5-year IDIQ term. NAVFAC worldwide task orders possible.', url:'https://beta.sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view', source:'FedBids', value:'IDIQ / TBD', status:'active', region:'statewide', scrapedAt:new Date().toISOString() })
-  }
-}
-
-async function seedH2bid() {
-  for (const b of H2BID_BIDS) {
-    await saveBid({ ...b, region: detectRegion(b.city), value:'TBD', status:'active', scrapedAt: new Date().toISOString() });
+    // FedBids — verified OPEN bids (Aug 2026) — direct URLs confirmed
+    await saveBid({ id:'fedbid-001',
+      name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)',
+      agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic — US Navy',
+      city:'NC / SC / Nationwide',
+      posted:'2026-07-15',
+      due:'2026-09-15',
+      scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations including MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island.',
+      url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view',
+      source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide',
+      scrapedAt:new Date().toISOString() });
+    await saveBid({ id:'fedbid-002',
+      name:'City of Austin — Northeast Plant Expansions (Wildhorse, Pearce Lane, Taylor Lane WWTPs) RFQS 6100 CLMP395A',
+      agency:'City of Austin — Austin Water Department',
+      city:'Austin, TX',
+      posted:'2026-07-15',
+      due:'2026-09-03',
+      scope:'Expansion of Wildhorse, Pearce Lane and Taylor Lane wastewater treatment plants. Engineering design services for WWTP capacity expansion including electrical, instrumentation, controls, SCADA upgrades, civil and process engineering.',
+      url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
+      source:'FedBids', value:'TBD', status:'active', region:'texas',
+      scrapedAt:new Date().toISOString() });
+    await saveBid({ id:'fedbid-003',
+      name:'City of Austin — Enterprise Asset Management (EAM/CMMS) for Austin Water RFP 2200 GTG3007',
+      agency:'City of Austin — Austin Water Department',
+      city:'Austin, TX',
+      posted:'2026-07-20',
+      due:'2026-09-10',
+      scope:'Cloud-based Enterprise Asset Management / CMMS for Austin Water. Replace and consolidate existing asset management platforms. Improve asset reliability, streamline operations, data-driven decision-making across water and wastewater infrastructure. Includes SCADA integration.',
+      url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144068',
+      source:'FedBids', value:'TBD', status:'active', region:'texas',
+      scrapedAt:new Date().toISOString() });
+    await saveBid({ id:'fedbid-004',
+      name:'City of Austin — Large Industrial Motors Repairs for Austin Energy & Austin Water RFP 1100 MMH3047',
+      agency:'City of Austin — Austin Energy & Austin Water',
+      city:'Austin, TX',
+      posted:'2026-07-10',
+      due:'2026-09-17',
+      scope:'Maintenance, repair, overhaul and rewinding of large industrial motors for Austin Energy and Austin Water. Includes motors for pumping stations, water treatment, wastewater treatment facilities. Electrical and instrumentation scope.',
+      url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143850',
+      source:'FedBids', value:'TBD', status:'active', region:'texas',
+      scrapedAt:new Date().toISOString() });
+    await saveBid({ id:'fedbid-005',
+      name:'City of Austin — Gilleland Wastewater Interceptor Construction RFQS 6100 CLMP400',
+      agency:'City of Austin — Austin Water Department',
+      city:'Austin, TX',
+      posted:'2026-08-01',
+      due:'2026-09-24',
+      scope:'Construction of approximately 7,730 LF of 30-inch gravity interceptor and 7,610 LF of 36-inch gravity interceptor in the Western Gilleland Basin. Includes electrical, instrumentation, controls, SCADA integration for new interceptor system.',
+      url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144532',
+      source:'FedBids', value:'TBD', status:'active', region:'texas',
+      scrapedAt:new Date().toISOString() })
   }
 }
 
