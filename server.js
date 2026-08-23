@@ -116,7 +116,7 @@ async function seedAllBids() {
       posted:'2026-07-15',
       due:'2026-09-15',
       scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations including MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island.',
-      url:'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view',
+      url:'https://usfcr.com/search/opportunities/?oppId=01a39cc449de486f8c86555c0cb73b4e',
       source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide',
       scrapedAt:new Date().toISOString() });
     await saveBid({ id:'fedbid-002',
