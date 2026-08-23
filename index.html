@@ -833,27 +833,25 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-  // FedBids — use beta.sam.gov (opens without login) or direct stored URL
+  // FedBids — open DIRECT bid page URL stored from email
   if((b.source||'').toLowerCase()==='fedbids'){
-    // 1. Check DIRECT_BID_URLS first (most accurate)
+    // Priority 1: DIRECT_BID_URLS hardcoded table
     const directU = DIRECT_BID_URLS[b.id];
-    if(directU) {
-      // Convert sam.gov/opp/ → beta.sam.gov/opp/ (no login needed)
-      return directU.replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/');
+    if(directU && directU.startsWith('http')) return directU;
+    // Priority 2: URL stored on bid from email ingest — use as-is (most accurate)
+    const storedU = (b.url||'').trim();
+    if(storedU && storedU.startsWith('http') &&
+       !storedU.includes('sam.gov/search') &&
+       !storedU.includes('beta.sam.gov/search')) {
+      return storedU;
     }
-    // 2. Use stored bid URL — convert sam.gov → beta.sam.gov
-    const storedU = b.url || '';
-    if(storedU) {
-      return storedU
-        .replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/')
-        .replace('https://sam.gov/search', 'https://beta.sam.gov/search')
-        .replace('https://sam.gov/workspace/', 'https://beta.sam.gov/workspace/');
-    }
-    // 3. Extract solicitation number from name → beta.sam.gov search
-    const sol = (b.name||'').match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
-    if(sol) return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(sol[1])+'&is_active=true';
-    // 4. Keyword search fallback
-    const kw = (b.name||'').split('—')[0].trim().split(' ').slice(0,5).join('+');
+    // Priority 3: Extract solicitation # from bid name → SAM search
+    const sol = (b.name||'').match(/([A-Z]{2,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6})/);
+    if(sol) return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(sol[1])+'&is_active=true&sort=-modifiedDate';
+    // Priority 4: Use stored URL even if it is a search URL
+    if(storedU && storedU.startsWith('http')) return storedU;
+    // Priority 5: Keyword search on bid name
+    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,6).join('+');
     return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(kw)+'&is_active=true';
   }
   return b.url || '';
@@ -1730,7 +1728,11 @@ function rowFed(b){
   const eid = encodeURIComponent(String(b.id));
   const acts = '<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'selected\')">\u2713 Select</button><button class="ab del" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'deleted\')">\u2715 Delete</button></div>';
   const bidIdLabel = b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-6).toUpperCase() : (b.id ? b.id.slice(-6).toUpperCase() : '\u2014');
-  const urlCell = '<td class="tu"><button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">\u2197 View RFQ</button><button onclick="openBidLink(\'' + b.id + '\')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">\uD83D\uDD17 Bid Link</button></td>';
+  const fedUrl = getDirectUrl(b);
+  const urlCell = '<td class="tu">'
+    + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
+    + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
+    + '</td>';
   return '<tr>'
     + '<td class="tn">' + (b._sno||'') + '</td>'
     + '<td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">' + bidIdLabel + '</td>'
