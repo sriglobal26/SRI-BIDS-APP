@@ -460,4 +460,9 @@ async function autoExpireAndClean() {
 }
 
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
-initDB().then(() => { setTimeout(autoFetchNewBids, 15000); setTimeout(autoExpireAndClean, 20000); }).catch(err => console.error('[DB] Init failed:', err.message));
+initDB().then(async () => {
+  // On every startup: wipe all FedBids and reseed exactly 5 clean verified bids
+  await cleanFedBidsOnStartup();
+  setTimeout(autoFetchNewBids, 15000);
+  setTimeout(autoExpireAndClean, 20000);
+}).catch(err => console.error('[DB] Init failed:', err.message));
