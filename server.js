@@ -363,14 +363,15 @@ async function autoExpireAndClean() {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Step 1a: FedBids only — permanently delete if due date is 4+ days past
+    // Step 1a: FedBids only — permanently delete ONLY if due date is 4+ days IN THE PAST
+    // i.e. due date must be BEFORE (today - 4 days) — bids that closed 4+ days ago
     const fedExpired = await pool.query(
       `DELETE FROM bids
        WHERE data->>'source' = 'FedBids'
        AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-       AND (data->>'due')::date < CURRENT_DATE - INTERVAL '4 days'`
+       AND (data->>'due')::date < (CURRENT_DATE - INTERVAL '4 days')`
     );
-    if (fedExpired.rowCount > 0) console.log('[FedBids] Auto-deleted', fedExpired.rowCount, 'FedBids expired 4+ days ago');
+    if (fedExpired.rowCount > 0) console.log('[FedBids] Auto-deleted', fedExpired.rowCount, 'FedBids that closed 4+ days ago');
 
     // Step 1b: All other sources — move expired bids to deleted tab
     const expired = await pool.query(
