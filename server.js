@@ -286,16 +286,30 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       }
     }
 
-    // ── URL BUILDER ─────────────────────────────────────────
+    // ── URL BUILDER — extract direct bid page URL from email ──
+    // Get ALL URLs from email body
+    const allUrls = (emailBody.match(/https?:\/\/[^\s<>"\)]+/g) || []);
+    // Filter out tracking/unsubscribe/image URLs — keep real bid page URLs
+    const skipDomains = ['unsubscribe','tracking','click','open','img','pixel','mail','email','list-manage','mailchimp','constantcontact','sendgrid','fedbidspeed.com/t/','fedbidspeed.com/track'];
+    const bidUrls = allUrls.filter(u => !skipDomains.some(s => u.toLowerCase().includes(s)));
+    // Prefer non-SAM direct agency portal URLs (sam.gov search is last resort)
+    const directUrl = bidUrls.find(u =>
+      !u.includes('sam.gov/search') &&
+      !u.includes('beta.sam.gov/search') &&
+      u.length > 20
+    ) || bidUrls[0] || '';
+    // Solicitation number from subject
     const solMatch = subject.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
-    const urlFromEmail = (emailBody.match(/https?:\/\/[^\s<>"]+/) || [])[0] || '';
     let rfqUrl;
-    if (solMatch) {
-      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true';
-    } else if (urlFromEmail && !urlFromEmail.includes('sam.gov/opp/') && !urlFromEmail.includes('sam.gov/workspace/')) {
-      rfqUrl = urlFromEmail.replace('https://sam.gov/', 'https://beta.sam.gov/');
+    if (directUrl && directUrl.startsWith('http')) {
+      // Use direct agency portal URL from email — best option
+      rfqUrl = directUrl.replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/');
+    } else if (solMatch) {
+      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true&sort=-modifiedDate';
+    } else if (body.url && body.url.startsWith('http')) {
+      rfqUrl = body.url;
     } else {
-      const kw = subject.split(/[—\-]/)[0].trim().split(' ').slice(0,5).join(' ');
+      const kw = subject.replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
       rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
     }
 
