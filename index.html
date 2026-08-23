@@ -755,8 +755,17 @@ const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public
 let bidState={};
 
 function classifyBid(b){
-  // FedBids — never expire on frontend; server handles deletion 4 days after due date
-  if((b.source||'').toLowerCase()==='fedbids') return 'active';
+  // FedBids — hide from frontend 4 days BEFORE due date
+  if((b.source||'').toLowerCase()==='fedbids'){
+    if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)){
+      const due = new Date(b.due + 'T00:00:00');
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() + 4); // today + 4 days
+      cutoff.setHours(0,0,0,0);
+      if(due < cutoff) return 'deleted'; // due within 4 days — hide it
+    }
+    return 'active';
+  }
   // TWDB/prebid — never expire
   if(b.source==='TWDB' || b.status==='prebid') return 'active';
   // If already marked deleted by server, keep in deleted
