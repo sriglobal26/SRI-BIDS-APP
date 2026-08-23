@@ -156,6 +156,8 @@ app.get('/api/reset', async (req, res) => {
   try {
     await pool.query("DELETE FROM bids");
     await seedAllBids();
+    // After seed, delete any FedBids that got in (FedBids managed separately)
+    await pool.query("DELETE FROM bids WHERE data->>'source' = 'FedBids'");
     const r = await pool.query('SELECT COUNT(*) FROM bids');
     res.json({ success: true, message: 'All bids deleted and reseeded', total: parseInt(r.rows[0].count) });
   } catch(e) { res.status(500).json({ error: e.message }); }
