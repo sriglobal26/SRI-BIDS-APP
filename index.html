@@ -1766,7 +1766,11 @@ function rowFed(b){
   const eid = encodeURIComponent(String(b.id));
   const acts = '<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'selected\')">\u2713 Select</button><button class="ab del" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'deleted\')">\u2715 Delete</button></div>';
   const bidIdLabel = b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-6).toUpperCase() : (b.id ? b.id.slice(-6).toUpperCase() : '\u2014');
-  const fedUrl = getDirectUrl(b);
+  // Build direct SAM.gov search URL from solicitationNo — never use stored DB url
+  const solNo = b.solicitationNo || '';
+  const fedUrl = solNo
+    ? 'https://sam.gov/search?index=opp&q=' + encodeURIComponent(solNo) + '&is_active=true'
+    : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
     + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
@@ -2111,8 +2115,16 @@ function showBidDetail(b) {
   // Scope
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
 
-  // URL row
-  const openUrl = getDirectUrl(b);
+  // URL row — for FedBids, build from solicitationNo directly
+  let openUrl;
+  if((b.source||'').toLowerCase()==='fedbids'){
+    const sn = b.solicitationNo || '';
+    openUrl = sn
+      ? 'https://sam.gov/search?index=opp&q=' + encodeURIComponent(sn) + '&is_active=true'
+      : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
+  } else {
+    openUrl = getDirectUrl(b);
+  }
   const urlEl   = document.getElementById('bd-url');
   const urlRow  = document.getElementById('bd-url-row');
   const openBtn = document.getElementById('bd-open-link');
