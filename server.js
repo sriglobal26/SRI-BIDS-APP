@@ -460,7 +460,7 @@ async function autoExpireAndClean() {
 }
 
 
-// ─── FEDBIDS STARTUP CLEAN ────────────────────────────────────
+// ─── FEDBIDS STARTUP CLEAN ──────────────────────────────────── (forced redeploy 2026-08-23 15:28:51 UTC)
 // Runs on every deploy — deletes ALL FedBids and reseeds exactly 5 verified bids
 async function cleanFedBidsOnStartup() {
   try {
