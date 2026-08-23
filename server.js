@@ -459,6 +459,35 @@ async function autoExpireAndClean() {
   } catch(e) { console.error('[AutoExpire]', e.message); }
 }
 
+
+// ─── FEDBIDS STARTUP CLEAN ────────────────────────────────────
+// Runs on every deploy — deletes ALL FedBids and reseeds exactly 5 verified bids
+async function cleanFedBidsOnStartup() {
+  try {
+    // Delete every FedBid including duplicates from Make.com
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'FedBids'");
+    console.log('[FedBids] Startup: deleted', del.rowCount, 'FedBids (including duplicates)');
+
+    // Reseed exactly 5 verified open bids
+    const FIVE_BIDS = [
+      { id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', solicitationNo:'N4008524R2674', location:'MCAS Cherry Point NC / MCAS Beaufort SC', responseDate:'2026-09-15', setAside:'Total Small Business Set-Aside (NAICS 541330)', scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations.', url:'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true', source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide', userState:'active' },
+      { id:'fedbid-002', name:'City of Austin — Northeast WWTP Expansions (RFQS-6100-CLMP395A)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-07-15', due:'2026-09-03', solicitationNo:'RFQS-6100-CLMP395A', location:'Austin, TX', responseDate:'2026-09-03', setAside:'Open Competition', scope:'Expansion of Wildhorse, Pearce Lane and Taylor Lane wastewater treatment plants. Electrical, instrumentation, controls, SCADA upgrades.', url:'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas', userState:'active' },
+      { id:'fedbid-003', name:'City of Austin — Enterprise Asset Management EAM CMMS Austin Water (RFP-2200-GTG3007)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-07-20', due:'2026-09-10', solicitationNo:'RFP-2200-GTG3007', location:'Austin, TX', responseDate:'2026-09-10', setAside:'Open Competition', scope:'Cloud-based EAM/CMMS for Austin Water. SCADA integration, asset reliability across water and wastewater infrastructure.', url:'https://sam.gov/search?index=opp&q=GTG3007&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas', userState:'active' },
+      { id:'fedbid-004', name:'City of Austin — Large Industrial Motors Repairs Austin Energy Austin Water (RFP-1100-MMH3047)', agency:'City of Austin — Austin Energy & Austin Water', city:'Austin, TX', posted:'2026-07-10', due:'2026-09-17', solicitationNo:'RFP-1100-MMH3047', location:'Austin, TX', responseDate:'2026-09-17', setAside:'Open Competition', scope:'Maintenance, repair, overhaul of large industrial motors for Austin Energy and Austin Water pumping stations and treatment facilities.', url:'https://sam.gov/search?index=opp&q=MMH3047&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas', userState:'active' },
+      { id:'fedbid-005', name:'City of Austin — Gilleland Wastewater Interceptor Construction (RFQS-6100-CLMP400)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-08-01', due:'2026-09-24', solicitationNo:'RFQS-6100-CLMP400', location:'Austin, TX — Western Gilleland Basin', responseDate:'2026-09-24', setAside:'Open Competition', scope:'Construction of 7,730 LF of 30-inch and 7,610 LF of 36-inch gravity interceptor. Electrical, instrumentation, controls, SCADA integration.', url:'https://sam.gov/search?index=opp&q=CLMP400&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas', userState:'active' },
+    ];
+    for (const b of FIVE_BIDS) {
+      await pool.query(
+        'INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+        [b.id, JSON.stringify({...b, scrapedAt: new Date().toISOString()})]
+      );
+    }
+    console.log('[FedBids] Startup: seeded 5 clean verified bids');
+  } catch(e) {
+    console.error('[FedBids Startup Error]', e.message);
+  }
+}
+
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
 initDB().then(async () => {
   // On every startup: wipe all FedBids and reseed exactly 5 clean verified bids
