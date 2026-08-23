@@ -441,6 +441,35 @@ app.get('/api/fix-fedbids-dates', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Clean all FedBids from DB — delete everything and reseed only 5 verified bids
+app.get('/api/clean-fedbids', async (req, res) => {
+  try {
+    // Step 1: Delete ALL FedBids from DB
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'FedBids'");
+    console.log('[CleanFedBids] Deleted', del.rowCount, 'FedBids');
+
+    // Step 2: Reseed only the 5 verified open bids
+    const verifiedBids = [
+      { id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic — US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', solicitationNo:'N4008524R2674', location:'MCAS Cherry Point, Camp Lejeune NC / MCAS Beaufort, MCRD Parris Island SC', responseDate:'2026-09-15', setAside:'Total Small Business Set-Aside (NAICS 541330)', scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations.', url:'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true', source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide' },
+      { id:'fedbid-002', name:'City of Austin — Northeast WWTP Expansions Wildhorse Pearce Lane Taylor Lane (RFQS-6100-CLMP395A)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-07-15', due:'2026-09-03', solicitationNo:'RFQS-6100-CLMP395A', location:'Austin, TX — Wildhorse, Pearce Lane, Taylor Lane WWTP Sites', responseDate:'2026-09-03', setAside:'Open Competition', scope:'Expansion of Wildhorse, Pearce Lane and Taylor Lane wastewater treatment plants. Electrical, instrumentation, controls, SCADA upgrades, civil and process engineering.', url:'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas' },
+      { id:'fedbid-003', name:'City of Austin — Enterprise Asset Management EAM CMMS for Austin Water (RFP-2200-GTG3007)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-07-20', due:'2026-09-10', solicitationNo:'RFP-2200-GTG3007', location:'Austin, TX — Austin Water Department', responseDate:'2026-09-10', setAside:'Open Competition', scope:'Cloud-based EAM/CMMS for Austin Water. Replace existing asset management platforms. SCADA integration, asset reliability, data-driven decision-making across water and wastewater infrastructure.', url:'https://sam.gov/search?index=opp&q=GTG3007&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas' },
+      { id:'fedbid-004', name:'City of Austin — Large Industrial Motors Repairs Austin Energy Austin Water (RFP-1100-MMH3047)', agency:'City of Austin — Austin Energy & Austin Water', city:'Austin, TX', posted:'2026-07-10', due:'2026-09-17', solicitationNo:'RFP-1100-MMH3047', location:'Austin, TX — Austin Energy & Austin Water Facilities', responseDate:'2026-09-17', setAside:'Open Competition', scope:'Maintenance, repair, overhaul and rewinding of large industrial motors for Austin Energy and Austin Water pumping stations, water treatment and wastewater treatment facilities.', url:'https://sam.gov/search?index=opp&q=MMH3047&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas' },
+      { id:'fedbid-005', name:'City of Austin — Gilleland Wastewater Interceptor Construction (RFQS-6100-CLMP400)', agency:'City of Austin — Austin Water Department', city:'Austin, TX', posted:'2026-08-01', due:'2026-09-24', solicitationNo:'RFQS-6100-CLMP400', location:'Austin, TX — Western Gilleland Basin', responseDate:'2026-09-24', setAside:'Open Competition', scope:'Construction of approximately 7,730 LF of 30-inch gravity interceptor and 7,610 LF of 36-inch gravity interceptor in the Western Gilleland Basin. Electrical, instrumentation, controls, SCADA integration.', url:'https://sam.gov/search?index=opp&q=CLMP400&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'texas' },
+    ];
+
+    let seeded = 0;
+    for (const bid of verifiedBids) {
+      await pool.query(
+        "INSERT INTO bids (data) VALUES ($1) ON CONFLICT DO NOTHING",
+        [JSON.stringify({ ...bid, userState:'active', scrapedAt: new Date().toISOString() })]
+      );
+      seeded++;
+    }
+
+    res.json({ success: true, deleted: del.rowCount, seeded, message: `Deleted ${del.rowCount} FedBids, reseeded ${seeded} verified bids` });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete('/api/bids/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]);
