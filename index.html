@@ -2018,26 +2018,61 @@ function showBidDetail(b) {
     try { b = JSON.parse(b.split('&quot;').join('"')); } catch(e) { return; }
   }
   currentBidDetail = b;
-  document.getElementById('bd-source').textContent = b.source || 'Unknown Source';
+
+  // Source badge
+  document.getElementById('bd-source-badge').textContent = b.source || 'Source';
+
+  // Solicitation number — extract from name e.g. N4008524R2674 or RFP 2200 GTG3007
+  const solMatch = (b.name||'').match(/([A-Z0-9]{2,6}[-\s][A-Z0-9]{2,6}[-\s][A-Z0-9]{2,8}[-\s]?[A-Z0-9]*)/);
+  const solEl = document.getElementById('bd-solno');
+  if(solMatch) { solEl.textContent = solMatch[1].trim(); solEl.style.display='inline-block'; }
+  else { solEl.style.display='none'; }
+
+  // Name
   document.getElementById('bd-name').textContent = b.name || 'Unnamed Bid';
-  document.getElementById('bd-agency').textContent = b.agency || '-';
-  document.getElementById('bd-city').textContent = b.city || '-';
-  document.getElementById('bd-posted').textContent = formatDate(b.posted) || formatDate((b.scrapedAt||'').slice(0,10)) || '-';
-  document.getElementById('bd-due').textContent = formatDate(b.due) || 'See link';
-  document.getElementById('bd-value').textContent = b.value || 'TBD';
+
+  // Grid fields
+  document.getElementById('bd-agency').textContent  = b.agency || '-';
+  document.getElementById('bd-city').textContent    = b.city   || '-';
+  document.getElementById('bd-value').textContent   = b.value  || 'TBD';
+  document.getElementById('bd-posted').textContent  = formatDate(b.posted) || formatDate((b.scrapedAt||'').slice(0,10)) || '-';
+  document.getElementById('bd-due').textContent     = formatDate(b.due)    || 'See link';
+
+  // Days remaining
+  const daysEl = document.getElementById('bd-days');
+  if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
+    const diff = Math.ceil((new Date(b.due) - new Date()) / 86400000);
+    if(diff > 0)      { daysEl.textContent = diff + ' days left';  daysEl.style.color = diff <= 7 ? 'var(--orange)' : 'var(--green)'; }
+    else if(diff === 0){ daysEl.textContent = 'Due TODAY';         daysEl.style.color = 'var(--orange)'; }
+    else               { daysEl.textContent = 'Closed';            daysEl.style.color = 'var(--gray)'; }
+  } else { daysEl.textContent = '-'; daysEl.style.color='var(--gray)'; }
+
+  // Scope
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
-  let openUrl = getDirectUrl(b);
+
+  // URL row
+  const openUrl = getDirectUrl(b);
+  const urlEl   = document.getElementById('bd-url');
+  const urlRow  = document.getElementById('bd-url-row');
+  const openBtn = document.getElementById('bd-open-link');
+  const noteEl  = document.getElementById('bd-login-note');
   if(openUrl) {
-    document.getElementById('bd-url').textContent = openUrl;
-    document.getElementById('bd-url').href = openUrl;
-    document.getElementById('bd-open-link').dataset.url = openUrl;
-    document.getElementById('bd-open-link').onclick = function(){ window.open(openUrl,'_blank'); };
-    document.getElementById('bd-open-link').style.display = 'inline-block';
-    document.getElementById('bd-url-row').style.display = 'block';
+    urlEl.textContent = openUrl;
+    urlEl.href        = openUrl;
+    openBtn.onclick   = function(){ window.open(openUrl,'_blank'); };
+    openBtn.style.display = 'inline-flex';
+    urlRow.style.display  = 'block';
+    // Login note for SAM.gov
+    if(openUrl.includes('sam.gov')) {
+      noteEl.textContent = '⚠ SAM.gov may require login. If redirected to homepage, sign in first then return to this link.';
+    } else {
+      noteEl.textContent = '';
+    }
   } else {
-    document.getElementById('bd-url-row').style.display = 'none';
-    document.getElementById('bd-open-link').style.display = 'none';
+    urlRow.style.display  = 'none';
+    openBtn.style.display = 'none';
   }
+
   document.getElementById('m-bid-detail').style.display = 'block';
   document.body.style.overflow = 'hidden';
 }
