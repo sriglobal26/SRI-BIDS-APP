@@ -755,8 +755,10 @@ const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public
 let bidState={};
 
 function classifyBid(b){
-  // TWDB/prebid/FedBids bids never auto-expire
-  if(b.source==='TWDB' || b.status==='prebid' || (b.source||'').toLowerCase()==='fedbids') return 'active';
+  // FedBids — never expire on frontend; server handles deletion 4 days after due date
+  if((b.source||'').toLowerCase()==='fedbids') return 'active';
+  // TWDB/prebid — never expire
+  if(b.source==='TWDB' || b.status==='prebid') return 'active';
   // If already marked deleted by server, keep in deleted
   if(b.userState === 'deleted') return 'deleted';
   // Auto-move to deleted if due date passed
@@ -764,15 +766,14 @@ function classifyBid(b){
   if(b.due) {
     let dueDate = null;
     if(/^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
-      dueDate = new Date(b.due); // YYYY-MM-DD
-    } else if(/^\d{2}\/\d{2}\/\d{4}$/.test(b.due)) {
-      const [m, d, y] = b.due.split('/');
-      dueDate = new Date(y + '-' + m + '-' + d); // MM/DD/YYYY → YYYY-MM-DD
+      dueDate = new Date(b.due + 'T23:59:59'); // end of due date
+    } else if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(b.due)) {
+      const parts = b.due.split('/');
+      dueDate = new Date(parts[2] + '-' + parts[0].padStart(2,'0') + '-' + parts[1].padStart(2,'0') + 'T23:59:59');
     }
     if(dueDate) {
       const now = new Date();
-      now.setHours(0,0,0,0);
-      if(dueDate < now) return 'deleted'; // expired — move to deleted tab
+      if(dueDate < now) return 'deleted';
     }
   }
   return 'active';
