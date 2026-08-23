@@ -125,8 +125,8 @@ async function initDB() {
   await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
   await pool.query(`CREATE TABLE IF NOT EXISTS emails (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP DEFAULT NOW())`).catch(()=>{});
   console.log('[DB] Ready');
-  // Delete and reseed all bids fresh
-  await pool.query("DELETE FROM bids WHERE data->>'source' IN ('EnviroBidNet','H2bid','CivCast','TX ESBD','TWDB','Manual')");
+  // Delete ALL bids including FedBids then reseed fresh
+  await pool.query('DELETE FROM bids');
   await seedAllBids();
 }
 
