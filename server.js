@@ -403,6 +403,43 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Fix ALL FedBids URLs in DB to use BidSpeed
+app.get('/api/fix-fedbids-urls', async (req, res) => {
+  try {
+    const fixes = [
+      { id: 'fedbid-001', url: 'https://app.bidspeed.com/opportunities?search=N4008524R2674', solNo: 'N4008524R2674' },
+      { id: 'fedbid-002', url: 'https://app.bidspeed.com/opportunities?search=CLMP395A',     solNo: 'RFQS-6100-CLMP395A' },
+      { id: 'fedbid-003', url: 'https://app.bidspeed.com/opportunities?search=GTG3007',      solNo: 'RFP-2200-GTG3007' },
+      { id: 'fedbid-004', url: 'https://app.bidspeed.com/opportunities?search=MMH3047',      solNo: 'RFP-1100-MMH3047' },
+      { id: 'fedbid-005', url: 'https://app.bidspeed.com/opportunities?search=CLMP400',      solNo: 'RFQS-6100-CLMP400' },
+    ];
+    let total = 0;
+    for (const fix of fixes) {
+      const r = await pool.query(
+        `UPDATE bids SET data = jsonb_set(jsonb_set(data, '{url}', to_jsonb($1::text)), '{solicitationNo}', to_jsonb($2::text))
+         WHERE data->>'id' = $3`,
+        [fix.url, fix.solNo, fix.id]
+      );
+      total += r.rowCount;
+      console.log(`[FixURL] ${fix.id} → ${fix.url} (${r.rowCount} rows)`);
+    }
+    // Also fix ALL other FedBids from Make.com that have sam.gov URLs
+    const r2 = await pool.query(
+      `UPDATE bids SET data = jsonb_set(data, '{url}',
+         to_jsonb('https://app.bidspeed.com/opportunities?search=' ||
+           COALESCE(
+             data->>'solicitationNo',
+             regexp_replace(data->>'name', '[^A-Za-z0-9 ]', '', 'g')
+           )
+         ))
+       WHERE data->>'source' = 'FedBids'
+       AND (data->>'url' LIKE '%sam.gov%' OR data->>'url' LIKE '%usfcr.com%' OR data->>'url' LIKE '%financeonline%')`
+    );
+    total += r2.rowCount;
+    res.json({ success: true, fixed: total, message: total + ' FedBid URLs updated to BidSpeed' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Fix existing FedBids with missing due dates — set to 'Check Link'
 app.get('/api/fix-fedbids-dates', async (req, res) => {
   try {
