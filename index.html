@@ -811,11 +811,11 @@ const DIRECT_BID_URLS = {
   'esbd-005':'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
   'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
-  'fedbid-001':'https://usfcr.com/search/opportunities/?oppId=01a39cc449de486f8c86555c0cb73b4e',
-  'fedbid-002':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
-  'fedbid-003':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144068',
-  'fedbid-004':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143850',
-  'fedbid-005':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144532',
+  'fedbid-001':'https://app.bidspeed.com/opportunities?search=N4008524R2674',
+  'fedbid-002':'https://app.bidspeed.com/opportunities?search=CLMP395A',
+  'fedbid-003':'https://app.bidspeed.com/opportunities?search=GTG3007',
+  'fedbid-004':'https://app.bidspeed.com/opportunities?search=MMH3047',
+  'fedbid-005':'https://app.bidspeed.com/opportunities?search=CLMP400',
 };
 function formatDate(d) {
   if (!d) return '—';
@@ -845,20 +845,23 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-  // FedBids — use direct stored URL (Austin Finance works without login)
+  // FedBids — open in BidSpeed where user has criteria set up
   if((b.source||'').toLowerCase()==='fedbids'){
-    // Priority 1: DIRECT_BID_URLS hardcoded table (most reliable)
+    // Priority 1: DIRECT_BID_URLS (hardcoded BidSpeed links)
     const directU = DIRECT_BID_URLS[b.id] || '';
-    if(directU && directU.startsWith('http') && !directU.includes('sam.gov/opp/') && !directU.includes('beta.sam.gov/opp/')) return directU;
-    // Priority 2: Stored URL — skip sam.gov/opp/ links (require login)
+    if(directU && directU.startsWith('http')) return directU;
+    // Priority 2: Use stored URL if already a BidSpeed link
     const storedU = (b.url||'').trim();
-    if(storedU && storedU.startsWith('http') && !storedU.includes('sam.gov/opp/') && !storedU.includes('beta.sam.gov/opp/')) return storedU;
-    // Priority 3: If we have a sam.gov/opp link, redirect to usfcr.com search (public)
-    const sol = (b.name||'').match(/([A-Z]{1,6}\d{6,10}[A-Z]\d{4})/);
-    if(sol) return 'https://usfcr.com/search/opportunities/?q='+encodeURIComponent(sol[1]);
-    // Priority 4: USFCR keyword search — public, no login
+    if(storedU && (storedU.includes('bidspeed.com') || storedU.includes('fedbidspeed.com'))) return storedU;
+    // Priority 3: Build BidSpeed search using solicitation number
+    const solNo = b.solicitationNo || '';
+    if(solNo) return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(solNo);
+    // Priority 4: Extract sol number from bid name
+    const solMatch = (b.name||'').match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6}|[A-Z]{2,8}[0-9]{4,10}[A-Z][0-9]{4})/);
+    if(solMatch) return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(solMatch[1]);
+    // Priority 5: BidSpeed keyword search from bid name
     const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
-    return 'https://usfcr.com/search/opportunities/?q='+encodeURIComponent(kw);
+    return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(kw);
   }
   return b.url || '';
 }
@@ -2024,7 +2027,7 @@ setTimeout(async ()=>{
         <div style="color:var(--gray);font-size:10px;margin-top:6px" id="bd-login-note"></div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button id="bd-open-link" style="background:var(--cyan);color:var(--navy);padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">&#8599; Open Bid Portal</button>
+        <button id="bd-open-link" style="background:var(--cyan);color:var(--navy);padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">&#8599; Open in BidSpeed</button>
         <button id="bd-select-btn" onclick="selectBidFromDetail()" style="background:var(--green);color:var(--navy);padding:11px 22px;border-radius:6px;font-weight:700;font-size:13px;border:none;cursor:pointer;font-family:var(--mono)">&#10003; Select This Bid</button>
         <button onclick="closeBidDetail()" style="background:rgba(255,255,255,.08);color:var(--gray);padding:11px 22px;border-radius:6px;font-size:13px;border:1px solid rgba(255,255,255,.1);cursor:pointer">Close</button>
       </div>
