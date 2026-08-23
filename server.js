@@ -116,7 +116,7 @@ async function seedAllBids() {
       posted:'2026-07-15',
       due:'2026-09-15',
       scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations including MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island.',
-      url:'https://app.bidspeed.com/opportunities?search=N4008524R2674',
+      url:'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true',
       source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide',
       solicitationNo:'N4008524R2674',
       location:'MCAS Cherry Point, Camp Lejeune NC / MCAS Beaufort, MCRD Parris Island SC',
@@ -130,7 +130,7 @@ async function seedAllBids() {
       posted:'2026-07-15',
       due:'2026-09-03',
       scope:'Expansion of Wildhorse, Pearce Lane and Taylor Lane wastewater treatment plants. Engineering design services for WWTP capacity expansion including electrical, instrumentation, controls, SCADA upgrades, civil and process engineering.',
-      url:'https://app.bidspeed.com/opportunities?search=CLMP395A',
+      url:'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
       solicitationNo:'RFQS-6100-CLMP395A',
       location:'Austin, TX — Wildhorse, Pearce Lane, Taylor Lane WWTP Sites',
@@ -144,7 +144,7 @@ async function seedAllBids() {
       posted:'2026-07-20',
       due:'2026-09-10',
       scope:'Cloud-based Enterprise Asset Management / CMMS for Austin Water. Replace and consolidate existing asset management platforms. Improve asset reliability, streamline operations, data-driven decision-making across water and wastewater infrastructure. Includes SCADA integration.',
-      url:'https://app.bidspeed.com/opportunities?search=GTG3007',
+      url:'https://sam.gov/search?index=opp&q=GTG3007&is_active=true',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
       solicitationNo:'RFP-2200-GTG3007',
       location:'Austin, TX — Austin Water Department',
@@ -158,7 +158,7 @@ async function seedAllBids() {
       posted:'2026-07-10',
       due:'2026-09-17',
       scope:'Maintenance, repair, overhaul and rewinding of large industrial motors for Austin Energy and Austin Water. Includes motors for pumping stations, water treatment, wastewater treatment facilities. Electrical and instrumentation scope.',
-      url:'https://app.bidspeed.com/opportunities?search=MMH3047',
+      url:'https://sam.gov/search?index=opp&q=MMH3047&is_active=true',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
       solicitationNo:'RFP-1100-MMH3047',
       location:'Austin, TX — Austin Energy & Austin Water Facilities',
@@ -172,7 +172,7 @@ async function seedAllBids() {
       posted:'2026-08-01',
       due:'2026-09-24',
       scope:'Construction of approximately 7,730 LF of 30-inch gravity interceptor and 7,610 LF of 36-inch gravity interceptor in the Western Gilleland Basin. Includes electrical, instrumentation, controls, SCADA integration for new interceptor system.',
-      url:'https://app.bidspeed.com/opportunities?search=CLMP400',
+      url:'https://sam.gov/search?index=opp&q=CLMP400&is_active=true',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
       solicitationNo:'RFQS-6100-CLMP400',
       location:'Austin, TX — Western Gilleland Basin',
@@ -404,39 +404,27 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
 });
 
 // Fix ALL FedBids URLs in DB to use BidSpeed
+// Fix ALL FedBids URLs in DB to use SAM.gov search with sol number
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
     const fixes = [
-      { id: 'fedbid-001', url: 'https://app.bidspeed.com/opportunities?search=N4008524R2674', solNo: 'N4008524R2674' },
-      { id: 'fedbid-002', url: 'https://app.bidspeed.com/opportunities?search=CLMP395A',     solNo: 'RFQS-6100-CLMP395A' },
-      { id: 'fedbid-003', url: 'https://app.bidspeed.com/opportunities?search=GTG3007',      solNo: 'RFP-2200-GTG3007' },
-      { id: 'fedbid-004', url: 'https://app.bidspeed.com/opportunities?search=MMH3047',      solNo: 'RFP-1100-MMH3047' },
-      { id: 'fedbid-005', url: 'https://app.bidspeed.com/opportunities?search=CLMP400',      solNo: 'RFQS-6100-CLMP400' },
+      { id:'fedbid-001', url:'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true',    sol:'N4008524R2674' },
+      { id:'fedbid-002', url:'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true',         sol:'RFQS-6100-CLMP395A' },
+      { id:'fedbid-003', url:'https://sam.gov/search?index=opp&q=GTG3007&is_active=true',          sol:'RFP-2200-GTG3007' },
+      { id:'fedbid-004', url:'https://sam.gov/search?index=opp&q=MMH3047&is_active=true',          sol:'RFP-1100-MMH3047' },
+      { id:'fedbid-005', url:'https://sam.gov/search?index=opp&q=CLMP400&is_active=true',          sol:'RFQS-6100-CLMP400' },
     ];
     let total = 0;
     for (const fix of fixes) {
       const r = await pool.query(
-        `UPDATE bids SET data = jsonb_set(jsonb_set(data, '{url}', to_jsonb($1::text)), '{solicitationNo}', to_jsonb($2::text))
-         WHERE data->>'id' = $3`,
-        [fix.url, fix.solNo, fix.id]
+        `UPDATE bids SET data = jsonb_set(jsonb_set(data,'{url}',to_jsonb($1::text)),'{solicitationNo}',to_jsonb($2::text)) WHERE data->>'id'=$3`,
+        [fix.url, fix.sol, fix.id]
       );
       total += r.rowCount;
-      console.log(`[FixURL] ${fix.id} → ${fix.url} (${r.rowCount} rows)`);
     }
-    // Also fix ALL other FedBids from Make.com that have sam.gov URLs
-    const r2 = await pool.query(
-      `UPDATE bids SET data = jsonb_set(data, '{url}',
-         to_jsonb('https://app.bidspeed.com/opportunities?search=' ||
-           COALESCE(
-             data->>'solicitationNo',
-             regexp_replace(data->>'name', '[^A-Za-z0-9 ]', '', 'g')
-           )
-         ))
-       WHERE data->>'source' = 'FedBids'
-       AND (data->>'url' LIKE '%sam.gov%' OR data->>'url' LIKE '%usfcr.com%' OR data->>'url' LIKE '%financeonline%')`
-    );
-    total += r2.rowCount;
-    res.json({ success: true, fixed: total, message: total + ' FedBid URLs updated to BidSpeed' });
+    res.json({ success:true, fixed:total, message: total+' FedBid URLs fixed to SAM.gov search' });
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
