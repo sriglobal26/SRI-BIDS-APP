@@ -118,6 +118,10 @@ async function seedAllBids() {
       scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection, fiber optic. 5-year IDIQ. NAVFAC Mid-Atlantic Marine Corps installations including MCAS Cherry Point, Camp Lejeune, MCAS Beaufort, MCRD Parris Island.',
       url:'https://usfcr.com/search/opportunities/?oppId=01a39cc449de486f8c86555c0cb73b4e',
       source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide',
+      solicitationNo:'N4008524R2674',
+      location:'MCAS Cherry Point, Camp Lejeune NC / MCAS Beaufort, MCRD Parris Island SC',
+      responseDate:'2026-09-15',
+      setAside:'Total Small Business Set-Aside (NAICS 541330)',
       scrapedAt:new Date().toISOString() });
     await saveBid({ id:'fedbid-002',
       name:'City of Austin — Northeast Plant Expansions (Wildhorse, Pearce Lane, Taylor Lane WWTPs) RFQS 6100 CLMP395A',
@@ -128,6 +132,10 @@ async function seedAllBids() {
       scope:'Expansion of Wildhorse, Pearce Lane and Taylor Lane wastewater treatment plants. Engineering design services for WWTP capacity expansion including electrical, instrumentation, controls, SCADA upgrades, civil and process engineering.',
       url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
+      solicitationNo:'RFQS-6100-CLMP395A',
+      location:'Austin, TX — Wildhorse, Pearce Lane, Taylor Lane WWTP Sites',
+      responseDate:'2026-09-03',
+      setAside:'Open Competition',
       scrapedAt:new Date().toISOString() });
     await saveBid({ id:'fedbid-003',
       name:'City of Austin — Enterprise Asset Management (EAM/CMMS) for Austin Water RFP 2200 GTG3007',
@@ -138,6 +146,10 @@ async function seedAllBids() {
       scope:'Cloud-based Enterprise Asset Management / CMMS for Austin Water. Replace and consolidate existing asset management platforms. Improve asset reliability, streamline operations, data-driven decision-making across water and wastewater infrastructure. Includes SCADA integration.',
       url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144068',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
+      solicitationNo:'RFP-2200-GTG3007',
+      location:'Austin, TX — Austin Water Department',
+      responseDate:'2026-09-10',
+      setAside:'Open Competition',
       scrapedAt:new Date().toISOString() });
     await saveBid({ id:'fedbid-004',
       name:'City of Austin — Large Industrial Motors Repairs for Austin Energy & Austin Water RFP 1100 MMH3047',
@@ -148,6 +160,10 @@ async function seedAllBids() {
       scope:'Maintenance, repair, overhaul and rewinding of large industrial motors for Austin Energy and Austin Water. Includes motors for pumping stations, water treatment, wastewater treatment facilities. Electrical and instrumentation scope.',
       url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143850',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
+      solicitationNo:'RFP-1100-MMH3047',
+      location:'Austin, TX — Austin Energy & Austin Water Facilities',
+      responseDate:'2026-09-17',
+      setAside:'Open Competition',
       scrapedAt:new Date().toISOString() });
     await saveBid({ id:'fedbid-005',
       name:'City of Austin — Gilleland Wastewater Interceptor Construction RFQS 6100 CLMP400',
@@ -158,6 +174,10 @@ async function seedAllBids() {
       scope:'Construction of approximately 7,730 LF of 30-inch gravity interceptor and 7,610 LF of 36-inch gravity interceptor in the Western Gilleland Basin. Includes electrical, instrumentation, controls, SCADA integration for new interceptor system.',
       url:'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144532',
       source:'FedBids', value:'TBD', status:'active', region:'texas',
+      solicitationNo:'RFQS-6100-CLMP400',
+      location:'Austin, TX — Western Gilleland Basin',
+      responseDate:'2026-09-24',
+      setAside:'Open Competition',
       scrapedAt:new Date().toISOString() })
   }
 }
@@ -184,7 +204,11 @@ async function fetchFromBeacon() {
       const bidId = 'beacon-' + (bid.id||Date.now());
       const ex = await pool.query('SELECT id FROM bids WHERE id=$1', [bidId]);
       if (ex.rows.length > 0) continue;
-      await saveBid({ id:bidId, name:bid.title||'Houston Bid', agency:'H2bid', city:'Houston, TX', due, scope:bid.description||bid.title||'', url:bid.url||'https://www.beaconbid.com/solicitations/city-of-houston', source:'H2bid', value:'TBD', status:'active', region:'houston', scrapedAt:new Date().toISOString() });
+      await saveBid({ id:bidId, name:bid.title||'Houston Bid', agency:'H2bid', city:'Houston, TX', due, scope:bid.description||bid.title||'', url:bid.url||'https://www.beaconbid.com/solicitations/city-of-houston', source:'H2bid', value:'TBD', status:'active', region:'houston', solicitationNo:'RFQS-6100-CLMP400',
+      location:'Austin, TX — Western Gilleland Basin',
+      responseDate:'2026-09-24',
+      setAside:'Open Competition',
+      scrapedAt:new Date().toISOString() });
       added++;
     }
     if (added > 0) console.log('[AutoFetch] BeaconBid:', added, 'new bids');
@@ -364,6 +388,10 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       due: due || 'Check Link',
       scope: (emailBody || subject).substring(0, 500),
       url: rfqUrl,
+      solicitationNo: body.solicitationNo || solMatch ? solMatch[0] : '',
+      location: body.location || body.city || 'Texas',
+      responseDate: due || body.responseDate || '',
+      setAside: body.setAside || 'See Solicitation',
       source: 'FedBids',
       value: body.value || 'TBD',
       status: 'active',
