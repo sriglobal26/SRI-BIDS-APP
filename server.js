@@ -379,6 +379,17 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
     }
 
+    // ── DUPLICATE CHECK — skip if same solicitationNo or name already exists ──
+    const dupKey = solMatch ? solMatch[0] : subject;
+    const dupCheck = await pool.query(
+      "SELECT id FROM bids WHERE data->>'source' = 'FedBids' AND (data->>'solicitationNo' = $1 OR data->>'name' = $2) LIMIT 1",
+      [dupKey, subject]
+    );
+    if (dupCheck.rows.length > 0) {
+      console.log('[FedBids Ingest] Duplicate skipped:', dupKey);
+      return res.json({ success: true, skipped: true, reason: 'Duplicate bid already exists', key: dupKey });
+    }
+
     const bid = {
       id: 'fedbid-' + Date.now(),
       name: subject,
@@ -438,6 +449,42 @@ app.get('/api/fix-fedbids-dates', async (req, res) => {
        AND (data->>'due' IS NULL OR data->>'due' = '' OR data->>'due' = 'undefined')`
     );
     res.json({ success: true, fixed: result.rowCount, message: result.rowCount + ' FedBids due dates fixed' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Deduplicate FedBids — keep only the latest entry per solicitationNo or name
+app.get('/api/dedupe-fedbids', async (req, res) => {
+  try {
+    // Get all FedBids
+    const all = await pool.query("SELECT id, data FROM bids WHERE data->>'source' = 'FedBids' ORDER BY id ASC");
+    const rows = all.rows;
+    console.log('[Dedupe] Total FedBids in DB:', rows.length);
+
+    const seen = new Map(); // key = solicitationNo or name → keep latest
+    const toDelete = [];
+
+    for (const row of rows) {
+      const b = row.data;
+      // Use solicitationNo first, then name as dedup key
+      const key = (b.solicitationNo || b.name || b.id || '').trim().toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) {
+        // Already seen — delete the older one (keep current)
+        toDelete.push(seen.get(key));
+        seen.set(key, row.id);
+      } else {
+        seen.set(key, row.id);
+      }
+    }
+
+    let deleted = 0;
+    for (const dbId of toDelete) {
+      await pool.query("DELETE FROM bids WHERE id = $1", [dbId]);
+      deleted++;
+    }
+
+    console.log('[Dedupe] Deleted', deleted, 'duplicate FedBids');
+    res.json({ success: true, total: rows.length, deleted, remaining: rows.length - deleted });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
