@@ -811,7 +811,7 @@ const DIRECT_BID_URLS = {
   'esbd-005':'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
   'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
-  'fedbid-001':'https://sam.gov/opp/5b325487226b4a589ba9cbc39f417d6c/view',
+  'fedbid-001':'https://usfcr.com/search/opportunities/?oppId=01a39cc449de486f8c86555c0cb73b4e',
   'fedbid-002':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
   'fedbid-003':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144068',
   'fedbid-004':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143850',
@@ -845,26 +845,20 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-  // FedBids — open DIRECT bid page URL stored from email
+  // FedBids — use direct stored URL (Austin Finance works without login)
   if((b.source||'').toLowerCase()==='fedbids'){
-    // Priority 1: DIRECT_BID_URLS hardcoded table
-    const directU = DIRECT_BID_URLS[b.id];
-    if(directU && directU.startsWith('http')) return directU;
-    // Priority 2: URL stored on bid from email ingest — use as-is (most accurate)
+    // Priority 1: DIRECT_BID_URLS hardcoded table (most reliable)
+    const directU = DIRECT_BID_URLS[b.id] || '';
+    if(directU && directU.startsWith('http') && !directU.includes('sam.gov/opp/') && !directU.includes('beta.sam.gov/opp/')) return directU;
+    // Priority 2: Stored URL — skip sam.gov/opp/ links (require login)
     const storedU = (b.url||'').trim();
-    if(storedU && storedU.startsWith('http') &&
-       !storedU.includes('sam.gov/search') &&
-       !storedU.includes('beta.sam.gov/search')) {
-      return storedU;
-    }
-    // Priority 3: Extract solicitation # from bid name → SAM search
-    const sol = (b.name||'').match(/([A-Z]{2,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6})/);
-    if(sol) return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(sol[1])+'&is_active=true&sort=-modifiedDate';
-    // Priority 4: Use stored URL even if it is a search URL
-    if(storedU && storedU.startsWith('http')) return storedU;
-    // Priority 5: Keyword search on bid name
-    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,6).join('+');
-    return 'https://beta.sam.gov/search?index=opp&keywords='+encodeURIComponent(kw)+'&is_active=true';
+    if(storedU && storedU.startsWith('http') && !storedU.includes('sam.gov/opp/') && !storedU.includes('beta.sam.gov/opp/')) return storedU;
+    // Priority 3: If we have a sam.gov/opp link, redirect to usfcr.com search (public)
+    const sol = (b.name||'').match(/([A-Z]{1,6}\d{6,10}[A-Z]\d{4})/);
+    if(sol) return 'https://usfcr.com/search/opportunities/?q='+encodeURIComponent(sol[1]);
+    // Priority 4: USFCR keyword search — public, no login
+    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
+    return 'https://usfcr.com/search/opportunities/?q='+encodeURIComponent(kw);
   }
   return b.url || '';
 }
@@ -2072,11 +2066,7 @@ function showBidDetail(b) {
     openBtn.style.display = 'inline-flex';
     urlRow.style.display  = 'block';
     // Login note for SAM.gov
-    if(openUrl.includes('sam.gov')) {
-      noteEl.textContent = '⚠ SAM.gov may require login. If redirected to homepage, sign in first then return to this link.';
-    } else {
-      noteEl.textContent = '';
-    }
+    noteEl.textContent = '';
   } else {
     urlRow.style.display  = 'none';
     openBtn.style.display = 'none';
