@@ -790,27 +790,57 @@ function classifyBid(b){
 
 // Global direct bid URL map - overrides DB URLs
 const DIRECT_BID_URLS = {
-  'ebn-874521':'https://www.envirobidnet.com/bids/water-and-wastewater-treatment',
-  'ebn-873100':'https://www.envirobidnet.com/bids/scada-and-environmental-technology',
-  'ebn-872500':'https://www.envirobidnet.com/bids/scada-and-environmental-technology',
-  'ebn-871800':'https://envirobidnet.com/bids/environmental-engineering/all',
-  'ebn-870500':'https://www.envirobidnet.com/bids/water-and-wastewater-treatment',
-  'ebn-869800':'https://envirobidnet.com/bids/environmental-engineering/all',
-  'ebn-869200':'https://www.envirobidnet.com/environmental-bids-and-rfp',
-  'h2bid-001':'https://app.civcast.com/bid-opportunities/projects',
-  'h2bid-002':'https://www.civcastusa.com/publishers/5d6017908289a31a1c7febe1',
-  'h2bid-003':'https://www.civcastusa.com/publishers/5867827b01ec5a264c779277',
-  'h2bid-004':'https://www.bidnetdirect.com/texas/solicitations/open-bids/statewide/Wastewater-Treatment-Plants-Improvements/444120606309',
-  'h2bid-005':'https://www.bidnetdirect.com/public/supplier/solicitations/statewide/444028207150/abstract?purchasingGroupId=8407551&origin=1',
-  'h2bid-006':'https://app.civcast.com/bid-opportunities/projects',
-  'h2bid-007':'https://app.civcast.com/bid-opportunities/projects',
+  // ── EnviroBidNet (real bid IDs from Sam's account) ──
+  'ebn-881931':'https://envirobidnet.com/subscriber_view_bid/881931',
+  'ebn-881932':'https://envirobidnet.com/subscriber_view_bid/881932',
+  'ebn-881778':'https://envirobidnet.com/subscriber_view_bid/881778',
+  'ebn-881930':'https://envirobidnet.com/subscriber_view_bid/881930',
+  'ebn-881890':'https://envirobidnet.com/subscriber_view_bid/881890',
+  'ebn-881891':'https://envirobidnet.com/subscriber_view_bid/881891',
+  'ebn-881877':'https://envirobidnet.com/subscriber_view_bid/881877',
+  // ── H2bid / BeaconBid (Houston Public Works) ──
+  'h2bid-001':'https://www.beaconbid.com/solicitations/city-of-houston',
+  'h2bid-002':'https://www.beaconbid.com/solicitations/city-of-houston/085f5cae-deb4-4ccd-aae0-7c2c8c3e8bdf',
+  'h2bid-003':'https://www.beaconbid.com/solicitations/city-of-houston',
+  'h2bid-004':'https://www.beaconbid.com/solicitations/city-of-houston/d970dd10-3342-4999-b71c-8bda77e4b9f1',
+  'h2bid-005':'https://www.beaconbid.com/solicitations/city-of-houston',
+  'h2bid-006':'https://www.beaconbid.com/solicitations/city-of-houston/a14610b8-d60a-4d4a-be27-bd9c490eaf7c',
+  'h2bid-007':'https://www.beaconbid.com/solicitations/city-of-houston/a14610b8-d60a-4d4a-be27-bd9c490eaf7c',
+  'h2bid-008':'https://www.beaconbid.com/solicitations/city-of-houston/90956f58-9d02-4caf-8f2f-79f610978277',
+  'h2bid-009':'https://www.beaconbid.com/solicitations/city-of-houston/334da38b-c084-4235-a3d9-2e31155fcde7',
+  'h2bid-010':'https://www.beaconbid.com/solicitations/city-of-houston/bdccdb58-0dc2-45dc-9e43-d1c35f2d8b40',
+  // ── CivCast ──
+  'civcast-001':'https://app.civcast.com/bid-opportunities/projects',
+  'civcast-002':'https://app.civcast.com/bid-opportunities/projects',
+  'civcast-003':'https://www.civcastusa.com/publishers/5d6017908289a31a1c7febe1',
+  'civcast-004':'https://app.civcast.com/bid-opportunities/projects',
+  'civcast-005':'https://app.civcast.com/bid-opportunities/projects',
+  'civcast-006':'https://app.civcast.com/bid-opportunities/projects',
+  'civcast-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
+  // ── TX ESBD ──
   'esbd-001':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
   'esbd-002':'https://www.txsmartbuy.gov/esbd/3202600155',
   'esbd-003':'https://www.txsmartbuy.gov/esbd/26PSS001',
   'esbd-004':'https://www.txsmartbuy.gov/esbd/TMD26-FMO-0043352',
   'esbd-005':'https://www.txsmartbuy.gov/esbd/TAMUS-RFP-02-3452',
-  'esbd-006':'https://www.txsmartbuy.gov/esbd/3202600155',
+  'esbd-006':'https://www.txsmartbuy.gov/esbd/2025-ElectricConstruct-IDIQ',
   'esbd-007':'https://www.txsmartbuy.gov/esbd/696-FD-26-P007',
+  // ── TWDB ──
+  'twdb-001':'https://www.twdb.texas.gov/financial/programs/DWSRF/index.asp',
+  'twdb-002':'https://www.twdb.texas.gov/financial/programs/EDAP/index.asp',
+  'twdb-003':'https://www.twdb.texas.gov/financial/programs/swift/index.asp',
+  'twdb-004':'https://www.twdb.texas.gov/financial/programs/CWSRF/index.asp',
+  'twdb-005':'https://www.twdb.texas.gov/financial/programs/FIF/index.asp',
+  'twdb-006':'https://www.twdb.texas.gov/financial/programs/SWIFT/index.asp',
+  'twdb-007':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
+  // ── Manual / Seed ──
+  'seed-1':'https://www.saws.org/business-center/doing-business/procurement/',
+  'seed-2':'https://www.lnva.dst.tx.us/',
+  'seed-3':'https://www.hcfcd.org/Business/Contracting-Opportunities',
+  'seed-4':'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp',
+  'seed-5':'https://www.tra.texas.gov/procurement/',
+  'seed-6':'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true',
+  // ── FedBids — SAM.gov search by solicitation number ──
   'fedbid-001':'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true',
   'fedbid-002':'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true',
   'fedbid-003':'https://sam.gov/search?index=opp&q=GTG3007&is_active=true',
@@ -860,7 +890,9 @@ function getDirectUrl(b) {
     const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
     return 'https://sam.gov/search?index=opp&q='+encodeURIComponent(kw)+'&is_active=true';
   }
-  return b.url || '';
+  // All other sources — use DIRECT_BID_URLS first, then stored b.url
+  const fallbackU = DIRECT_BID_URLS[b.id] || b.url || '';
+  return fallbackU;
 }
 
 async function fetchBids(){
