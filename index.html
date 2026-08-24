@@ -1109,7 +1109,9 @@ function updBadges(){
   document.getElementById('badge-del').textContent=BIDS.filter(b=>bidState[b.id]==='deleted').length;
   // Always update FedBids badge — even when tab is not open
   const fb=document.getElementById('badge-fedbids');
-  if(fb) fb.textContent=BIDS.filter(b=>(b.source||'').toLowerCase()==='fedbids'&&bidState[b.id]==='active').length;
+  // Badge shows only the 5 approved FedBids
+  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+  if(fb) fb.textContent=BIDS.filter(b=>APPROVED_IDS.includes(b.id)).length;
 }
 function updStats(){
   document.getElementById('sn-act').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
@@ -1806,8 +1808,9 @@ function rowFed(b){
 }
 
 function renderFedBids(){
-  // Only show active FedBids — exclude deleted/expired/selected
-  const fedBids = BIDS.filter(b => (b.source||'').toLowerCase() === 'fedbids' && bidState[b.id] === 'active');
+  // ONLY show the 5 approved FedBids — ignore everything else
+  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+  const fedBids = BIDS.filter(b => APPROVED_IDS.includes(b.id));
   const tbody = document.getElementById('fedbids-body');
   const mt = document.getElementById('fedbids-mt');
   const cnt = document.getElementById('fedbids-result-count');
