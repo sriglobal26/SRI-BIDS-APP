@@ -123,6 +123,11 @@ async function autoFetchNewBids() {
 async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
   await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
+  // Delete duplicate FedBids on every startup
+  try {
+    const d = await pool.query(`DELETE FROM bids WHERE data->>'source'='FedBids' AND id NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
+    if(d.rowCount > 0) console.log('[initDB] Deleted', d.rowCount, 'duplicate FedBids');
+  } catch(e) { console.error('[initDB dedup]', e.message); }
   await pool.query(`CREATE TABLE IF NOT EXISTS emails (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP DEFAULT NOW())`).catch(()=>{});
   console.log('[DB] Ready');
   // Delete ALL bids including FedBids then reseed fresh
@@ -373,14 +378,6 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
-// Run every minute: delete duplicate FedBids from database
-cron.schedule('* * * * *', async () => {
-  try {
-    const r = await pool.query(`DELETE FROM bids WHERE data->>'source'='FedBids' AND id NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
-    if(r.rowCount > 0) console.log('[CRON] Deleted', r.rowCount, 'duplicate FedBids');
-  } catch(e) { console.error('[CRON dedup]', e.message); }
-});
-
 cron.schedule('0 */2 * * *', () => autoFetchNewBids()); // every 2 hours
 cron.schedule('0 */2 * * *', () => autoExpireAndClean()); // expire + clean every 2 hours
 
