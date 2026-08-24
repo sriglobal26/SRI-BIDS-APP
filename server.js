@@ -107,10 +107,8 @@ async function seedAllBids() {
     for (const b of TWDB_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
     // Manual bids — seed-5 is TWDB post-funding
     for (const b of MANUAL_BIDS) await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
-      added++;
-    }
-    if (added > 0) console.log('[AutoFetch] BeaconBid:', added, 'new bids');
-  } catch(e) { console.log('[AutoFetch] BeaconBid skipped:', e.message); }
+    console.log('[Seed] All bids seeded');
+  } catch(e) { console.error('[Seed Error]', e.message); }
 }
 
 async function autoFetchNewBids() {
@@ -299,8 +297,6 @@ app.get('/api/fix-fedbids-urls', async (req, res) => {
     }
     res.json({ success:true, fixed:total, message: total+' FedBid URLs fixed to SAM.gov search' });
   } catch(e) { res.status(500).json({error:e.message}); }
-});
-  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // Fix existing FedBids with missing due dates — set to 'Check Link'
