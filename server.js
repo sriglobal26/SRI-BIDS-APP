@@ -272,8 +272,87 @@ app.post('/api/bids', async (req, res) => {
 
 // FedBids email ingest — disabled, manual bids only via /api/nuke-fedbids
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
-  // Ingest disabled — FedBids managed manually to prevent duplicates
-  res.json({ success: true, skipped: true, reason: 'Manual FedBids only — ingest disabled' });
+  try {
+    const body = req.body;
+    const subject = body.subject || body.name || 'FedBid Opportunity';
+    const emailBody = body.body || body.text || body.snippet || body.content || '';
+    const allText = subject + ' ' + emailBody;
+
+    // ── STRICT DUPLICATE CHECK ──
+    // Check by solicitation number OR exact name match
+    const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    const solNo = solMatch ? solMatch[1] : '';
+    const dupCheck = await pool.query(
+      `SELECT id FROM bids WHERE data->>'source'='FedBids' AND (
+        (data->>'solicitationNo'=$1 AND $1 != '') OR
+        LOWER(data->>'name')=LOWER($2)
+      ) LIMIT 1`,
+      [solNo, subject]
+    );
+    if (dupCheck.rows.length > 0) {
+      return res.json({ success: true, skipped: true, reason: 'Duplicate', solNo, name: subject });
+    }
+
+    // ── DATE PARSER ──
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+      january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+    function parseDate(str) {
+      if (!str) return '';
+      str = str.trim();
+      let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return str;
+      m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m) { const yr = m[3].length===2?'20'+m[3]:m[3]; return yr+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      m = str.match(/([a-zA-Z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
+      if (m) { const mo=MONTHS[m[1].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      m = str.match(/(\d{1,2})\s+([a-zA-Z]+)\.?\s+(\d{4})/i);
+      if (m) { const mo=MONTHS[m[2].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'); }
+      return '';
+    }
+
+    // Parse due date
+    let due = '';
+    if (body.due) due = parseDate(body.due);
+    if (!due) {
+      const duePat = allText.match(/(?:due|deadline|response|closing)\s*(?:date)?[:\s]+([^\n<]{4,30})/i);
+      if (duePat) due = parseDate(duePat[1].trim());
+    }
+    if (!due) {
+      const dates = allText.match(/(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})/gi);
+      if (dates) { const parsed = dates.map(d=>parseDate(d)).filter(Boolean).sort(); due = parsed[parsed.length-1]||''; }
+    }
+
+    // Build URL from solicitation number
+    const rfqUrl = solNo
+      ? 'https://sam.gov/search?index=opp&q='+encodeURIComponent(solNo)+'&is_active=true'
+      : 'https://sam.gov/search?index=opp&keywords='+encodeURIComponent(subject.split(/[\s\-—]/)[0])+'&is_active=true';
+
+    const bid = {
+      id: 'fedbid-' + Date.now(),
+      name: subject,
+      agency: body.agency || body.from || 'FedBidSpeed',
+      city: body.city || 'Texas',
+      posted: new Date().toISOString().split('T')[0],
+      due: due || 'Check Link',
+      solicitationNo: solNo || '',
+      location: body.location || body.city || 'Texas',
+      responseDate: due || '',
+      setAside: body.setAside || 'See Solicitation',
+      scope: (emailBody||subject).substring(0,500),
+      url: rfqUrl,
+      source: 'FedBids',
+      value: body.value || 'TBD',
+      status: 'active',
+      region: 'texas',
+      userState: 'active',
+      scrapedAt: new Date().toISOString()
+    };
+    await pool.query(
+      'INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',
+      [bid.id, JSON.stringify(bid)]
+    );
+    res.json({ success: true, bid: { id: bid.id, name: bid.name, solNo, due } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // Fix ALL FedBids URLs in DB to use BidSpeed
