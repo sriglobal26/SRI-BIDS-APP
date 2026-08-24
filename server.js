@@ -144,6 +144,10 @@ app.get('/health', async (req, res) => {
 // NUCLEAR OPTION: Delete ALL FedBids instantly and reseed 5 clean
 app.get('/api/nuke-fedbids', async (req, res) => {
   try {
+    // Delete ALL non-approved FedBids using data->>'id' field
+    const del = await pool.query(`DELETE FROM bids WHERE data->>'source'='FedBids' AND data->>'id' NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
+    console.log('[NukeFedBids] Deleted', del.rowCount, 'duplicate FedBids');
+    // Now reseed any missing approved bids
     await pool.query("DELETE FROM bids WHERE data->>'source' = 'FedBids'");
     const FIVE = [
       { id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)', agency:'NAVFAC Mid-Atlantic / US Navy', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', solicitationNo:'N4008524R2674', location:'MCAS Cherry Point NC / MCAS Beaufort SC', responseDate:'2026-09-15', setAside:'Total Small Business Set-Aside (NAICS 541330)', scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection. 5-year IDIQ.', url:'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true', source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide', userState:'active' },
@@ -362,7 +366,8 @@ app.get('/api/clean-fedbids', async (req, res) => {
 
 app.delete('/api/bids/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM bids WHERE id=$1', [req.params.id]);
+    // Try both id column and data->>'id' field
+    await pool.query("DELETE FROM bids WHERE id=$1 OR data->>'id'=$1", [req.params.id]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
