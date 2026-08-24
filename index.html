@@ -755,14 +755,16 @@ const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public
 let bidState={};
 
 function classifyBid(b){
-  // FedBids — hide from frontend 4 days BEFORE due date
+  // FedBids — only show approved 5 bids, mark all others as deleted
   if((b.source||'').toLowerCase()==='fedbids'){
+    const APPROVED = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+    if(!APPROVED.includes(b.id)) return 'deleted'; // not approved — hide it
     if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)){
       const due = new Date(b.due + 'T00:00:00');
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() + 4); // today + 4 days
+      cutoff.setDate(cutoff.getDate() + 4);
       cutoff.setHours(0,0,0,0);
-      if(due < cutoff) return 'deleted'; // due within 4 days — hide it
+      if(due < cutoff) return 'deleted';
     }
     return 'active';
   }
@@ -1107,7 +1109,7 @@ function updBadges(){
   document.getElementById('badge-del').textContent=BIDS.filter(b=>bidState[b.id]==='deleted').length;
   // Always update FedBids badge — even when tab is not open
   const fb=document.getElementById('badge-fedbids');
-  if(fb) fb.textContent=BIDS.filter(b=>(b.source||'').toLowerCase()==='fedbids').length;
+  if(fb) fb.textContent=BIDS.filter(b=>(b.source||'').toLowerCase()==='fedbids'&&bidState[b.id]==='active').length;
 }
 function updStats(){
   document.getElementById('sn-act').textContent=BIDS.filter(b=>bidState[b.id]==='active'&&(b.source||'').toLowerCase()!=='fedbids').length;
