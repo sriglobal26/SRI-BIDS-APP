@@ -900,6 +900,18 @@ async function fetchBids(){
     const res = await fetch('/api/bids');
     const data = await res.json();
     BIDS = (data.bids||[]);
+    // AUTO-DEDUP: Delete any FedBid not in the approved 5
+    const ALLOWED = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+    const badFedBids = BIDS.filter(b => (b.source||'').toLowerCase()==='fedbids' && !ALLOWED.includes(b.id));
+    if(badFedBids.length > 0){
+      console.log('[FedBids] Deleting', badFedBids.length, 'duplicate bids...');
+      await Promise.all(badFedBids.map(b => fetch('/api/bids/'+b.id, {method:'DELETE'})));
+      // Re-fetch after cleanup
+      const res2 = await fetch('/api/bids');
+      const data2 = await res2.json();
+      BIDS = (data2.bids||[]);
+      console.log('[FedBids] Cleanup done. FedBids remaining:', BIDS.filter(b=>(b.source||'').toLowerCase()==='fedbids').length);
+    }
     bidState = {};
     BIDS.forEach(b=>{
       // Always check if expired first — expired bids go to deleted even if userState is 'active'
