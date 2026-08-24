@@ -373,6 +373,14 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
+// Run every minute: delete duplicate FedBids from database
+cron.schedule('* * * * *', async () => {
+  try {
+    const r = await pool.query(`DELETE FROM bids WHERE data->>'source'='FedBids' AND id NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
+    if(r.rowCount > 0) console.log('[CRON] Deleted', r.rowCount, 'duplicate FedBids');
+  } catch(e) { console.error('[CRON dedup]', e.message); }
+});
+
 cron.schedule('0 */2 * * *', () => autoFetchNewBids()); // every 2 hours
 cron.schedule('0 */2 * * *', () => autoExpireAndClean()); // expire + clean every 2 hours
 
