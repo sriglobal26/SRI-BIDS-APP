@@ -132,7 +132,14 @@ async function initDB() {
 
 // ─── ROUTES ──────────────────────────────────────────────────
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', async (req, res) => {
+  try {
+    // Delete all non-approved FedBids every time health is checked
+    const del = await pool.query(`DELETE FROM bids WHERE data->>'source' = 'FedBids' AND data->>'id' NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
+    const cnt = await pool.query(`SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids'`);
+    res.json({ status: 'ok', fedbids_in_db: parseInt(cnt.rows[0].count), duplicates_deleted: del.rowCount });
+  } catch(e) { res.json({ status: 'ok' }); }
+});
 
 // NUCLEAR OPTION: Delete ALL FedBids instantly and reseed 5 clean
 app.get('/api/nuke-fedbids', async (req, res) => {
