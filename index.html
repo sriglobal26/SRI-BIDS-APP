@@ -907,7 +907,7 @@ async function fetchBids(){
     const badFedBids = BIDS.filter(b => (b.source||'').toLowerCase()==='fedbids' && !ALLOWED.includes(b.id));
     if(badFedBids.length > 0){
       console.log('[FedBids] Deleting', badFedBids.length, 'duplicate bids...');
-      await Promise.all(badFedBids.map(b => fetch('/api/bids/'+b.id, {method:'DELETE'})));
+      await Promise.all(badFedBids.map(b => fetch('/api/bids/'+encodeURIComponent(b.id), {method:'DELETE'})));
       // Re-fetch after cleanup
       const res2 = await fetch('/api/bids');
       const data2 = await res2.json();
