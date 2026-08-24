@@ -150,6 +150,11 @@ app.get('/api/nuke-fedbids', async (req, res) => {
         'INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
         [b.id, JSON.stringify({...b, scrapedAt: new Date().toISOString()})]
       );
+      // Wipe any timestamp-ID duplicates for same solicitationNo
+      await pool.query(
+        "DELETE FROM bids WHERE data->>'solicitationNo' = $1 AND data->>'id' != $2",
+        [b.solicitationNo, b.id]
+      );
     }
     const count = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids'");
     res.json({ success: true, fedbids_now: parseInt(count.rows[0].count), message: 'Done — FedBids cleaned and reseeded' });
@@ -226,119 +231,10 @@ app.post('/api/bids', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// FedBids email ingest endpoint — accepts raw email data from Make.com
+// FedBids email ingest — disabled, manual bids only via /api/nuke-fedbids
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
-  try {
-    const body = req.body;
-    const subject = body.subject || body.name || 'FedBid Opportunity';
-    const emailBody = body.body || body.text || body.snippet || body.content || '';
-    const allText = subject + ' ' + emailBody;
-
-    // ── BULLETPROOF DATE PARSER ──────────────────────────────
-    const MONTHS = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
-      january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
-    function parseDate(str) {
-      if (!str) return '';
-      str = str.trim();
-      // YYYY-MM-DD
-      let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) return str;
-      // MM/DD/YYYY or MM-DD-YYYY
-      m = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
-      if (m) { const yr = m[3].length===2?'20'+m[3]:m[3]; return yr+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
-      // "Month DD, YYYY" or "Month DD YYYY"
-      m = str.match(/([a-zA-Z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
-      if (m) { const mo = MONTHS[m[1].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
-      // "DD Month YYYY"
-      m = str.match(/(\d{1,2})\s+([a-zA-Z]+)\.?\s+(\d{4})/i);
-      if (m) { const mo = MONTHS[m[2].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'); }
-      return '';
-    }
-
-    // Try to find due date — check body.due first, then search email text
-    let due = '';
-    if (body.due) { due = parseDate(body.due); }
-    if (!due) {
-      // Look for "Due:" "Deadline:" "Response Date:" "Closing:" "Due Date:" patterns
-      const duePat = allText.match(/(?:due\s*(?:date)?|deadline|response\s*date|closing\s*(?:date)?|solicitation\s*closes?)[:\s]+([^
-<]{4,30})/i);
-      if (duePat) due = parseDate(duePat[1].trim());
-    }
-    if (!due) {
-      // Scan all text for any date pattern
-      const allDates = allText.match(/(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4})/gi);
-      if (allDates && allDates.length > 0) {
-        // Pick the latest date (most likely to be the due date)
-        const parsed = allDates.map(d => parseDate(d)).filter(Boolean).sort();
-        due = parsed[parsed.length - 1] || '';
-      }
-    }
-
-    // ── URL BUILDER — extract direct bid page URL from email ──
-    // Get ALL URLs from email body
-    const allUrls = (emailBody.match(/https?:\/\/[^\s<>"\)]+/g) || []);
-    // Filter out tracking/unsubscribe/image URLs — keep real bid page URLs
-    const skipDomains = ['unsubscribe','tracking','click','open','img','pixel','mail','email','list-manage','mailchimp','constantcontact','sendgrid','fedbidspeed.com/t/','fedbidspeed.com/track'];
-    const bidUrls = allUrls.filter(u => !skipDomains.some(s => u.toLowerCase().includes(s)));
-    // Prefer non-SAM direct agency portal URLs (sam.gov search is last resort)
-    const directUrl = bidUrls.find(u =>
-      !u.includes('sam.gov/search') &&
-      !u.includes('beta.sam.gov/search') &&
-      u.length > 20
-    ) || bidUrls[0] || '';
-    // Solicitation number from subject
-    const solMatch = subject.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
-    let rfqUrl;
-    if (directUrl && directUrl.startsWith('http')) {
-      // Use direct agency portal URL from email — best option
-      rfqUrl = directUrl.replace('https://sam.gov/opp/', 'https://beta.sam.gov/opp/');
-    } else if (solMatch) {
-      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(solMatch[1]) + '&is_active=true&sort=-modifiedDate';
-    } else if (body.url && body.url.startsWith('http')) {
-      rfqUrl = body.url;
-    } else {
-      const kw = subject.replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
-      rfqUrl = 'https://beta.sam.gov/search?index=opp&keywords=' + encodeURIComponent(kw) + '&is_active=true';
-    }
-
-    // ── DUPLICATE CHECK — skip if same solicitationNo or name already exists ──
-    const dupKey = solMatch ? solMatch[0] : subject;
-    const dupCheck = await pool.query(
-      "SELECT id FROM bids WHERE data->>'source' = 'FedBids' AND (data->>'solicitationNo' = $1 OR data->>'name' = $2) LIMIT 1",
-      [dupKey, subject]
-    );
-    if (dupCheck.rows.length > 0) {
-      console.log('[FedBids Ingest] Duplicate skipped:', dupKey);
-      return res.json({ success: true, skipped: true, reason: 'Duplicate bid already exists', key: dupKey });
-    }
-
-    const bid = {
-      id: 'fedbid-' + Date.now(),
-      name: subject,
-      agency: body.agency || body.from || body.sender || 'FedBidSpeed',
-      city: body.city || 'Texas',
-      posted: body.posted || new Date().toISOString().split('T')[0],
-      due: due || 'Check Link',
-      scope: (emailBody || subject).substring(0, 500),
-      url: rfqUrl,
-      solicitationNo: body.solicitationNo || solMatch ? solMatch[0] : '',
-      location: body.location || body.city || 'Texas',
-      responseDate: due || body.responseDate || '',
-      setAside: body.setAside || 'See Solicitation',
-      source: 'FedBids',
-      value: body.value || 'TBD',
-      status: 'active',
-      region: 'texas',
-      scrapedAt: new Date().toISOString()
-    };
-    // Only save if we have fewer than 10 FedBids to prevent runaway duplicates
-    const fedCount = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids'");
-    if (parseInt(fedCount.rows[0].count) >= 10) {
-      return res.json({ success: false, skipped: true, reason: 'FedBids limit reached (10 max)', count: fedCount.rows[0].count });
-    }
-    await saveBid(bid);
-    res.json({ success: true, bid });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  // Ingest disabled — FedBids managed manually to prevent duplicates
+  res.json({ success: true, skipped: true, reason: 'Manual FedBids only — ingest disabled' });
 });
 
 // Fix ALL FedBids URLs in DB to use BidSpeed
@@ -492,8 +388,9 @@ async function autoExpireAndClean() {
 async function cleanFedBidsOnStartup() {
   try {
     // Delete every FedBid including duplicates from Make.com
+    // Delete ALL FedBids — including any with timestamp IDs from Make.com
     const del = await pool.query("DELETE FROM bids WHERE data->>'source' = 'FedBids'");
-    console.log('[FedBids] Startup: deleted', del.rowCount, 'FedBids (including duplicates)');
+    console.log('[FedBids] Startup: deleted', del.rowCount, 'FedBids (all wiped)');
 
     // Reseed exactly 5 verified open bids
     const FIVE_BIDS = [
@@ -507,6 +404,11 @@ async function cleanFedBidsOnStartup() {
       await pool.query(
         'INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
         [b.id, JSON.stringify({...b, scrapedAt: new Date().toISOString()})]
+      );
+      // Wipe any timestamp-ID duplicates for same solicitationNo
+      await pool.query(
+        "DELETE FROM bids WHERE data->>'solicitationNo' = $1 AND data->>'id' != $2",
+        [b.solicitationNo, b.id]
       );
     }
     console.log('[FedBids] Startup: seeded 5 clean verified bids');
