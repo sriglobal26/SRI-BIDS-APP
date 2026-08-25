@@ -1,13 +1,29 @@
 // SRI Global Bids App — server.js
 'use strict';
 const express = require('express');
+
+// ─── GLOBAL CRASH PREVENTION ─────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH] Uncaught Exception:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[CRASH] Unhandled Rejection:', reason);
+});
 const path = require('path');
 const { Pool } = require('pg');
 const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000, max: 10 });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 30000,
+  idleTimeoutMillis: 600000,
+  max: 10,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -112,8 +128,10 @@ async function seedAllBids() {
 }
 
 async function autoFetchNewBids() {
-  console.log('[AutoFetch] Running every 2 hours...');
-  await fetchFromBeacon();
+  try {
+    console.log('[AutoFetch] Running every 2 hours...');
+    await fetchFromBeacon();
+  } catch(e) { console.error('[AutoFetch Error]', e.message); }
 }
 
 // ─── DB INIT ─────────────────────────────────────────────────
@@ -455,8 +473,8 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
-cron.schedule('0 */2 * * *', () => autoFetchNewBids()); // every 2 hours
-cron.schedule('0 */2 * * *', () => autoExpireAndClean()); // expire + clean every 2 hours
+cron.schedule('0 */2 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
+cron.schedule('0 */2 * * *', async () => { try { await autoExpireAndClean(); } catch(e){ console.error('[Cron]',e.message); } }); // expire + clean every 2 hours
 
 // ─── START ───────────────────────────────────────────────────
 // Auto-expire completed bids and clean 14-day-old deleted bids
@@ -536,10 +554,11 @@ async function cleanFedBidsOnStartup() {
   }
 }
 
+app.use((err,req,res,next) => { console.error('[Express]',err.message); res.status(500).json({error:err.message}); });
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
 initDB().then(async () => {
   // On every startup: wipe all FedBids and reseed exactly 5 clean verified bids
-  await cleanFedBidsOnStartup();
+  try { await cleanFedBidsOnStartup(); } catch(e){ console.error('[Startup]',e.message); }
   setTimeout(autoFetchNewBids, 15000);
   setTimeout(autoExpireAndClean, 20000);
 }).catch(err => console.error('[DB] Init failed:', err.message));
