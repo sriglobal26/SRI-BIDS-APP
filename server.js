@@ -1,6 +1,8 @@
 // SRI Global Bids App — server.js
 'use strict';
 const express = require('express');
+const axios   = require('axios');
+const cheerio = require('cheerio');
 
 // ─── GLOBAL CRASH PREVENTION ─────────────────────────────────
 process.on('uncaughtException', (err) => {
@@ -132,9 +134,6 @@ async function seedAllBids() {
 }
 
 // ─── AUTO FETCH: Real bid scraper runs every 2 hours ───────
-const axios = require('axios');
-const cheerio = require('cheerio');
-
 async function fetchGovCBHouston() {
   try {
     // Scrape GovCB for City of Houston open bids
