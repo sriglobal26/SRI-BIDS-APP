@@ -134,39 +134,11 @@ async function seedAllBids() {
 }
 
 // ─── AUTO FETCH ──────────────────────────────────────────────
-async function fetchGovCBHouston() {
-  try {
-    const res = await axios.get('https://www.govcb.com/statebrowse/state.bids-Texas-City%20of%20Houston.htm', {
-      timeout: 10000,
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const $ = cheerio.load(res.data);
-    let added = 0;
-    for (const el of $('a[href*="government-bids"]').toArray().slice(0, 20)) {
-      const title = $(el).text().trim();
-      const href  = 'https://www.govcb.com' + $(el).attr('href');
-      if (!/(SCADA|instrumentation|electrical|control|wastewater|water treatment|lift station|pump station|WWTP)/i.test(title)) continue;
-      if (title.length < 10) continue;
-      const id = 'h2bid-gc-' + Buffer.from(title).toString('base64').slice(0,10).replace(/[^a-zA-Z0-9]/g,'');
-      const exists = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
-      if (exists.rows.length > 0) continue;
-      await saveBid({ id, name: title, agency:'City of Houston', city:'Houston, TX',
-        posted: new Date().toISOString().split('T')[0], due:'', scope:'E&I scope — See RFQ link',
-        url: href, source:'H2bid', value:'TBD', status:'active', region:'houston', userState:'active',
-        scrapedAt: new Date().toISOString() });
-      added++;
-    }
-    if (added > 0) console.log('[AutoFetch] GovCB: added', added, 'new bids');
-  } catch(e) { console.error('[AutoFetch GovCB]', e.message); }
+async function autoFetchNewBids() {
+  // Auto-fetch disabled — bids added via Make.com email ingest
+  console.log('[AutoFetch] Skipped — using Make.com ingest');
 }
 
-async function autoFetchNewBids() {
-  try {
-    console.log('[AutoFetch] Running...');
-    await fetchGovCBHouston();
-    console.log('[AutoFetch] Done');
-  } catch(e) { console.error('[AutoFetch Error]', e.message); }
-}
 // ─── DB INIT ─────────────────────────────────────────────────
 
 async function initDB() {
@@ -589,14 +561,12 @@ async function cleanFedBidsOnStartup() {
 
 app.use((err,req,res,next) => { console.error('[Express]',err.message); res.status(500).json({error:err.message}); });
 // Listen FIRST so healthcheck passes immediately
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('[SRI Bids] Listening on port', PORT);
-  // DB init after server is ready
-  setTimeout(() => {
-    initDB().then(async () => {
-      try { await cleanFedBidsOnStartup(); } catch(e){ console.error('[Startup]',e.message); }
-      setTimeout(autoFetchNewBids, 30000);
-      setTimeout(autoExpireAndClean, 45000);
-    }).catch(err => console.error('[DB] Init failed:', err.message));
-  }, 100);
-});
+app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Server running on port', PORT));
+
+initDB()
+  .then(async () => {
+    try { await cleanFedBidsOnStartup(); } catch(e) { console.error('[Startup]', e.message); }
+    setTimeout(autoFetchNewBids, 60000);
+    setTimeout(autoExpireAndClean, 90000);
+  })
+  .catch(e => console.error('[DB Init]', e.message));
