@@ -757,7 +757,7 @@ let bidState={};
 function classifyBid(b){
   // FedBids — only show approved 5 bids, mark all others as deleted
   if((b.source||'').toLowerCase()==='fedbids'){
-    const APPROVED = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+    const APPROVED = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006'];
     if(!APPROVED.includes(b.id)) return 'deleted'; // not approved — hide it
     if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)){
       const due = new Date(b.due + 'T00:00:00');
@@ -848,6 +848,7 @@ const DIRECT_BID_URLS = {
   'fedbid-003':'https://sam.gov/search?index=opp&q=GTG3007&is_active=true',
   'fedbid-004':'https://sam.gov/search?index=opp&q=MMH3047&is_active=true',
   'fedbid-005':'https://sam.gov/search?index=opp&q=CLMP400&is_active=true',
+  'fedbid-006':'https://sam.gov/search?index=opp&q=FA558725Q0077&is_active=true',
 };
 function formatDate(d) {
   if (!d) return '—';
@@ -902,7 +903,7 @@ async function fetchBids(){
     const res = await fetch('/api/bids');
     const data = await res.json();
     // Strip non-approved FedBids from memory — never show duplicates
-    const APPROVED_FEDBIDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+    const APPROVED_FEDBIDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006'];
     BIDS = (data.bids||[]).filter(b =>
       (b.source||'').toLowerCase() !== 'fedbids' || APPROVED_FEDBIDS.includes(b.id)
     );
@@ -1102,7 +1103,7 @@ function updBadges(){
   // Always update FedBids badge — even when tab is not open
   const fb=document.getElementById('badge-fedbids');
   // Badge shows only the 5 approved FedBids
-  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006'];
   if(fb) fb.textContent=BIDS.filter(b=>APPROVED_IDS.includes(b.id)).length;
 }
 function updStats(){
@@ -1801,7 +1802,7 @@ function rowFed(b){
 
 function renderFedBids(){
   // ONLY show the 5 approved FedBids — ignore everything else
-  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005'];
+  const APPROVED_IDS = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006'];
   const fedBids = BIDS.filter(b => APPROVED_IDS.includes(b.id));
   const tbody = document.getElementById('fedbids-body');
   const mt = document.getElementById('fedbids-mt');
