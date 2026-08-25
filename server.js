@@ -133,99 +133,40 @@ async function seedAllBids() {
   } catch(e) { console.error('[Seed Error]', e.message); }
 }
 
-// ─── AUTO FETCH: Real bid scraper runs every 2 hours ───────
+// ─── AUTO FETCH ──────────────────────────────────────────────
 async function fetchGovCBHouston() {
   try {
-    // Scrape GovCB for City of Houston open bids
     const res = await axios.get('https://www.govcb.com/statebrowse/state.bids-Texas-City%20of%20Houston.htm', {
-      timeout: 15000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SRIBidsBot/1.0)' }
+      timeout: 10000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const $ = cheerio.load(res.data);
-    const newBids = [];
-
-    $('a[href*="government-bids"]').each((i, el) => {
+    let added = 0;
+    for (const el of $('a[href*="government-bids"]').toArray().slice(0, 20)) {
       const title = $(el).text().trim();
       const href  = 'https://www.govcb.com' + $(el).attr('href');
-      const parent = $(el).parent().text();
-      // Only E&I relevant bids
-      const relevant = /(SCADA|instrumentation|electrical|control|wastewater|water|lift station|pump|treatment|WWTP|pipeline|sewer)/i.test(title + parent);
-      if (relevant && title.length > 10) {
-        newBids.push({ title, href, source: 'H2bid' });
-      }
-    });
-
-    let added = 0;
-    for (const b of newBids.slice(0, 10)) {
-      const id = 'h2bid-auto-' + Buffer.from(b.title).toString('base64').slice(0,12).replace(/[^a-zA-Z0-9]/g,'');
-      const exists = await pool.query("SELECT id FROM bids WHERE id=$1 OR LOWER(data->>'name')=LOWER($2)", [id, b.title]);
+      if (!/(SCADA|instrumentation|electrical|control|wastewater|water treatment|lift station|pump station|WWTP)/i.test(title)) continue;
+      if (title.length < 10) continue;
+      const id = 'h2bid-gc-' + Buffer.from(title).toString('base64').slice(0,10).replace(/[^a-zA-Z0-9]/g,'');
+      const exists = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
       if (exists.rows.length > 0) continue;
-      await saveBid({
-        id, name: b.title, agency: 'City of Houston', city: 'Houston, TX',
-        posted: new Date().toISOString().split('T')[0], due: '', scope: 'E&I scope — See RFQ link',
-        url: b.href, source: 'H2bid', value: 'TBD', status: 'active', region: 'houston',
-        userState: 'active', scrapedAt: new Date().toISOString()
-      });
+      await saveBid({ id, name: title, agency:'City of Houston', city:'Houston, TX',
+        posted: new Date().toISOString().split('T')[0], due:'', scope:'E&I scope — See RFQ link',
+        url: href, source:'H2bid', value:'TBD', status:'active', region:'houston', userState:'active',
+        scrapedAt: new Date().toISOString() });
       added++;
     }
-    if (added > 0) console.log('[AutoFetch] GovCB Houston: added', added, 'new bids');
+    if (added > 0) console.log('[AutoFetch] GovCB: added', added, 'new bids');
   } catch(e) { console.error('[AutoFetch GovCB]', e.message); }
-}
-
-async function fetchSAMGovBids() {
-  try {
-    // SAM.gov public API — SCADA/water/wastewater in Texas, open only
-    const keywords = ['SCADA water Texas', 'wastewater instrumentation Texas', 'water treatment controls Texas'];
-    let added = 0;
-    for (const kw of keywords) {
-      const url = `https://api.sam.gov/opportunities/v2/search?limit=10&api_key=DEMO_KEY&q=${encodeURIComponent(kw)}&postedFrom=${getDateMinus(60)}&status=active&ptype=o`;
-      try {
-        const res = await axios.get(url, { timeout: 15000 });
-        const opps = res.data?.opportunitiesData || [];
-        for (const opp of opps.slice(0, 5)) {
-          const id = 'fedbid-auto-' + (opp.noticeId || opp.solicitationNumber || Date.now()).toString().slice(-8);
-          const exists = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [opp.solicitationNumber||'']);
-          if (exists.rows.length > 0) continue;
-          const due = opp.responseDeadLine ? opp.responseDeadLine.split('T')[0] : '';
-          // Skip if due within 4 days
-          if (due && new Date(due) < new Date(Date.now() + 4*86400000)) continue;
-          const APPROVED = ['fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006'];
-          const fedCount = await pool.query("SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids' AND id NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005','fedbid-006')");
-          if (parseInt(fedCount.rows[0].count) >= 20) continue; // cap at 20 auto-fetched fedbids
-          await saveBid({
-            id, name: opp.title || 'Federal Bid',
-            agency: opp.departmentName || opp.organizationHierarchy?.[0]?.name || 'Federal Agency',
-            city: opp.placeOfPerformance?.city?.name ? opp.placeOfPerformance.city.name + ', ' + (opp.placeOfPerformance.state?.code||'TX') : 'Texas',
-            posted: opp.postedDate ? opp.postedDate.split('T')[0] : new Date().toISOString().split('T')[0],
-            due, solicitationNo: opp.solicitationNumber || '',
-            responseDate: due, setAside: opp.typeOfSetAside || 'See Solicitation',
-            scope: opp.description ? opp.description.substring(0,500) : 'Federal E&I Opportunity — See SAM.gov',
-            url: `https://sam.gov/search?index=opp&q=${encodeURIComponent(opp.solicitationNumber||opp.title)}&is_active=true`,
-            source: 'FedBids', value: 'TBD', status: 'active', region: 'statewide',
-            userState: 'active', scrapedAt: new Date().toISOString()
-          });
-          added++;
-        }
-      } catch(e) { /* SAM.gov DEMO_KEY may rate-limit */ }
-    }
-    if (added > 0) console.log('[AutoFetch] SAM.gov: added', added, 'new FedBids');
-  } catch(e) { console.error('[AutoFetch SAMGov]', e.message); }
-}
-
-function getDateMinus(days) {
-  const d = new Date(); d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0].replace(/-/g,'/');
 }
 
 async function autoFetchNewBids() {
   try {
     console.log('[AutoFetch] Running...');
     await fetchGovCBHouston();
-    await fetchSAMGovBids();
     console.log('[AutoFetch] Done');
   } catch(e) { console.error('[AutoFetch Error]', e.message); }
 }
-
 // ─── DB INIT ─────────────────────────────────────────────────
 
 async function initDB() {
