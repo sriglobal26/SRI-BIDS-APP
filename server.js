@@ -588,10 +588,15 @@ async function cleanFedBidsOnStartup() {
 }
 
 app.use((err,req,res,next) => { console.error('[Express]',err.message); res.status(500).json({error:err.message}); });
-app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Listening on port', PORT));
-initDB().then(async () => {
-  // On every startup: wipe all FedBids and reseed exactly 5 clean verified bids
-  try { await cleanFedBidsOnStartup(); } catch(e){ console.error('[Startup]',e.message); }
-  setTimeout(autoFetchNewBids, 15000);
-  setTimeout(autoExpireAndClean, 20000);
-}).catch(err => console.error('[DB] Init failed:', err.message));
+// Listen FIRST so healthcheck passes immediately
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('[SRI Bids] Listening on port', PORT);
+  // DB init after server is ready
+  setTimeout(() => {
+    initDB().then(async () => {
+      try { await cleanFedBidsOnStartup(); } catch(e){ console.error('[Startup]',e.message); }
+      setTimeout(autoFetchNewBids, 30000);
+      setTimeout(autoExpireAndClean, 45000);
+    }).catch(err => console.error('[DB] Init failed:', err.message));
+  }, 100);
+});
