@@ -143,20 +143,20 @@ async function autoFetchNewBids() {
 // ─── DB INIT ─────────────────────────────────────────────────
 
 async function initDB() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+  await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
+  // Delete duplicate FedBids on every startup
   try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
-    await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
-    const cnt = await pool.query('SELECT COUNT(*) FROM bids');
-    if (parseInt(cnt.rows[0].count) === 0) {
-      console.log('[DB] Empty — seeding bids...');
-      await seedAllBids();
-    }
-    console.log('[DB] Ready. Bids in DB:', cnt.rows[0].count);
-  } catch(e) {
-    console.error('[DB Init Error]', e.message);
-  }
+  // FedBid dedup handled by /api/dedupe-fedbids endpoint
+  //if(d.rowCount > 0) console.log('[initDB] Deleted duplicate FedBids');
+  } catch(e) { console.error('[initDB dedup]', e.message); }
+  await pool.query(`CREATE TABLE IF NOT EXISTS emails (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP DEFAULT NOW())`).catch(()=>{});
+  console.log('[DB] Ready');
+  // Delete ALL bids including FedBids then reseed fresh
+  // Seed only if empty
+  const bcount = await pool.query('SELECT COUNT(*) FROM bids');
+  if(parseInt(bcount.rows[0].count) === 0) await seedAllBids();
 }
-
 
 // ─── ROUTES ──────────────────────────────────────────────────
 
@@ -556,10 +556,15 @@ async function cleanFedBidsOnStartup() {
 
 app.use((err,req,res,next) => { console.error('[Express]',err.message); res.status(500).json({error:err.message}); });
 // Listen FIRST so healthcheck passes immediately
-// Start server immediately
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('[SRI Bids] Running on port', PORT);
-  // DB init after server is listening
-  setTimeout(initDB, 100);
-  setTimeout(autoExpireAndClean, 3600000); // 1 hour
-});
+app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Server running on port', PORT));
+
+initDB()
+  .then(() => {
+    // Run cleanup after 5 minutes — server fully stable by then
+    setTimeout(async () => {
+      try { await cleanFedBidsOnStartup(); } catch(e) { console.error('[Startup]', e.message); }
+    }, 300000);
+    setTimeout(autoFetchNewBids, 120000);
+    setTimeout(autoExpireAndClean, 180000);
+  })
+  .catch(e => console.error('[DB Init]', e.message));
