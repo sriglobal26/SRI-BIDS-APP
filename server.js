@@ -136,8 +136,92 @@ async function seedAllBids() {
 
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
-  // Auto-fetch disabled — bids added via Make.com email ingest
-  console.log('[AutoFetch] Skipped — using Make.com ingest');
+  try {
+    console.log('[AutoFetch] Checking SAM.gov for new bids...');
+    await fetchFromSAMGov();
+  } catch(e) {
+    console.error('[AutoFetch Error]', e.message);
+  }
+}
+
+async function fetchFromSAMGov() {
+  // Search SAM.gov public API for open E&I / water / SCADA bids in Texas
+  const searches = [
+    'SCADA water Texas',
+    'wastewater instrumentation Texas',
+    'electrical controls water treatment Texas'
+  ];
+  let added = 0;
+  for (const q of searches) {
+    try {
+      const url = 'https://api.sam.gov/opportunities/v2/search?limit=5&api_key=DEMO_KEY' +
+        '&q=' + encodeURIComponent(q) +
+        '&ptype=o&status=active&dateRange=custom' +
+        '&startDate=' + getDateMinus(30) + '&endDate=' + getTodayDate();
+      const res = await axios.get(url, { timeout: 10000 });
+      const opps = (res.data && res.data.opportunitiesData) || [];
+      for (const opp of opps) {
+        if (!opp.solicitationNumber) continue;
+        // Skip if already in DB
+        const exists = await pool.query(
+          "SELECT id FROM bids WHERE data->>'solicitationNo'=$1",
+          [opp.solicitationNumber]
+        );
+        if (exists.rows.length > 0) continue;
+        // Skip if due within 4 days or already past
+        const due = opp.responseDeadLine ? opp.responseDeadLine.split('T')[0] : '';
+        if (due) {
+          const dueDate = new Date(due);
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() + 4);
+          if (dueDate < cutoff) continue;
+        }
+        // Cap FedBids auto-fetch at 20
+        const cnt = await pool.query(
+          "SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids' AND id NOT LIKE 'fedbid-00%'"
+        );
+        if (parseInt(cnt.rows[0].count) >= 20) break;
+        const bid = {
+          id: 'fedbid-auto-' + opp.solicitationNumber.replace(/[^a-zA-Z0-9]/g,'').slice(-8),
+          name: opp.title || 'Federal Bid',
+          agency: opp.departmentName || opp.subtierName || 'Federal Agency',
+          city: (opp.placeOfPerformance && opp.placeOfPerformance.city && opp.placeOfPerformance.city.name)
+            ? opp.placeOfPerformance.city.name + ', ' + ((opp.placeOfPerformance.state && opp.placeOfPerformance.state.code) || 'TX')
+            : 'Texas',
+          posted: opp.postedDate ? opp.postedDate.split('T')[0] : getTodayDate(),
+          due: due || '',
+          solicitationNo: opp.solicitationNumber,
+          location: 'Texas',
+          responseDate: due || '',
+          setAside: opp.typeOfSetAside || 'See Solicitation',
+          scope: (opp.description || 'Federal E&I Opportunity').substring(0, 500),
+          url: 'https://sam.gov/search?index=opp&q=' + encodeURIComponent(opp.solicitationNumber) + '&is_active=true',
+          source: 'FedBids',
+          value: 'TBD',
+          status: 'active',
+          region: 'statewide',
+          userState: 'active',
+          scrapedAt: new Date().toISOString()
+        };
+        await saveBid(bid);
+        added++;
+        console.log('[AutoFetch] Added FedBid:', opp.solicitationNumber, '-', opp.title);
+      }
+    } catch(e) {
+      console.error('[AutoFetch SAM]', q, '-', e.message);
+    }
+  }
+  if (added > 0) console.log('[AutoFetch] Added', added, 'new FedBids from SAM.gov');
+  else console.log('[AutoFetch] No new bids found');
+}
+
+function getTodayDate() {
+  return new Date().toISOString().split('T')[0].replace(/-/g,'/');
+}
+function getDateMinus(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split('T')[0].replace(/-/g,'/');
 }
 
 // ─── DB INIT ─────────────────────────────────────────────────
@@ -473,7 +557,7 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
-cron.schedule('0 */2 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
+cron.schedule('0 */6 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
 cron.schedule('0 */2 * * *', async () => { try { await autoExpireAndClean(); } catch(e){ console.error('[Cron]',e.message); } }); // expire + clean every 2 hours
 
 // ─── START ───────────────────────────────────────────────────
