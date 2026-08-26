@@ -143,26 +143,24 @@ async function autoFetchNewBids() {
 // ─── DB INIT ─────────────────────────────────────────────────
 
 async function initDB() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
-  await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
-  // FedBid dedup runs via /api/dedupe-fedbids endpoint
-  await pool.query(`CREATE TABLE IF NOT EXISTS emails (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP DEFAULT NOW())`).catch(()=>{});
-  console.log('[DB] Ready');
-  // Delete ALL bids including FedBids then reseed fresh
-  await pool.query('DELETE FROM bids');
-  await seedAllBids();
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
+    const cnt = await pool.query('SELECT COUNT(*) FROM bids');
+    if (parseInt(cnt.rows[0].count) === 0) {
+      console.log('[DB] Empty — seeding bids...');
+      await seedAllBids();
+    }
+    console.log('[DB] Ready. Bids in DB:', cnt.rows[0].count);
+  } catch(e) {
+    console.error('[DB Init Error]', e.message);
+  }
 }
+
 
 // ─── ROUTES ──────────────────────────────────────────────────
 
-app.get('/health', async (req, res) => {
-  try {
-    // Delete all non-approved FedBids every time health is checked
-    const del = await pool.query(`DELETE FROM bids WHERE data->>'source' = 'FedBids' AND data->>'id' NOT IN ('fedbid-001','fedbid-002','fedbid-003','fedbid-004','fedbid-005')`);
-    const cnt = await pool.query(`SELECT COUNT(*) FROM bids WHERE data->>'source'='FedBids'`);
-    res.json({ status: 'ok', fedbids_in_db: parseInt(cnt.rows[0].count), duplicates_deleted: del.rowCount });
-  } catch(e) { res.json({ status: 'ok' }); }
-});
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // NUCLEAR OPTION: Delete ALL FedBids instantly and reseed 5 clean
 app.get('/api/nuke-fedbids', async (req, res) => {
@@ -558,14 +556,10 @@ async function cleanFedBidsOnStartup() {
 
 app.use((err,req,res,next) => { console.error('[Express]',err.message); res.status(500).json({error:err.message}); });
 // Listen FIRST so healthcheck passes immediately
-app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Server running on port', PORT));
-
-initDB()
-  .then(() => {
-    // Run cleanup after 5 minutes — server fully stable by then
-    setTimeout(async () => {
-        }, 300000);
-    setTimeout(autoFetchNewBids, 120000);
-    setTimeout(autoExpireAndClean, 180000);
-  })
-  .catch(e => console.error('[DB Init]', e.message));
+// Start server immediately
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('[SRI Bids] Running on port', PORT);
+  // DB init after server is listening
+  setTimeout(initDB, 100);
+  setTimeout(autoExpireAndClean, 3600000); // 1 hour
+});
