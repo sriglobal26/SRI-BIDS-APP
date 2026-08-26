@@ -564,9 +564,12 @@ app.use((err,req,res,next) => { console.error('[Express]',err.message); res.stat
 app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Server running on port', PORT));
 
 initDB()
-  .then(async () => {
-    try { await cleanFedBidsOnStartup(); } catch(e) { console.error('[Startup]', e.message); }
-    setTimeout(autoFetchNewBids, 60000);
-    setTimeout(autoExpireAndClean, 90000);
+  .then(() => {
+    // Run cleanup after 5 minutes — server fully stable by then
+    setTimeout(async () => {
+      try { await cleanFedBidsOnStartup(); } catch(e) { console.error('[Startup]', e.message); }
+    }, 300000);
+    setTimeout(autoFetchNewBids, 120000);
+    setTimeout(autoExpireAndClean, 180000);
   })
   .catch(e => console.error('[DB Init]', e.message));
