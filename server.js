@@ -143,17 +143,14 @@ async function autoFetchNewBids() {
 // ─── DB INIT ─────────────────────────────────────────────────
 
 async function initDB() {
-  // Only create tables — no deletes, no seeds, no heavy work
   await pool.query(`CREATE TABLE IF NOT EXISTS bids (id TEXT PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
   await pool.query(`ALTER TABLE bids ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(()=>{});
   await pool.query(`CREATE TABLE IF NOT EXISTS emails (id SERIAL PRIMARY KEY, data JSONB, created_at TIMESTAMP DEFAULT NOW())`).catch(()=>{});
-  // Seed only if empty
   const cnt = await pool.query('SELECT COUNT(*) FROM bids');
   if (parseInt(cnt.rows[0].count) === 0) {
-    console.log('[initDB] Empty DB — seeding...');
     await seedAllBids();
   }
-  console.log('[initDB] Ready');
+  console.log('[initDB] Ready — bids:', cnt.rows[0].count);
 }
 
 
@@ -239,11 +236,6 @@ app.listen(PORT, '0.0.0.0', () => console.log('[SRI Bids] Server running on port
 
 initDB()
   .then(() => {
-    // Run cleanup after 5 minutes — server fully stable by then
-    setTimeout(async () => {
-      try { await cleanFedBidsOnStartup(); } catch(e) { console.error('[Startup]', e.message); }
-    }, 300000);
-    setTimeout(autoFetchNewBids, 120000);
-    setTimeout(autoExpireAndClean, 180000);
+    setTimeout(autoExpireAndClean, 600000);
   })
-  .catch(e => console.error('[DB Init]', e.message));
+  .catch(e => console.error('[DB]', e.message));
