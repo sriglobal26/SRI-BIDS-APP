@@ -137,7 +137,7 @@ async function seedAllBids() {
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
   // Bids come automatically from BidSpeed via Make.com email ingest
-  // Make.com watches sri-bids@srigl.com for emails from system@fedbidspeed.com
+  // Make.com watches fedbids@srigl.com for emails from system@fedbidspeed.com
   // and posts to /api/bids/fedbids-ingest
   console.log('[BidSpeed] Bids auto-added via Make.com email pipeline');
 }
