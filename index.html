@@ -877,12 +877,8 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-  // FedBids — open BidSpeed Federal page (same pattern as EBN)
+  // FedBids — ALWAYS open BidSpeed Federal page
   if((b.source||'').toLowerCase()==='fedbids'){
-    // Use stored URL if it's a valid BidSpeed link
-    if(b.url && b.url.includes('fedbidspeed.com')) return b.url;
-    if(b.url && b.url.includes('bidspeed.com')) return b.url;
-    // Fall back to BidSpeed Federal opportunities page
     return 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
   }
   // All other sources — use DIRECT_BID_URLS first, then stored b.url
