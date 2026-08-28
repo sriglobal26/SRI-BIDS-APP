@@ -843,8 +843,8 @@ const DIRECT_BID_URLS = {
   'seed-5':'https://www.tra.texas.gov/procurement/',
   'seed-6':'https://sam.gov/search?index=opp&q=N4008524R2674&is_active=true',
   // ── FedBids — SAM.gov search by solicitation number ──
-  'fedbid-001':'https://app.bidspeed.com/opportunities?search=N4008524R2674',
-  'fedbid-006':'https://app.bidspeed.com/opportunities?search=FA558725Q0077',
+  'fedbid-001':'https://app.fedbidspeed.com/opportunities',
+  'fedbid-006':'https://app.fedbidspeed.com/opportunities',
   // CLMP bids moved to H2bid (Active Bids tab) as h2bid-014 and h2bid-015
   'h2bid-014':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=143347',
   'h2bid-015':'https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitation_details.cfm?sid=144532',
@@ -877,12 +877,9 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-    // FedBids — ALWAYS open in BidSpeed (never SAM.gov)
+    // FedBids — open BidSpeed (user already logged in with SRI criteria)
   if((b.source||'').toLowerCase()==='fedbids'){
-    const sn = (b.solicitationNo||'').trim();
-    if(sn) return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(sn);
-    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
-    return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(kw);
+    return 'https://app.fedbidspeed.com/opportunities';
   }
   // All other sources — use DIRECT_BID_URLS first, then stored b.url
   const fallbackU = DIRECT_BID_URLS[b.id] || b.url || '';
@@ -1804,10 +1801,8 @@ function rowFed(b){
   const acts = '<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'selected\')">\u2713 Select</button><button class="ab del" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'deleted\')">\u2715 Delete</button></div>';
   const bidIdLabel = b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-6).toUpperCase() : (b.id ? b.id.slice(-6).toUpperCase() : '\u2014');
   // Build direct SAM.gov search URL from solicitationNo — never use stored DB url
-  // ALWAYS BidSpeed — use solicitationNo or bid name keywords
-  const solNo = (b.solicitationNo||'').trim();
-  const fedKw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
-  const fedUrl = 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo||fedKw);
+  // FedBids — open BidSpeed opportunities (user logged in with SRI criteria)
+  const fedUrl = 'https://app.fedbidspeed.com/opportunities';
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
     + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
