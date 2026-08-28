@@ -877,20 +877,23 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-    // FedBids — open SAM.gov search with solicitation number (no login, opens search results directly)
+    // FedBids — open in BidSpeed app (user is logged in with SRI criteria)
   if((b.source||'').toLowerCase()==='fedbids'){
-    // 1. Hardcoded direct URL
+    // 1. Hardcoded DIRECT_BID_URLS (BidSpeed links)
     const du = DIRECT_BID_URLS[b.id]||'';
     if(du) return du;
-    // 2. Stored URL on bid
+    // 2. Stored URL — if already BidSpeed link use it
     const su = (b.url||'').trim();
-    if(su && su.startsWith('http')) return su;
-    // 3. Build from solicitationNo
+    if(su && su.includes('bidspeed.com')) return su;
+    // 3. Build BidSpeed search from solicitationNo
     const sn = (b.solicitationNo||'').trim();
-    if(sn) return 'https://sam.gov/search?index=opp&q='+encodeURIComponent(sn)+'&is_active=true';
-    // 4. Keyword fallback
-    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
-    return 'https://sam.gov/search?index=opp&q='+encodeURIComponent(kw)+'&is_active=true';
+    if(sn) return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(sn);
+    // 4. Build from stored URL if it has SAM sol number
+    const samMatch = su.match(/q=([A-Z0-9\-]+)/);
+    if(samMatch) return 'https://app.bidspeed.com/opportunities?search='+samMatch[1];
+    // 5. BidSpeed keyword search fallback
+    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
+    return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(kw);
   }
   // All other sources — use DIRECT_BID_URLS first, then stored b.url
   const fallbackU = DIRECT_BID_URLS[b.id] || b.url || '';
@@ -1814,7 +1817,7 @@ function rowFed(b){
   // Build direct SAM.gov search URL from solicitationNo — never use stored DB url
   const solNo = b.solicitationNo || '';
   const fedUrl = solNo
-    ? 'https://sam.gov/search?index=opp&q=' + encodeURIComponent(solNo) + '&is_active=true'
+    ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo)
     : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
@@ -2167,7 +2170,7 @@ function showBidDetail(b) {
   if((b.source||'').toLowerCase()==='fedbids'){
     const sn = b.solicitationNo || '';
     openUrl = sn
-      ? 'https://sam.gov/search?index=opp&q=' + encodeURIComponent(sn) + '&is_active=true'
+      ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(sn)
       : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
   } else {
     openUrl = getDirectUrl(b);
