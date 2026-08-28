@@ -877,22 +877,11 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-    // FedBids — open in BidSpeed app (user is logged in with SRI criteria)
+    // FedBids — ALWAYS open in BidSpeed (never SAM.gov)
   if((b.source||'').toLowerCase()==='fedbids'){
-    // 1. Hardcoded DIRECT_BID_URLS (BidSpeed links)
-    const du = DIRECT_BID_URLS[b.id]||'';
-    if(du) return du;
-    // 2. Stored URL — if already BidSpeed link use it
-    const su = (b.url||'').trim();
-    if(su && su.includes('bidspeed.com')) return su;
-    // 3. Build BidSpeed search from solicitationNo
     const sn = (b.solicitationNo||'').trim();
     if(sn) return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(sn);
-    // 4. Build from stored URL if it has SAM sol number
-    const samMatch = su.match(/q=([A-Z0-9\-]+)/);
-    if(samMatch) return 'https://app.bidspeed.com/opportunities?search='+samMatch[1];
-    // 5. BidSpeed keyword search fallback
-    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,5).join(' ');
+    const kw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
     return 'https://app.bidspeed.com/opportunities?search='+encodeURIComponent(kw);
   }
   // All other sources — use DIRECT_BID_URLS first, then stored b.url
@@ -1815,10 +1804,10 @@ function rowFed(b){
   const acts = '<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'selected\')">\u2713 Select</button><button class="ab del" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'deleted\')">\u2715 Delete</button></div>';
   const bidIdLabel = b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-6).toUpperCase() : (b.id ? b.id.slice(-6).toUpperCase() : '\u2014');
   // Build direct SAM.gov search URL from solicitationNo — never use stored DB url
-  const solNo = b.solicitationNo || '';
-  const fedUrl = solNo
-    ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo)
-    : 'https://app.bidspeed.com';
+  // ALWAYS BidSpeed — use solicitationNo or bid name keywords
+  const solNo = (b.solicitationNo||'').trim();
+  const fedKw = (b.name||'').replace(/[^a-zA-Z0-9 ]/g,' ').trim().split(/\s+/).slice(0,4).join(' ');
+  const fedUrl = 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo||fedKw);
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
     + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
