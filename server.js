@@ -384,6 +384,28 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
 // Fix ALL FedBids URLs in DB to use SAM.gov search with sol number
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
+    // Update ALL FedBids in DB to use BidSpeed URL
+    const all = await pool.query("SELECT id, data FROM bids WHERE data->>'source'='FedBids'");
+    let updated = 0;
+    for (const row of all.rows) {
+      const b = row.data;
+      const solNo = b.solicitationNo || '';
+      const bidspeedUrl = solNo
+        ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo)
+        : 'https://app.bidspeed.com';
+      if (b.url !== bidspeedUrl) {
+        b.url = bidspeedUrl;
+        await pool.query("UPDATE bids SET data=$1 WHERE id=$2", [JSON.stringify(b), row.id]);
+        updated++;
+      }
+    }
+    res.json({ success: true, updated, message: updated + ' FedBid URLs updated to BidSpeed' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// OLD fix-fedbids-urls (replaced above)
+app.get('/api/fix-fedbids-urls-old', async (req, res) => {
+  try {
     const fixes = [
       { id:'fedbid-001', url:'https://app.bidspeed.com/opportunities?search=N4008524R2674',    sol:'N4008524R2674' },
       { id:'fedbid-002', url:'https://sam.gov/search?index=opp&q=CLMP395A&is_active=true',         sol:'RFQS-6100-CLMP395A' },
