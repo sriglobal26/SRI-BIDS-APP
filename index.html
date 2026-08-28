@@ -877,8 +877,12 @@ function getDirectUrl(b) {
     const bidNum = (b.bidId||'').replace('#','') || b.id.replace('ebn-','');
     return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
-    // FedBids — open BidSpeed (user already logged in with SRI criteria)
+  // FedBids — open BidSpeed Federal page (same pattern as EBN)
   if((b.source||'').toLowerCase()==='fedbids'){
+    // Use stored URL if it's a valid BidSpeed link
+    if(b.url && b.url.includes('fedbidspeed.com')) return b.url;
+    if(b.url && b.url.includes('bidspeed.com')) return b.url;
+    // Fall back to BidSpeed Federal opportunities page
     return 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
   }
   // All other sources — use DIRECT_BID_URLS first, then stored b.url
@@ -1801,8 +1805,8 @@ function rowFed(b){
   const acts = '<div class="ag"><button class="ab sel" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'selected\')">\u2713 Select</button><button class="ab del" onclick="mark(decodeURIComponent(\'' + eid + '\'),\'deleted\')">\u2715 Delete</button></div>';
   const bidIdLabel = b.id && b.id.startsWith('fedbid-') ? 'FB-' + b.id.replace('fedbid-','').slice(-6).toUpperCase() : (b.id ? b.id.slice(-6).toUpperCase() : '\u2014');
   // Build direct SAM.gov search URL from solicitationNo — never use stored DB url
-  // FedBids — open BidSpeed opportunities (user logged in with SRI criteria)
-  const fedUrl = 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
+  // FedBids — use getDirectUrl same as EBN
+  const fedUrl = getDirectUrl(b);
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
     + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
