@@ -347,10 +347,13 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       if (dates) { const parsed = dates.map(d=>parseDate(d)).filter(Boolean).sort(); due = parsed[parsed.length-1]||''; }
     }
 
-    // Build URL from solicitation number
-    const rfqUrl = solNo
-      ? 'https://sam.gov/search?index=opp&q='+encodeURIComponent(solNo)+'&is_active=true'
-      : 'https://sam.gov/search?index=opp&keywords='+encodeURIComponent(subject.split(/[\s\-—]/)[0])+'&is_active=true';
+    // Extract BidSpeed direct link from email body (contains pk= parameter)
+    // BidSpeed URL format: secure.fedbidspeed.com/Handler.ashx?...&pk=<uuid>&...
+    const allUrls = (emailBody.match(/https?:\/\/[^\s<>"]+/g) || []);
+    const bidspeedLink = allUrls.find(u => u.includes('fedbidspeed.com') && u.includes('pk='));
+    const rfqUrl = bidspeedLink
+      ? bidspeedLink  // Use exact BidSpeed bid link from email
+      : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home'; // Fallback to Federal page
 
     const bid = {
       id: 'fedbid-' + Date.now(),
