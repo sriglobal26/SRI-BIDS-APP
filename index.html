@@ -1818,7 +1818,7 @@ function rowFed(b){
   const solNo = b.solicitationNo || '';
   const fedUrl = solNo
     ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(solNo)
-    : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
+    : 'https://app.bidspeed.com';
   const urlCell = '<td class="tu">'
     + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
     + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
@@ -2171,7 +2171,7 @@ function showBidDetail(b) {
     const sn = b.solicitationNo || '';
     openUrl = sn
       ? 'https://app.bidspeed.com/opportunities?search=' + encodeURIComponent(sn)
-      : (DIRECT_BID_URLS[b.id] || b.url || 'https://sam.gov/search?index=opp&keywords=SCADA+water&is_active=true');
+      : (DIRECT_BID_URLS[b.id] || b.url || 'https://app.bidspeed.com');
   } else {
     openUrl = getDirectUrl(b);
   }
