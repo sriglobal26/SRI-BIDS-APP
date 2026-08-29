@@ -387,24 +387,27 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
 // Fix ALL FedBids URLs in DB to use SAM.gov search with sol number
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
-    // Update ALL FedBids in DB to use BidSpeed URL
-    const all = await pool.query("SELECT id, data FROM bids WHERE data->>'source'='FedBids'");
     let updated = 0;
-    for (const row of all.rows) {
+    const f001 = await pool.query("SELECT data FROM bids WHERE id='fedbid-001'");
+    if (f001.rows.length > 0) {
+      const b = f001.rows[0].data;
+      b.url = 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk=75dcdd81-43c5-4215-924c-4f81c893e2fc';
+      await pool.query("UPDATE bids SET data=$1 WHERE id='fedbid-001'", [JSON.stringify(b)]);
+      updated++;
+    }
+    const rest = await pool.query("SELECT id,data FROM bids WHERE data->>'source'='FedBids' AND id<>'fedbid-001'");
+    for (const row of rest.rows) {
       const b = row.data;
-      const solNo = b.solicitationNo || '';
-      const bidspeedUrl = 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-      if (b.url !== bidspeedUrl) {
-        b.url = bidspeedUrl;
+      if (!b.url || !b.url.includes('pk=')) {
+        b.url = 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
         await pool.query("UPDATE bids SET data=$1 WHERE id=$2", [JSON.stringify(b), row.id]);
         updated++;
       }
     }
-    res.json({ success: true, updated, message: updated + ' FedBid URLs updated to BidSpeed' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    res.json({success:true, updated, message: updated+' FedBid URLs updated to BidSpeed pk links'});
+  } catch(e) { res.status(500).json({error:e.message}); }
 });
 
-// OLD fix-fedbids-urls (replaced above)
 app.get('/api/fix-fedbids-urls-old', async (req, res) => {
   try {
     const fixes = [
