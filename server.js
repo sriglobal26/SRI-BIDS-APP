@@ -527,7 +527,7 @@ async function autoExpireAndClean() {
       `DELETE FROM bids
        WHERE data->>'source' = 'FedBids'
        AND data->>'due' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-       AND (data->>'due')::date < (CURRENT_DATE + INTERVAL '4 days')`
+       AND (data->>'due')::date < CURRENT_DATE`
     );
     if (fedExpired.rowCount > 0) console.log('[FedBids] Auto-deleted', fedExpired.rowCount, 'FedBids due within 4 days');
 
