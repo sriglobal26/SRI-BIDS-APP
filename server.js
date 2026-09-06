@@ -301,49 +301,35 @@ app.post('/api/bids', async (req, res) => {
 });
 
 // FedBids email ingest — disabled, manual bids only via /api/nuke-fedbids
-// EBN bid ingest — receives EBN bid data from Make.com or manual submission
+// EBN bid ingest from Make.com
 app.post('/api/bids/ebn-ingest', async (req, res) => {
   try {
     const body = req.body;
-    const bidNum = body.bidNum || body.bid_number || '';
-    const name = body.name || body.subject || body.title || 'EBN Bid ' + bidNum;
-    const due = body.due || body.expires || body.responseDate || '';
-    const agency = body.agency || body.from_agency || 'EnviroBidNet';
-    const scope = body.scope || body.description || body.body || '';
-
-    if (!bidNum) return res.status(400).json({ error: 'bidNum required' });
-
-    const id = 'ebn-' + bidNum;
-
-    // Duplicate check
+    console.log('[EBN] Received keys:', Object.keys(body).join(','));
+    const subject = body.subject || body.Subject || body.name || '';
+    const text = body.body || body.text || body.html || body.snippet || body.content || Object.values(body).join(' ');
+    const combined = subject + ' ' + text;
+    const m = combined.match(/subscriber_view_bid[^0-9]*([0-9]{6})/) || combined.match(/\b(8[0-9]{5})\b/);
+    const bidNum = body.bidNum || body.bid_number || (m && m[1]) || '';
+    const id = bidNum ? 'ebn-' + bidNum : 'ebn-' + Date.now();
     const dup = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
-    if (dup.rows.length > 0) {
-      return res.json({ success: true, skipped: true, reason: 'Already exists', id });
+    if (dup.rows.length > 0) return res.json({ success:true, skipped:true, id });
+    const dateM = combined.match(/(?:Expires?|Due)[:\s]+(\d{4}-\d{2}-\d{2}|\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+    let due = body.due || body.expires || '';
+    if (!due && dateM) {
+      const raw = dateM[1];
+      if (raw.includes('/')) { const p=raw.split('/'); due=(p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0'); }
+      else due = raw;
     }
-
-    const bid = {
-      id,
-      name,
-      agency,
-      city: body.city || 'Texas',
-      posted: new Date().toISOString().split('T')[0],
-      due: due || '',
-      scope: scope.substring(0, 500),
-      url: 'https://envirobidnet.com/subscriber_view_bid/' + bidNum,
-      source: 'EnviroBidNet',
-      value: body.value || 'TBD',
-      status: 'active',
-      region: body.region || 'texas',
-      userState: 'active',
-      scrapedAt: new Date().toISOString()
-    };
-
-    await pool.query(
-      'INSERT INTO bids(id, data) VALUES($1, $2) ON CONFLICT(id) DO NOTHING',
-      [id, JSON.stringify(bid)]
-    );
-    res.json({ success: true, bid: { id, name, due } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    const bid = { id, name: subject || 'EBN Bid '+bidNum, agency: body.agency || 'EnviroBidNet',
+      city: body.city||'Texas', posted: new Date().toISOString().split('T')[0], due,
+      scope: text.substring(0,500), url: bidNum ? 'https://envirobidnet.com/subscriber_view_bid/'+bidNum : 'https://www.envirobidnet.com/bid-center/',
+      source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active',
+      scrapedAt: new Date().toISOString() };
+    await pool.query('INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',[id,JSON.stringify(bid)]);
+    console.log('[EBN] Saved:', id, subject.substring(0,50));
+    res.json({ success:true, bid:{ id, name:bid.name, due, bidNum } });
+  } catch(e) { console.error('[EBN Error]',e.message); res.status(500).json({error:e.message}); }
 });
 
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
@@ -429,7 +415,7 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       'INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',
       [bid.id, JSON.stringify(bid)]
     );
-    res.json({ success: true, bid: { id: bid.id, name: bid.name, solNo, due } });
+    res.json({ success: true, bid: { id: bid.id, name: bid.name, due } });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
