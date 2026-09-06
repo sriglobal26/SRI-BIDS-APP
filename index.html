@@ -760,11 +760,9 @@ function classifyBid(b){
     const APPROVED = ['fedbid-001','fedbid-006'];
     if(!APPROVED.includes(b.id)) return 'deleted'; // not approved — hide it
     if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)){
-      const due = new Date(b.due + 'T00:00:00');
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() + 4);
-      cutoff.setHours(0,0,0,0);
-      if(due < cutoff) return 'deleted';
+      // Hide only AFTER due date has passed
+      const due = new Date(b.due + 'T23:59:59');
+      if(due < new Date()) return 'deleted';
     }
     return 'active';
   }
