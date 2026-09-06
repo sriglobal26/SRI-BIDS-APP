@@ -301,6 +301,51 @@ app.post('/api/bids', async (req, res) => {
 });
 
 // FedBids email ingest — disabled, manual bids only via /api/nuke-fedbids
+// EBN bid ingest — receives EBN bid data from Make.com or manual submission
+app.post('/api/bids/ebn-ingest', async (req, res) => {
+  try {
+    const body = req.body;
+    const bidNum = body.bidNum || body.bid_number || '';
+    const name = body.name || body.subject || body.title || 'EBN Bid ' + bidNum;
+    const due = body.due || body.expires || body.responseDate || '';
+    const agency = body.agency || body.from_agency || 'EnviroBidNet';
+    const scope = body.scope || body.description || body.body || '';
+
+    if (!bidNum) return res.status(400).json({ error: 'bidNum required' });
+
+    const id = 'ebn-' + bidNum;
+
+    // Duplicate check
+    const dup = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
+    if (dup.rows.length > 0) {
+      return res.json({ success: true, skipped: true, reason: 'Already exists', id });
+    }
+
+    const bid = {
+      id,
+      name,
+      agency,
+      city: body.city || 'Texas',
+      posted: new Date().toISOString().split('T')[0],
+      due: due || '',
+      scope: scope.substring(0, 500),
+      url: 'https://envirobidnet.com/subscriber_view_bid/' + bidNum,
+      source: 'EnviroBidNet',
+      value: body.value || 'TBD',
+      status: 'active',
+      region: body.region || 'texas',
+      userState: 'active',
+      scrapedAt: new Date().toISOString()
+    };
+
+    await pool.query(
+      'INSERT INTO bids(id, data) VALUES($1, $2) ON CONFLICT(id) DO NOTHING',
+      [id, JSON.stringify(bid)]
+    );
+    res.json({ success: true, bid: { id, name, due } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
     const body = req.body;
