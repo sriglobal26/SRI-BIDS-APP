@@ -343,6 +343,21 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const emailBody = body.body || body.text || body.snippet || body.content || '';
     const allText = subject + ' ' + emailBody;
 
+    // ── RELEVANCE FILTER — only save E&I/SCADA/water/wastewater bids ──
+    const EI_KEYWORDS = [
+      'scada','instrumentation','electrical','controls','control system',
+      'water treatment','wastewater','wwtp','lift station','pump station',
+      'mep','plc','hmi','telemetry','monitoring','sensors','metering',
+      'wwtf','water plant','sewer','stormwater','pipeline','treatment plant',
+      'e&i','e & i','engineer','engineering services'
+    ];
+    const relevantText = (subject + ' ' + emailBody).toLowerCase();
+    const isRelevant = EI_KEYWORDS.some(kw => relevantText.includes(kw));
+    if (!isRelevant) {
+      console.log('[FedBids Ingest] Skipped — not E&I relevant:', subject.substring(0,80));
+      return res.json({ success: true, skipped: true, reason: 'Not E&I relevant', subject });
+    }
+
     // ── STRICT DUPLICATE CHECK ──
     // Check by solicitation number OR exact name match
     const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
