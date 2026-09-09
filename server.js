@@ -34,10 +34,10 @@ app.use(express.static(__dirname));
 // ─── BID ARRAYS ────────────────────────────────────────────────
 
 const EBN_BIDS = [
-  { id:'ebn-884913', name:'EBN — Bid Opportunity 884913', agency:'EnviroBidNet', city:'Texas', posted:'2026-09-05', due:'2026-09-20', scope:'New E&I engineering opportunity. See bid link for full details.', url:'https://www.envirobidnet.com/subscriber_view_bid/884913', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services. 3 bid specifications available. Environmental engineering, site assessment, instrumentation and controls consulting.', url:'https://www.envirobidnet.com/subscriber_view_bid/884038', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-882894', name:'Liberty Hill — North Fork WWTP Improvements Addenda (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/subscriber_view_bid/882894', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-881778', name:'La Marque — RFQ Third-Party Building Plan Review (881778)', agency:'City of La Marque', city:'La Marque, TX', posted:'2026-08-20', due:'2026-09-15', scope:'RFQ Third-Party Building Plan Review and Inspection Services.', url:'https://www.envirobidnet.com/subscriber_view_bid/881778', source:'EnviroBidNet', value:'TBD', status:'active', region:'houston' },
+  { id:'ebn-884913', name:'EBN — Bid Opportunity 884913', agency:'EnviroBidNet', city:'Texas', posted:'2026-09-05', due:'2026-09-20', scope:'New E&I engineering opportunity. See bid link for full details.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services. 3 bid specifications available. Environmental engineering, site assessment, instrumentation and controls consulting.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-882894', name:'Liberty Hill — North Fork WWTP Improvements Addenda (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-881778', name:'La Marque — RFQ Third-Party Building Plan Review (881778)', agency:'City of La Marque', city:'La Marque, TX', posted:'2026-08-20', due:'2026-09-15', scope:'RFQ Third-Party Building Plan Review and Inspection Services.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'houston' },
 ];
 
 const H2BID_BIDS = [
@@ -313,8 +313,11 @@ app.post('/api/bids/ebn-ingest', async (req, res) => {
     const subject = body.subject || body.Subject || body.name || '';
     const text = body.body || body.text || body.html || body.snippet || body.content || Object.values(body).join(' ');
     const combined = subject + ' ' + text;
-    const m = combined.match(/subscriber_view_bid[^0-9]*([0-9]{6})/) || combined.match(/\b(8[0-9]{5})\b/);
-    const bidNum = body.bidNum || body.bid_number || (m && m[1]) || '';
+    // Extract full EBN URL with long ID (e.g. /subscriber_view_bid/1788700574880)
+    const fullUrlMatch = combined.match(/https?:\/\/www\.envirobidnet\.com\/subscriber_view_bid\/(\d{6,15})/);
+    const shortMatch = combined.match(/subscriber_view_bid[^0-9]*([0-9]{6,15})/);
+    const bidNum = body.bidNum || body.bid_number || (fullUrlMatch && fullUrlMatch[1]) || (shortMatch && shortMatch[1]) || '';
+    const directEbnUrl = fullUrlMatch ? fullUrlMatch[0] : '';
     const id = bidNum ? 'ebn-' + bidNum : 'ebn-' + Date.now();
     const dup = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
     if (dup.rows.length > 0) return res.json({ success:true, skipped:true, id });
