@@ -408,109 +408,66 @@ app.post('/api/bids/ebn-ingest', async (req, res) => {
 
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
-    const body = req.body;
-    const subject = body.subject || body.Subject || body.name || body.title || 'FedBid Opportunity';
-    const emailBody = body.body || body.Body || body.text || body.Text || body.snippet || body.Snippet || body.content || '';
+    const b = req.body || {};
+    const subject = b.subject || b.Subject || b.name || b.title || '';
+    const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
     const allText = subject + ' ' + emailBody;
+    console.log('[FedBids] Subject:', subject.substring(0,80));
+    console.log('[FedBids] Body length:', emailBody.length);
 
-    // ── RELEVANCE FILTER — only save E&I/SCADA/water/wastewater bids ──
-    const EI_KEYWORDS = [
-      'scada','instrumentation','electrical','controls','control system',
-      'water treatment','wastewater','wwtp','lift station','pump station',
-      'mep','plc','hmi','telemetry','monitoring','sensors','metering',
-      'wwtf','water plant','sewer','stormwater','pipeline','treatment plant',
-      'e&i','e & i','engineer','engineering services'
-    ];
-    const relevantText = (subject + ' ' + emailBody).toLowerCase();
-    const isRelevant = EI_KEYWORDS.some(kw => relevantText.includes(kw));
-    if (!isRelevant) {
-      console.log('[FedBids Ingest] Skipped — not E&I relevant:', subject.substring(0,80));
-      return res.json({ success: true, skipped: true, reason: 'Not E&I relevant', subject });
-    }
+    // Extract BidSpeed pk link
+    const pkMatch = allText.match(/pk=([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+    const bidUrl = pkMatch
+      ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk=' + pkMatch[1]
+      : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
 
-    // ── STRICT DUPLICATE CHECK ──
-    // Check by solicitation number OR exact name match
+    // Extract solicitation number
     const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     const solNo = solMatch ? solMatch[1] : '';
-    const dupCheck = await pool.query(
-      `SELECT id FROM bids WHERE data->>'source'='FedBids' AND (
-        (data->>'solicitationNo'=$1 AND $1 != '') OR
-        LOWER(data->>'name')=LOWER($2)
-      ) LIMIT 1`,
-      [solNo, subject]
-    );
-    if (dupCheck.rows.length > 0) {
-      return res.json({ success: true, skipped: true, reason: 'Duplicate', solNo, name: subject });
+
+    // Get bid name from subject
+    const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid ' + (solNo || new Date().toISOString().split('T')[0]));
+
+    // Duplicate check
+    if (solNo) {
+      const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
+      if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate', solNo });
     }
 
-    // ── DATE PARSER ──
-    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
-      january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
-    function parseDate(str) {
-      if (!str) return '';
-      str = str.trim();
-      let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) return str;
-      m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-      if (m) { const yr = m[3].length===2?'20'+m[3]:m[3]; return yr+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
-      m = str.match(/([a-zA-Z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
-      if (m) { const mo=MONTHS[m[1].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
-      m = str.match(/(\d{1,2})\s+([a-zA-Z]+)\.?\s+(\d{4})/i);
-      if (m) { const mo=MONTHS[m[2].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'); }
-      return '';
-    }
-
-    // Parse due date
+    // Extract valid due date (must be 2026-2030)
     let due = '';
-    if (body.due) due = parseDate(body.due);
-    if (!due) {
-      const duePat = allText.match(/(?:due|deadline|response|closing)\s*(?:date)?[:\s]+([^\n<]{4,30})/i);
-      if (duePat) due = parseDate(duePat[1].trim());
-    }
-    if (!due) {
-      const dates = allText.match(/(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})/gi);
-      if (dates) { const parsed = dates.map(d=>parseDate(d)).filter(Boolean).sort(); due = parsed[parsed.length-1]||''; }
+    const dPatterns = [
+      /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4})/i,
+      /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+      /(?:response|due|deadline|closing)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? [0-9]{4})/i,
+    ];
+    for (const pat of dPatterns) {
+      const m = allText.match(pat);
+      if (m) {
+        try {
+          const dt = new Date(m[1]);
+          if (!isNaN(dt) && dt.getFullYear() >= 2026 && dt.getFullYear() <= 2030) {
+            due = dt.toISOString().split('T')[0]; break;
+          }
+        } catch(e2){}
+      }
     }
 
-    // Extract BidSpeed direct link from email body (contains pk= parameter)
-    // BidSpeed URL format: secure.fedbidspeed.com/Handler.ashx?...&pk=<uuid>&...
-    const allUrls = (emailBody.match(/https?:\/\/[^\s<>"]+/g) || []);
-    const bidspeedLink = allUrls.find(u => u.includes('fedbidspeed.com') && u.includes('pk='));
-    const rfqUrl = bidspeedLink
-      ? bidspeedLink  // Use exact BidSpeed bid link from email
-      : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home'; // Fallback to Federal page
-
-    const bid = {
-      id: 'fedbid-' + Date.now(),
-      name: subject,
-      agency: body.agency || body.from || 'FedBidSpeed',
-      city: body.city || 'Texas',
+    const id = 'fedbid-' + (solNo || String(Date.now())).replace(/[^a-zA-Z0-9]/g,'').slice(-10);
+    await saveBid({ id, name: bidName.substring(0,200),
+      agency: 'Federal Agency', city: 'Nationwide',
       posted: new Date().toISOString().split('T')[0],
-      due: due || 'Check Link',
-      solicitationNo: solNo || '',
-      location: body.location || body.city || 'Texas',
-      responseDate: due || '',
-      setAside: body.setAside || 'See Solicitation',
-      scope: (emailBody||subject).substring(0,500),
-      url: rfqUrl,
-      source: 'FedBids',
-      value: body.value || 'TBD',
-      status: 'active',
-      region: 'texas',
-      userState: 'active',
-      scrapedAt: new Date().toISOString()
-    };
-    await pool.query(
-      'INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',
-      [bid.id, JSON.stringify(bid)]
-    );
-    res.json({ success: true, bid: { id: bid.id, name: bid.name, due } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+      due, solicitationNo: solNo, responseDate: due,
+      setAside: 'See Solicitation', scope: emailBody.substring(0,500),
+      url: bidUrl, source: 'FedBids', value: 'TBD',
+      status: 'active', region: 'statewide', userState: 'active',
+      scrapedAt: new Date().toISOString() });
+
+    console.log('[FedBids] Saved:', id, bidName.substring(0,60));
+    res.json({ success:true, bid:{ id, name:bidName, solNo, due, url:bidUrl } });
+  } catch(e) { console.error('[FedBids Error]', e.message); res.status(500).json({error:e.message}); }
 });
 
-// Fix ALL FedBids URLs in DB to use BidSpeed
-// Fix ALL FedBids URLs in DB to use SAM.gov search with sol number
-// Clean expired EBN bids from database
 app.get('/api/clean-ebn', async (req, res) => {
   try {
     // Delete all EBN bids from DB so fresh ones from server.js get seeded
