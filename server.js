@@ -472,6 +472,23 @@ app.get('/api/clean-ebn-old', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Nuclear clean — delete ALL EBN bids and reseed only real ones
+app.get('/api/nuke-ebn', async (req, res) => {
+  try {
+    // Delete ALL EBN bids from DB
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
+    // Reseed only the 2 real verified EBN bids
+    const realEBN = [
+      { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt: new Date().toISOString() },
+      { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services. 3 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt: new Date().toISOString() },
+    ];
+    for (const b of realEBN) {
+      await pool.query('INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET data=$2', [b.id, JSON.stringify(b)]);
+    }
+    res.json({ success:true, deleted: del.rowCount, reseeded: realEBN.length, message: 'Deleted '+del.rowCount+' EBN bids, reseeded 2 real bids' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
     let updated = 0;
