@@ -594,7 +594,7 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
-cron.schedule('0 */2 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
+cron.schedule('0 */4 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
 cron.schedule('0 */2 * * *', async () => { try { await autoExpireAndClean(); } catch(e){ console.error('[Cron]',e.message); } }); // expire + clean every 2 hours
 
 // ─── START ───────────────────────────────────────────────────
