@@ -759,8 +759,7 @@ function classifyBid(b){
   if((b.source||'').toLowerCase()==='fedbids'){
     const APPROVED = ['fedbid-001','fedbid-006'];
     if(!APPROVED.includes(b.id)) return 'deleted'; // not approved — hide it
-    if(b.due && /^\d{4}-\d{2}-\d{2}$/.test(b.due)){
-      // Hide only AFTER due date has passed
+    if(b.due && /^20[2-9][0-9]-\d{2}-\d{2}$/.test(b.due)){
       const due = new Date(b.due + 'T23:59:59');
       if(due < new Date()) return 'deleted';
     }
