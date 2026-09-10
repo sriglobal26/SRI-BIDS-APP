@@ -147,47 +147,102 @@ async function seedAllBids() {
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
   try {
-    console.log('[AutoFetch] Fetching NAICS 541330 bids from SAM.gov...');
-    await fetchSAMGovNAICS541330();
+    console.log('[IMAP] Reading fedbids@srigl.com...');
+    await fetchFedBidsFromIMAP();
   } catch(e) { console.error('[AutoFetch Error]', e.message); }
 }
 
-async function fetchSAMGovNAICS541330() {
-  try {
-    const today = new Date();
-    const from = new Date(today - 60*24*60*60*1000);
-    const fmt = d => d.toISOString().split('T')[0].replace(/-/g,'/');
-    const keywords = ['SCADA water Texas','wastewater instrumentation controls','electrical engineering water treatment Texas'];
-    let added = 0;
-    for (const kw of keywords) {
-      try {
-        const url = 'https://api.sam.gov/opportunities/v2/search?limit=10&api_key=DEMO_KEY&naics=541330&ptype=o&status=active&q='+encodeURIComponent(kw)+'&postedFrom='+fmt(from)+'&postedTo='+fmt(today);
-        const res = await axios.get(url, { timeout: 10000 });
-        const opps = (res.data && res.data.opportunitiesData) || [];
-        for (const opp of opps) {
-          if (!opp.solicitationNumber) continue;
-          const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [opp.solicitationNumber]);
-          if (dup.rows.length > 0) continue;
-          const due = opp.responseDeadLine ? opp.responseDeadLine.split('T')[0] : '';
-          if (due && new Date(due) < new Date()) continue;
-          const id = 'fedbid-sam-' + opp.solicitationNumber.replace(/[^a-zA-Z0-9]/g,'').slice(-8);
-          await saveBid({ id, name: opp.title||'Federal Bid',
-            agency: opp.departmentName||opp.subtierName||'Federal Agency',
-            city: (opp.placeOfPerformance&&opp.placeOfPerformance.city&&opp.placeOfPerformance.city.name) ? opp.placeOfPerformance.city.name+', '+(opp.placeOfPerformance.state&&opp.placeOfPerformance.state.code||'TX') : 'Nationwide',
-            posted: opp.postedDate?opp.postedDate.split('T')[0]:new Date().toISOString().split('T')[0],
-            due, solicitationNo: opp.solicitationNumber, responseDate: due,
-            setAside: opp.typeOfSetAside||'See Solicitation',
-            scope: (opp.description||'NAICS 541330 Engineering Services').substring(0,500),
-            url: 'https://sam.gov/opp/'+(opp.noticeId||'')+'/view',
-            source: 'FedBids', value:'TBD', status:'active', region:'statewide',
-            userState:'active', scrapedAt: new Date().toISOString() });
-          added++;
-          console.log('[SAM.gov] Added:', opp.solicitationNumber);
-        }
-      } catch(e2) { console.error('[SAM.gov search]', kw, e2.message); }
+async function fetchFedBidsFromIMAP() {
+  const imapSimple = require('imap-simple');
+  const { simpleParser } = require('mailparser');
+
+  const config = {
+    imap: {
+      user: 'fedbids@srigl.com',
+      password: 'Sriglobal26*',
+      host: 'mail.srigl.com',
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      authTimeout: 10000
     }
-    if (added > 0) console.log('[AutoFetch] Added', added, 'new SAM.gov NAICS 541330 bids');
-  } catch(e) { console.error('[fetchSAMGov Error]', e.message); }
+  };
+
+  let connection;
+  try {
+    connection = await imapSimple.connect(config);
+    await connection.openBox('INBOX');
+
+    // Search for all emails from BidSpeed
+    const searchCriteria = [['FROM', 'system@fedbidspeed.com']];
+    const fetchOptions = { bodies: ['HEADER', 'TEXT', ''], struct: true };
+    const messages = await connection.search(searchCriteria, fetchOptions);
+
+    console.log('[IMAP] Found', messages.length, 'BidSpeed emails');
+    let added = 0;
+
+    for (const msg of messages) {
+      try {
+        const all = msg.parts.find(p => p.which === '');
+        if (!all) continue;
+
+        const parsed = await simpleParser(all.body);
+        const subject = parsed.subject || '';
+        const textBody = parsed.text || '';
+        const htmlBody = parsed.html || '';
+        const fullText = subject + ' ' + textBody + ' ' + htmlBody;
+
+        // Extract BidSpeed pk link
+        const pkMatch = fullText.match(/https?:\/\/[^\s"<>]*fedbidspeed\.com[^\s"<>]*pk=[a-f0-9\-]{36}[^\s"<>]*/i);
+        const bidUrl = pkMatch ? pkMatch[0].trim() : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
+
+        // Extract solicitation number
+        const solMatch = fullText.match(/([A-Z]{1,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6}|[A-Z]{2}\d{4,6}[A-Z]\d{4,6})/);
+        const solNo = solMatch ? solMatch[1] : '';
+
+        // Skip duplicates
+        if (solNo) {
+          const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
+          if (dup.rows.length > 0) continue;
+        } else {
+          const dup = await pool.query("SELECT id FROM bids WHERE LOWER(data->>'name')=LOWER($1)", [subject]);
+          if (dup.rows.length > 0) continue;
+        }
+
+        // Extract due date
+        const dateMatch = fullText.match(/(?:response|due|deadline|closing)[^:]*:\s*([A-Za-z]+ \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/i);
+        let due = '';
+        if (dateMatch) {
+          const raw = dateMatch[1].trim();
+          try {
+            const d = new Date(raw);
+            if (!isNaN(d)) due = d.toISOString().split('T')[0];
+          } catch(e2) {}
+        }
+
+        // Skip if already expired
+        if (due && new Date(due) < new Date()) continue;
+
+        const id = 'fedbid-imap-' + (solNo || Date.now()).toString().replace(/[^a-zA-Z0-9]/g,'').slice(-10);
+        await saveBid({
+          id, name: subject || 'FedBid Opportunity',
+          agency: 'Federal Agency', city: 'Nationwide',
+          posted: new Date().toISOString().split('T')[0],
+          due, solicitationNo: solNo,
+          scope: textBody.substring(0, 500),
+          url: bidUrl,
+          source: 'FedBids', value: 'TBD', status: 'active',
+          region: 'statewide', userState: 'active',
+          scrapedAt: new Date().toISOString()
+        });
+        added++;
+        console.log('[IMAP] Added bid:', subject.substring(0,60));
+      } catch(e2) { console.error('[IMAP] Email parse error:', e2.message); }
+    }
+    console.log('[IMAP] Done — added', added, 'new FedBids');
+  } finally {
+    if (connection) connection.end();
+  }
 }
 
 
