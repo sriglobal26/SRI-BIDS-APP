@@ -421,8 +421,15 @@ app.post('/api/test-ingest', (req, res) => {
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
     const body = req.body;
-    const subject = body.subject || body.name || 'FedBid Opportunity';
-    const emailBody = body.body || body.text || body.snippet || body.content || '';
+    // Accept ALL possible field names from Make.com
+    const subject = body.subject || body.Subject || body.name || body.title || 
+                    body['1.subject'] || body['1.Subject'] || 'FedBid Opportunity';
+    const emailBody = body.body || body.Body || body.text || body.Text || 
+                      body.snippet || body.Snippet || body.content || body.html ||
+                      body['1.snippet'] || body['1.body'] || body['1.text'] || '';
+    // Log what we received for debugging
+    console.log('[FedBids Ingest] Keys:', Object.keys(body).join(','));
+    console.log('[FedBids Ingest] Subject:', subject.substring(0,80));
     const allText = subject + ' ' + emailBody;
 
     // ── DUPLICATE CHECK ──
