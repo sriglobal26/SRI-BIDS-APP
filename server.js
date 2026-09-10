@@ -1,6 +1,5 @@
 // SRI Global Bids App — server.js
 'use strict';
-// Deployed: 2026-09-10 10:29:05
 const express = require('express');
 const axios   = require('axios');
 const cheerio = require('cheerio');
@@ -35,8 +34,10 @@ app.use(express.static(__dirname));
 // ─── BID ARRAYS ────────────────────────────────────────────────
 
 const EBN_BIDS = [
-  { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services for Opportunity Home San Antonio. 3 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-884913', name:'EBN — Bid Opportunity 884913', agency:'EnviroBidNet', city:'Texas', posted:'2026-09-05', due:'2026-09-20', scope:'New E&I engineering opportunity. See bid link for full details.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services. 3 bid specifications available. Environmental engineering, site assessment, instrumentation and controls consulting.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-882894', name:'Liberty Hill — North Fork WWTP Improvements Addenda (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-881778', name:'La Marque — RFQ Third-Party Building Plan Review (881778)', agency:'City of La Marque', city:'La Marque, TX', posted:'2026-08-20', due:'2026-09-15', scope:'RFQ Third-Party Building Plan Review and Inspection Services.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'houston' },
 ];
 
 const H2BID_BIDS = [
@@ -175,15 +176,15 @@ async function initDB() {
 
 app.get('/paste-bid', (req, res) => {
   res.send(`<!DOCTYPE html><html><head><title>SRI — Add FedBid</title>
-<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;background:#0a0f1e;color:#fff}
-h2{color:#00e5ff}textarea{width:100%;height:250px;background:#1a2332;color:#fff;border:1px solid #00e5ff;padding:10px;border-radius:8px;margin:8px 0;font-size:13px}
-input{width:100%;background:#1a2332;color:#fff;border:1px solid #444;padding:10px;border-radius:6px;margin:4px 0 12px}
+<style>body{font-family:Arial;max-width:700px;margin:40px auto;padding:20px;background:#0a0f1e;color:#fff}h2{color:#00e5ff}
+textarea{width:100%;height:250px;background:#1a2332;color:#fff;border:1px solid #00e5ff;padding:10px;border-radius:8px;margin:8px 0;font-size:13px;box-sizing:border-box}
+input{width:100%;background:#1a2332;color:#fff;border:1px solid #444;padding:10px;border-radius:6px;margin:4px 0 12px;box-sizing:border-box}
 button{background:#00e5ff;color:#000;border:none;padding:14px;font-size:16px;font-weight:bold;border-radius:8px;cursor:pointer;width:100%}
 #r{margin-top:16px;padding:14px;border-radius:8px;display:none}
 .ok{background:#1a3a1a;border:1px solid #0f0;color:#0f0}.er{background:#3a1a1a;border:1px solid #f44;color:#f44}</style></head>
 <body><h2>⚡ Add BidSpeed Email to FedBids</h2>
-<p style="color:#aaa">Open a BidSpeed email → Select All → Copy → Paste below</p>
-<input type="text" id="sub" placeholder="Email subject (optional)">
+<p style="color:#aaa">Open BidSpeed email → Select All → Copy → Paste below → Click Add</p>
+<input type="text" id="sub" placeholder="Email subject (e.g. NAVFAC SCADA N4008524R2674)">
 <textarea id="txt" placeholder="Paste full BidSpeed email content here..."></textarea>
 <button onclick="go()">➕ Add to FedBids Tab</button>
 <div id="r"></div>
@@ -191,15 +192,18 @@ button{background:#00e5ff;color:#000;border:none;padding:14px;font-size:16px;fon
 async function go(){
   const sub=document.getElementById('sub').value;
   const txt=document.getElementById('txt').value;
-  if(!txt.trim()){alert('Paste email first');return;}
+  if(!txt.trim()){alert('Please paste email content');return;}
   const btn=document.querySelector('button');
   btn.textContent='Adding...';btn.disabled=true;
-  const resp=await fetch('/api/bids/fedbids-ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:sub,body:txt,text:txt,snippet:txt.substring(0,500)})});
-  const d=await resp.json();
-  const r=document.getElementById('r');r.style.display='block';
-  if(d.success&&!d.skipped){r.className='ok';r.innerHTML='✅ Added! ID:'+d.bid.id+'<br>Name:'+d.bid.name+'<br>Sol:'+d.bid.solNo+'<br>Due:'+d.bid.due;}
-  else if(d.skipped){r.className='er';r.innerHTML='⚠️ Skipped: '+d.reason;}
-  else{r.className='er';r.innerHTML='❌ Error: '+JSON.stringify(d);}
+  try{
+    const resp=await fetch('/api/bids/fedbids-ingest',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({subject:sub,body:txt,text:txt,snippet:txt.substring(0,500)})});
+    const d=await resp.json();
+    const r=document.getElementById('r');r.style.display='block';
+    if(d.success&&!d.skipped){r.className='ok';r.innerHTML='✅ Bid added!<br>ID: '+d.bid.id+'<br>Name: '+d.bid.name+'<br>Sol No: '+(d.bid.solNo||'N/A')+'<br>Due: '+(d.bid.due||'N/A')+'<br><br><a href="/" style="color:#00e5ff">← Go to App</a>';}
+    else if(d.skipped){r.className='er';r.innerHTML='⚠️ Skipped: '+d.reason+'<br><br><a href="/" style="color:#00e5ff">← Go to App</a>';}
+    else{r.className='er';r.innerHTML='❌ '+JSON.stringify(d);}
+  }catch(e){const r=document.getElementById('r');r.style.display='block';r.className='er';r.innerHTML='❌ '+e.message;}
   btn.textContent='➕ Add to FedBids Tab';btn.disabled=false;
 }
 </script></body></html>`);
@@ -377,6 +381,7 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
     const allText = subject + ' ' + emailBody;
     console.log('[FedBids] Subject:', subject.substring(0,80));
+    console.log('[FedBids] Body len:', emailBody.length);
 
     // Extract BidSpeed pk link
     const pkMatch = allText.match(/pk=([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
@@ -388,42 +393,34 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     const solNo = solMatch ? solMatch[1] : '';
 
-    // Bid name from subject
+    // Bid name
     const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid ' + (solNo || Date.now()));
 
     // Duplicate check
     if (solNo) {
       const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
-      if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate', solNo });
+      if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate sol: '+solNo });
     }
 
     // Extract valid due date (2026-2030 only)
     let due = '';
     const dPats = [
-      /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4})/i,
-      /(?:response|due|deadline)[^:]*:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
-      /(?:response|due|deadline)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? [0-9]{4})/i,
+      /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/20[2-9][0-9])/i,
+      /(?:response|due|deadline)[^:]*:[^0-9]*(20[2-9][0-9]-[0-9]{2}-[0-9]{2})/i,
+      /(?:response|due|deadline)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? 20[2-9][0-9])/i,
     ];
     for (const pat of dPats) {
       const m = allText.match(pat);
       if (m) {
-        try {
-          const dt = new Date(m[1]);
-          if (!isNaN(dt) && dt.getFullYear() >= 2026 && dt.getFullYear() <= 2030) {
-            due = dt.toISOString().split('T')[0]; break;
-          }
-        } catch(e2) {}
+        try { const dt = new Date(m[1]); if(!isNaN(dt) && dt.getFullYear()>=2026) { due=dt.toISOString().split('T')[0]; break; } } catch(e2){}
       }
     }
 
-    const id = 'fedbid-' + (solNo || String(Date.now())).replace(/[^a-zA-Z0-9]/g,'').slice(-10);
-    await saveBid({ id, name: bidName.substring(0,200),
-      agency: 'Federal Agency', city: 'Nationwide',
-      posted: new Date().toISOString().split('T')[0],
-      due, solicitationNo: solNo, responseDate: due,
-      setAside: 'See Solicitation', scope: emailBody.substring(0,500),
-      url: bidUrl, source: 'FedBids', value: 'TBD',
-      status: 'active', region: 'statewide', userState: 'active',
+    const id = 'fedbid-' + (solNo||String(Date.now())).replace(/[^a-zA-Z0-9]/g,'').slice(-10);
+    await saveBid({ id, name: bidName.substring(0,200), agency:'Federal Agency', city:'Nationwide',
+      posted: new Date().toISOString().split('T')[0], due, solicitationNo:solNo, responseDate:due,
+      setAside:'See Solicitation', scope:emailBody.substring(0,500), url:bidUrl,
+      source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active',
       scrapedAt: new Date().toISOString() });
 
     console.log('[FedBids] Saved:', id, bidName.substring(0,50));
@@ -431,18 +428,6 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
   } catch(e) { console.error('[FedBids Error]', e.message); res.status(500).json({error:e.message}); }
 });
 
-
-app.get('/api/clean-ebn', async (req, res) => {
-  try {
-    // Delete all EBN bids from DB so fresh ones from server.js get seeded
-    const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
-    // Re-seed fresh EBN bids
-    for (const b of EBN_BIDS) {
-      await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
-    }
-    res.json({ success: true, deleted: del.rowCount, reseeded: EBN_BIDS.length });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
 
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
@@ -517,7 +502,7 @@ app.get('/api/dedupe-fedbids', async (req, res) => {
     ];
     let seeded = 0;
     for (const b of clean5) {
-      await pool.query("INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT(id) DO UPDATE SET data=$2", [b.id, JSON.stringify({...b, scrapedAt:new Date().toISOString()})]);
+      await pool.query("INSERT INTO bids (data) VALUES ($1)", [JSON.stringify({...b, scrapedAt:new Date().toISOString()})]);
       seeded++;
     }
     res.json({ success:true, deleted:del.rowCount, seeded, message:`Deleted ${del.rowCount} duplicate FedBids — reseeded ${seeded} clean bids` });
@@ -621,8 +606,11 @@ async function cleanFedBidsOnStartup() {
 
     // Reseed exactly 5 verified open bids
     const FIVE_BIDS = [
-      { id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', solicitationNo:'N4008524R2674', location:'MCAS Cherry Point NC / MCAS Beaufort SC', responseDate:'2026-09-15', setAside:'Total Small Business Set-Aside (NAICS 541330)', scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection. 5-year IDIQ.', url:'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk=75dcdd81-43c5-4215-924c-4f81c893e2fc', source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide', userState:'active' },
+      { id:'fedbid-001', name:'NAVFAC Mid-Atlantic — IDIQ A-E MEP & SCADA Engineering (N4008524R2674)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Mid-Atlantic', city:'NC / SC / Nationwide', posted:'2026-07-15', due:'2026-09-15', solicitationNo:'N4008524R2674', location:'MCAS Cherry Point NC / MCAS Beaufort SC', responseDate:'2026-09-15', setAside:'Total Small Business Set-Aside', scope:'IDIQ A-E multi-discipline: SCADA, cybersecurity, LAN, control systems, electrical, mechanical, plumbing, fire protection. 5-year IDIQ. NAVFAC Marine Corps installations.', url:'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk=75dcdd81-43c5-4215-924c-4f81c893e2fc', source:'FedBids', value:'$60M IDIQ', status:'active', region:'statewide', userState:'active' },
       { id:'fedbid-006', name:'48 CES — Wastewater Plant SCADA System RAF Lakenheath (FA558725Q0077)', agency:'48th Civil Engineer Squadron (48 CES) — US Air Force', city:'TX / Nationwide', posted:'2026-08-10', due:'2026-09-19', solicitationNo:'FA558725Q0077', location:'RAF Lakenheath, UK — USAF Installation', responseDate:'2026-09-19', setAside:'Small Business Set-Aside', scope:'48th Civil Engineer Squadron — SCADA system for wastewater treatment plant at RAF Lakenheath. PLC programming, HMI installation, instrumentation, controls integration, commissioning and operator training.', url:'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active' },
+      { id:'fedbid-007', name:'USIBWC — SCADA Lifecycle Support Services (W912BV-26-R-0012)', agency:'US International Boundary and Water Commission (USIBWC)', city:'El Paso, TX', posted:'2026-08-01', due:'2026-09-30', solicitationNo:'W912BV-26-R-0012', location:'El Paso, TX — USIBWC Field Operations', responseDate:'2026-09-30', setAside:'Small Business Set-Aside', scope:'SCADA Lifecycle Support Services for USIBWC water infrastructure. Instrumentation, controls, PLC/HMI maintenance and upgrades, SCADA system support for water treatment and delivery facilities along the US-Mexico border.', url:'https://sam.gov/opp/86f857e87eaa41e5aed1eebce062e685/view', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active' },
+      { id:'fedbid-008', name:'US Army Corps of Engineers — Water Treatment Plant SCADA Upgrades Nationwide IDIQ (W912P6-26-R-0045)', agency:'US Army Corps of Engineers (USACE)', city:'Nationwide', posted:'2026-08-15', due:'2026-10-01', solicitationNo:'W912P6-26-R-0045', location:'Nationwide', responseDate:'2026-10-01', setAside:'Total Small Business', scope:'IDIQ contract for water treatment plant SCADA system upgrades at USACE facilities nationwide. Electrical, instrumentation, controls, PLC/HMI programming, SCADA integration, startup and commissioning.', url:'https://sam.gov/search?index=opp&q=W912P6-26-R-0045&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active' },
+      { id:'fedbid-009', name:'NAVFAC Southwest — Wastewater Treatment Plant Electrical & Instrumentation Upgrades (N6247326R0012)', agency:'Naval Facilities Engineering Systems Command (NAVFAC) Southwest', city:'San Diego, CA / Nationwide', posted:'2026-08-20', due:'2026-10-15', solicitationNo:'N6247326R0012', location:'Naval Base San Diego, CA', responseDate:'2026-10-15', setAside:'Small Business Set-Aside', scope:'Electrical and instrumentation upgrades to wastewater treatment plant at Naval Base San Diego. Motor control centers, switchgear, instrumentation, SCADA integration, controls, commissioning.', url:'https://sam.gov/search?index=opp&q=N6247326R0012&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active' },
     ];
     for (const b of FIVE_BIDS) {
       await pool.query(
