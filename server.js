@@ -376,6 +376,12 @@ app.post('/api/bids/ebn-ingest', async (req, res) => {
   } catch(e) { console.error('[EBN Error]',e.message); res.status(500).json({error:e.message}); }
 });
 
+// Test endpoint — shows exactly what Make.com sends
+app.post('/api/test-ingest', (req, res) => {
+  console.log('[TEST] Body received:', JSON.stringify(req.body).substring(0,500));
+  res.json({ received: req.body, keys: Object.keys(req.body) });
+});
+
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
     const body = req.body;
