@@ -146,103 +146,84 @@ async function seedAllBids() {
 
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
-  try {
-    console.log('[IMAP] Reading fedbids@srigl.com...');
-    await fetchFedBidsFromIMAP();
-  } catch(e) { console.error('[AutoFetch Error]', e.message); }
+  console.log('[AutoFetch] Skipped — bids added via Make.com and manual updates');
 }
 
 async function fetchFedBidsFromIMAP() {
-  const imapSimple = require('imap-simple');
-  const { simpleParser } = require('mailparser');
+  console.log('[IMAP] Reading fedbids@srigl.com via IMAP...');
+  // Use built-in node modules only — no external IMAP library needed
+  const tls = require('tls');
+  return new Promise((resolve, reject) => {
+    const socket = tls.connect({ host: 'mail.srigl.com', port: 993, rejectUnauthorized: false }, async () => {
+      let buffer = '';
+      let step = 0;
+      let emails = [];
 
-  const config = {
-    imap: {
-      user: 'fedbids@srigl.com',
-      password: 'Sriglobal26*',
-      host: 'mail.srigl.com',
-      port: 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 10000
-    }
-  };
+      const send = (cmd) => { socket.write(cmd + '\r\n'); };
 
-  let connection;
-  try {
-    connection = await imapSimple.connect(config);
-    await connection.openBox('INBOX');
+      socket.on('data', async (data) => {
+        buffer += data.toString();
+        const lines = buffer.split('\r\n');
+        buffer = lines.pop();
 
-    // Search for all emails from BidSpeed
-    const searchCriteria = [['FROM', 'system@fedbidspeed.com']];
-    const fetchOptions = { bodies: ['HEADER', 'TEXT', ''], struct: true };
-    const messages = await connection.search(searchCriteria, fetchOptions);
-
-    console.log('[IMAP] Found', messages.length, 'BidSpeed emails');
-    let added = 0;
-
-    for (const msg of messages) {
-      try {
-        const all = msg.parts.find(p => p.which === '');
-        if (!all) continue;
-
-        const parsed = await simpleParser(all.body);
-        const subject = parsed.subject || '';
-        const textBody = parsed.text || '';
-        const htmlBody = parsed.html || '';
-        const fullText = subject + ' ' + textBody + ' ' + htmlBody;
-
-        // Extract BidSpeed pk link
-        const pkMatch = fullText.match(/https?:\/\/[^\s"<>]*fedbidspeed\.com[^\s"<>]*pk=[a-f0-9\-]{36}[^\s"<>]*/i);
-        const bidUrl = pkMatch ? pkMatch[0].trim() : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-
-        // Extract solicitation number
-        const solMatch = fullText.match(/([A-Z]{1,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6}|[A-Z]{2}\d{4,6}[A-Z]\d{4,6})/);
-        const solNo = solMatch ? solMatch[1] : '';
-
-        // Skip duplicates
-        if (solNo) {
-          const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
-          if (dup.rows.length > 0) continue;
-        } else {
-          const dup = await pool.query("SELECT id FROM bids WHERE LOWER(data->>'name')=LOWER($1)", [subject]);
-          if (dup.rows.length > 0) continue;
+        for (const line of lines) {
+          if (step === 0 && line.includes('OK') && line.includes('ready')) {
+            step = 1;
+            send('A1 LOGIN fedbids@srigl.com Sriglobal26*');
+          } else if (step === 1 && line.includes('A1 OK')) {
+            step = 2;
+            send('A2 SELECT INBOX');
+          } else if (step === 2 && line.includes('A2 OK')) {
+            step = 3;
+            send('A3 SEARCH FROM "system@fedbidspeed.com"');
+          } else if (step === 3 && line.startsWith('* SEARCH')) {
+            const ids = line.replace('* SEARCH', '').trim().split(' ').filter(Boolean);
+            console.log('[IMAP] Found', ids.length, 'BidSpeed emails');
+            if (ids.length === 0) { send('A4 LOGOUT'); return; }
+            step = 4;
+            send('A4 FETCH ' + ids.join(',') + ' (BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])');
+          } else if (step === 4 && line.includes('A4 OK')) {
+            send('A5 LOGOUT');
+            socket.end();
+            // Process collected emails
+            let added = 0;
+            for (const email of emails) {
+              try {
+                const subject = (email.match(/Subject: (.+)/i)||[])[1]||'';
+                const body = email;
+                const pkMatch = body.match(/pk=[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
+                const bidUrl = pkMatch
+                  ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&' + pkMatch[0]
+                  : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
+                const solMatch = body.match(/([A-Z]{1,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6})/);
+                const solNo = solMatch ? solMatch[1] : '';
+                if (solNo) {
+                  const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
+                  if (dup.rows.length > 0) continue;
+                }
+                const id = 'fedbid-' + (solNo||Date.now()).toString().replace(/[^a-zA-Z0-9]/g,'').slice(-10);
+                await saveBid({ id, name: subject.trim()||'FedBid Opportunity',
+                  agency:'Federal Agency', city:'Nationwide',
+                  posted: new Date().toISOString().split('T')[0], due:'',
+                  solicitationNo: solNo, scope: body.substring(0,300),
+                  url: bidUrl, source:'FedBids', value:'TBD',
+                  status:'active', region:'statewide', userState:'active',
+                  scrapedAt: new Date().toISOString() });
+                added++;
+              } catch(e2) { console.error('[IMAP parse]', e2.message); }
+            }
+            console.log('[IMAP] Added', added, 'new FedBids');
+            resolve(added);
+          } else if (step === 4) {
+            emails.push(line);
+          }
         }
-
-        // Extract due date
-        const dateMatch = fullText.match(/(?:response|due|deadline|closing)[^:]*:\s*([A-Za-z]+ \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/i);
-        let due = '';
-        if (dateMatch) {
-          const raw = dateMatch[1].trim();
-          try {
-            const d = new Date(raw);
-            if (!isNaN(d)) due = d.toISOString().split('T')[0];
-          } catch(e2) {}
-        }
-
-        // Skip if already expired
-        if (due && new Date(due) < new Date()) continue;
-
-        const id = 'fedbid-imap-' + (solNo || Date.now()).toString().replace(/[^a-zA-Z0-9]/g,'').slice(-10);
-        await saveBid({
-          id, name: subject || 'FedBid Opportunity',
-          agency: 'Federal Agency', city: 'Nationwide',
-          posted: new Date().toISOString().split('T')[0],
-          due, solicitationNo: solNo,
-          scope: textBody.substring(0, 500),
-          url: bidUrl,
-          source: 'FedBids', value: 'TBD', status: 'active',
-          region: 'statewide', userState: 'active',
-          scrapedAt: new Date().toISOString()
-        });
-        added++;
-        console.log('[IMAP] Added bid:', subject.substring(0,60));
-      } catch(e2) { console.error('[IMAP] Email parse error:', e2.message); }
-    }
-    console.log('[IMAP] Done — added', added, 'new FedBids');
-  } finally {
-    if (connection) connection.end();
-  }
+      });
+      socket.on('error', e => { console.error('[IMAP socket]', e.message); reject(e); });
+    });
+    socket.on('error', e => { console.error('[IMAP connect]', e.message); reject(e); });
+    setTimeout(() => { socket.destroy(); resolve(0); }, 30000);
+  });
 }
 
 
