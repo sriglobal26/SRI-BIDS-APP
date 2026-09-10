@@ -146,10 +146,48 @@ async function seedAllBids() {
 
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
-  // Bids come automatically from BidSpeed via Make.com email ingest
-  // Make.com watches fedbids@srigl.com for emails from system@fedbidspeed.com
-  // and posts to /api/bids/fedbids-ingest
-  console.log('[BidSpeed] Bids auto-added via Make.com email pipeline');
+  try {
+    console.log('[AutoFetch] Fetching NAICS 541330 bids from SAM.gov...');
+    await fetchSAMGovNAICS541330();
+  } catch(e) { console.error('[AutoFetch Error]', e.message); }
+}
+
+async function fetchSAMGovNAICS541330() {
+  try {
+    const today = new Date();
+    const from = new Date(today - 60*24*60*60*1000);
+    const fmt = d => d.toISOString().split('T')[0].replace(/-/g,'/');
+    const keywords = ['SCADA water Texas','wastewater instrumentation controls','electrical engineering water treatment Texas'];
+    let added = 0;
+    for (const kw of keywords) {
+      try {
+        const url = 'https://api.sam.gov/opportunities/v2/search?limit=10&api_key=DEMO_KEY&naics=541330&ptype=o&status=active&q='+encodeURIComponent(kw)+'&postedFrom='+fmt(from)+'&postedTo='+fmt(today);
+        const res = await axios.get(url, { timeout: 10000 });
+        const opps = (res.data && res.data.opportunitiesData) || [];
+        for (const opp of opps) {
+          if (!opp.solicitationNumber) continue;
+          const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [opp.solicitationNumber]);
+          if (dup.rows.length > 0) continue;
+          const due = opp.responseDeadLine ? opp.responseDeadLine.split('T')[0] : '';
+          if (due && new Date(due) < new Date()) continue;
+          const id = 'fedbid-sam-' + opp.solicitationNumber.replace(/[^a-zA-Z0-9]/g,'').slice(-8);
+          await saveBid({ id, name: opp.title||'Federal Bid',
+            agency: opp.departmentName||opp.subtierName||'Federal Agency',
+            city: (opp.placeOfPerformance&&opp.placeOfPerformance.city&&opp.placeOfPerformance.city.name) ? opp.placeOfPerformance.city.name+', '+(opp.placeOfPerformance.state&&opp.placeOfPerformance.state.code||'TX') : 'Nationwide',
+            posted: opp.postedDate?opp.postedDate.split('T')[0]:new Date().toISOString().split('T')[0],
+            due, solicitationNo: opp.solicitationNumber, responseDate: due,
+            setAside: opp.typeOfSetAside||'See Solicitation',
+            scope: (opp.description||'NAICS 541330 Engineering Services').substring(0,500),
+            url: 'https://sam.gov/opp/'+(opp.noticeId||'')+'/view',
+            source: 'FedBids', value:'TBD', status:'active', region:'statewide',
+            userState:'active', scrapedAt: new Date().toISOString() });
+          added++;
+          console.log('[SAM.gov] Added:', opp.solicitationNumber);
+        }
+      } catch(e2) { console.error('[SAM.gov search]', kw, e2.message); }
+    }
+    if (added > 0) console.log('[AutoFetch] Added', added, 'new SAM.gov NAICS 541330 bids');
+  } catch(e) { console.error('[fetchSAMGov Error]', e.message); }
 }
 
 
