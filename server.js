@@ -574,6 +574,14 @@ app.get('/api/nuke-ebn', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Manual trigger — fetch all BidSpeed emails from IMAP right now
+app.get('/api/fetch-fedbids-now', async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Fetching BidSpeed emails from fedbids@srigl.com...' });
+    await fetchFedBidsFromIMAP();
+  } catch(e) { console.error('[Manual Fetch]', e.message); }
+});
+
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
     let updated = 0;
