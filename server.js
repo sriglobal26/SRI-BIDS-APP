@@ -377,6 +377,33 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
   } catch(e) { console.error('[FedBids Error]',e.message); res.status(500).json({error:e.message}); }
 });
 
+// Clean expired/fake EBN bids and reseed real ones
+app.get('/api/clean-ebn', async (req, res) => {
+  try {
+    const del1 = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND (id LIKE 'ebn-auto-%' OR id LIKE 'ebn-178%' OR (data->>'name') LIKE '20__-%-%')");
+    const del2 = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND data->>'due' != '' AND data->>'due' NOT LIKE '2%' ");
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
+    }
+    res.json({ success:true, deletedFake:del1.rowCount, deletedExpired:del2.rowCount, reseeded:EBN_BIDS.length });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
+// Nuclear clean — delete ALL EBN bids and reseed only real ones
+app.get('/api/nuke-ebn', async (req, res) => {
+  try {
+    const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
+    const realEBN = [
+      { id:'ebn-883613', name:'Texas Facilities Commission — Engineering Site Services New Public Health Laboratory (883613)', agency:'Texas Facilities Commission', city:'Austin, TX', posted:'2026-08-25', due:'2026-09-23', scope:'Engineering Site Services for New Public Health Laboratory. Civil Engineering.', url:'https://www.envirobidnet.com/subscriber_view_bid/883613', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt:new Date().toISOString() },
+      { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'North Fork WWTP — headworks, MBR treatment, electrical, instrumentation, controls, SCADA.', url:'https://www.envirobidnet.com/subscriber_view_bid/882894', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt:new Date().toISOString() },
+    ];
+    for (const b of realEBN) {
+      await pool.query('INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET data=$2', [b.id, JSON.stringify(b)]);
+    }
+    res.json({ success:true, deleted:del.rowCount, reseeded:realEBN.length });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
 app.get('/api/fix-fedbids-urls', async (req, res) => {
   try {
     let updated = 0;
