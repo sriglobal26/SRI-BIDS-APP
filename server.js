@@ -444,6 +444,24 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
 // Clean expired EBN bids from database
 app.get('/api/clean-ebn', async (req, res) => {
   try {
+    // Delete fake auto-generated bids (timestamp IDs, wrong names)
+    const del1 = await pool.query(
+      "DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND (id LIKE 'ebn-auto-%' OR id LIKE 'ebn-178%' OR data->>'name' LIKE '2026-%')"
+    );
+    // Delete expired EBN bids
+    const del2 = await pool.query(
+      "DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND data->>'due' != '' AND (data->>'due')::date < CURRENT_DATE"
+    );
+    // Reseed fresh EBN bids
+    for (const b of EBN_BIDS) {
+      await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
+    }
+    res.json({ success:true, deletedFake: del1.rowCount, deletedExpired: del2.rowCount, reseeded: EBN_BIDS.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/clean-ebn-old', async (req, res) => {
+  try {
     // Delete all EBN bids from DB so fresh ones from server.js get seeded
     const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
     // Re-seed fresh EBN bids
