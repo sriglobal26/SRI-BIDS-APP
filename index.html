@@ -872,9 +872,10 @@ function getDirectUrl(b) {
   if(b.source==='H2bid') return b.url && !b.url.includes('publicbidtracker') && !b.url.includes('civcastusa') ? b.url : 'https://purchasing.houstontx.gov';
   // EnviroBidNet - open subscriber direct bid page
   if(b.source==='EnviroBidNet') {
-    // EBN requires login — open bid center where Sam is already logged in
-    // Individual bid links are only valid from original EBN email
-    return 'https://www.envirobidnet.com/bid-center/';
+    // Use stored URL — subscriber_view_bid link opens exact bid page
+    if(b.url && b.url.includes('envirobidnet.com')) return b.url;
+    const bidNum = b.id.replace('ebn-','');
+    return bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/'+bidNum : 'https://www.envirobidnet.com/bid-center/';
   }
   // FedBids — use direct BidSpeed pk link if available, else Federal page
   if((b.source||'').toLowerCase()==='fedbids'){
