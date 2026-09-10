@@ -527,7 +527,7 @@ app.get('/api/dedupe-fedbids', async (req, res) => {
     ];
     let seeded = 0;
     for (const b of clean5) {
-      await pool.query("INSERT INTO bids (data) VALUES ($1)", [JSON.stringify({...b, scrapedAt:new Date().toISOString()})]);
+      await pool.query("INSERT INTO bids (id, data) VALUES ($1, $2) ON CONFLICT(id) DO UPDATE SET data=$2", [b.id, JSON.stringify({...b, scrapedAt:new Date().toISOString()})]);
       seeded++;
     }
     res.json({ success:true, deleted:del.rowCount, seeded, message:`Deleted ${del.rowCount} duplicate FedBids — reseeded ${seeded} clean bids` });
