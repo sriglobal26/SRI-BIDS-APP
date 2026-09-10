@@ -556,6 +556,105 @@ app.get('/api/nuke-ebn', async (req, res) => {
 });
 
 // Manual trigger — fetch all BidSpeed emails from IMAP right now
+// Fetch ALL EBN emails from sam@srigl.com directly
+app.get('/api/fetch-ebn-now', async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Fetching EBN emails from sam@srigl.com...' });
+    await fetchEBNFromIMAP();
+  } catch(e) { console.error('[EBN IMAP]', e.message); }
+});
+
+async function fetchEBNFromIMAP() {
+  const tls = require('tls');
+  return new Promise((resolve, reject) => {
+    const socket = tls.connect({ host: 'mail.srigl.com', port: 993, rejectUnauthorized: false }, async () => {
+      let buffer = '';
+      let step = 0;
+      let emails = [];
+
+      const send = (cmd) => socket.write(cmd + '\r\n');
+
+      socket.on('data', async (data) => {
+        buffer += data.toString();
+        const lines = buffer.split('\r\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (step === 0 && line.includes('OK') && line.includes('ready')) {
+            step = 1;
+            send('B1 LOGIN sam@srigl.com Sriglobal26*');
+          } else if (step === 1 && line.includes('B1 OK')) {
+            step = 2;
+            send('B2 SELECT INBOX');
+          } else if (step === 2 && line.includes('B2 OK')) {
+            step = 3;
+            send('B3 SEARCH FROM "no-reply@envirobidnet.com"');
+          } else if (step === 3 && line.startsWith('* SEARCH')) {
+            const ids = line.replace('* SEARCH', '').trim().split(' ').filter(Boolean);
+            console.log('[EBN IMAP] Found', ids.length, 'EBN emails');
+            if (ids.length === 0) { send('B4 LOGOUT'); return; }
+            step = 4;
+            // Fetch last 50 emails max
+            const fetchIds = ids.slice(-50).join(',');
+            send('B4 FETCH ' + fetchIds + ' (BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])');
+          } else if (step === 4 && line.includes('B4 OK')) {
+            send('B5 LOGOUT');
+            socket.end();
+            let added = 0;
+            for (const email of emails) {
+              try {
+                const subject = (email.match(/Subject: (.+)/i)||[])[1]||'';
+                // Extract bid number from URL in email
+                const urlMatch = email.match(/subscriber_view_bid[\/](\d{6,15})/i);
+                const bidNum = urlMatch ? urlMatch[1] : '';
+                if (!bidNum) continue;
+                const id = 'ebn-' + bidNum;
+                // Skip duplicates
+                const dup = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
+                if (dup.rows.length > 0) continue;
+                // Extract due date
+                const dateMatch = email.match(/(?:Expires?|Due)[:\s]+(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                let due = '';
+                if (dateMatch) {
+                  const raw = dateMatch[1];
+                  if (raw.includes('/')) {
+                    const p = raw.split('/');
+                    due = (p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');
+                  } else due = raw;
+                }
+                // Skip expired
+                if (due && new Date(due) < new Date()) continue;
+                // Extract agency from subject
+                const agencyMatch = subject.match(/^([^:—]+)[:\—]/);
+                const agency = agencyMatch ? agencyMatch[1].trim() : 'EnviroBidNet';
+                await saveBid({ id,
+                  name: subject.trim() || 'EBN Bid ' + bidNum,
+                  agency, city: 'Texas',
+                  posted: new Date().toISOString().split('T')[0],
+                  due, scope: email.substring(0,400),
+                  url: 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum,
+                  source: 'EnviroBidNet', value: 'TBD',
+                  status: 'active', region: 'texas',
+                  userState: 'active', scrapedAt: new Date().toISOString()
+                });
+                added++;
+                console.log('[EBN IMAP] Added:', id, subject.substring(0,50));
+              } catch(e2) { console.error('[EBN parse]', e2.message); }
+            }
+            console.log('[EBN IMAP] Done — added', added, 'new EBN bids');
+            resolve(added);
+          } else if (step === 4) {
+            emails.push(line);
+          }
+        }
+      });
+      socket.on('error', e => { console.error('[EBN socket]', e.message); reject(e); });
+    });
+    socket.on('error', e => { console.error('[EBN connect]', e.message); reject(e); });
+    setTimeout(() => { socket.destroy(); resolve(0); }, 30000);
+  });
+}
+
 app.get('/api/fetch-fedbids-now', async (req, res) => {
   try {
     res.json({ success: true, message: 'Fetching BidSpeed emails from fedbids@srigl.com...' });
