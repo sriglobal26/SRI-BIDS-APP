@@ -172,73 +172,36 @@ async function initDB() {
 
 // ─── ROUTES ──────────────────────────────────────────────────
 
-// Email paste page — paste BidSpeed email content to add bid
 app.get('/paste-bid', (req, res) => {
-  res.send(`<!DOCTYPE html>
-<html>
-<head><title>SRI — Paste BidSpeed Email</title>
-<style>
-  body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;background:#0a0f1e;color:#fff}
-  h2{color:#00e5ff}
-  textarea{width:100%;height:300px;background:#1a2332;color:#fff;border:1px solid #00e5ff;padding:12px;font-size:14px;border-radius:8px;margin:10px 0}
-  button{background:#00e5ff;color:#000;border:none;padding:14px 30px;font-size:16px;font-weight:bold;border-radius:8px;cursor:pointer;width:100%}
-  button:hover{background:#00b8cc}
-  #result{margin-top:20px;padding:16px;border-radius:8px;display:none}
-  .success{background:#1a3a1a;border:1px solid #00ff88;color:#00ff88}
-  .error{background:#3a1a1a;border:1px solid #ff4444;color:#ff4444}
-  label{color:#aaa;font-size:13px}
-  input{width:100%;background:#1a2332;color:#fff;border:1px solid #444;padding:10px;border-radius:6px;font-size:14px;margin:6px 0 16px}
-</style>
-</head>
-<body>
-<h2>⚡ SRI Global — Add BidSpeed Email</h2>
-<p style="color:#aaa">Paste the full BidSpeed email content below. The bid will be automatically extracted and added to your FedBids tab.</p>
-<label>Email Subject (optional):</label>
-<input type="text" id="subject" placeholder="e.g. NAVFAC SCADA Engineering Services N4008524R2674">
-<label>Paste Full Email Content:</label>
-<textarea id="emailContent" placeholder="Paste the full BidSpeed email text here..."></textarea>
-<button onclick="submitBid()">➕ Add to FedBids Tab</button>
-<div id="result"></div>
+  res.send(`<!DOCTYPE html><html><head><title>SRI — Add FedBid</title>
+<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;background:#0a0f1e;color:#fff}
+h2{color:#00e5ff}textarea{width:100%;height:250px;background:#1a2332;color:#fff;border:1px solid #00e5ff;padding:10px;border-radius:8px;margin:8px 0;font-size:13px}
+input{width:100%;background:#1a2332;color:#fff;border:1px solid #444;padding:10px;border-radius:6px;margin:4px 0 12px}
+button{background:#00e5ff;color:#000;border:none;padding:14px;font-size:16px;font-weight:bold;border-radius:8px;cursor:pointer;width:100%}
+#r{margin-top:16px;padding:14px;border-radius:8px;display:none}
+.ok{background:#1a3a1a;border:1px solid #0f0;color:#0f0}.er{background:#3a1a1a;border:1px solid #f44;color:#f44}</style></head>
+<body><h2>⚡ Add BidSpeed Email to FedBids</h2>
+<p style="color:#aaa">Open a BidSpeed email → Select All → Copy → Paste below</p>
+<input type="text" id="sub" placeholder="Email subject (optional)">
+<textarea id="txt" placeholder="Paste full BidSpeed email content here..."></textarea>
+<button onclick="go()">➕ Add to FedBids Tab</button>
+<div id="r"></div>
 <script>
-async function submitBid() {
-  const subject = document.getElementById('subject').value;
-  const body = document.getElementById('emailContent').value;
-  if (!body.trim()) { alert('Please paste email content first'); return; }
-  const btn = document.querySelector('button');
-  btn.textContent = 'Adding...';
-  btn.disabled = true;
-  try {
-    const resp = await fetch('/api/bids/fedbids-ingest', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ subject, body, text: body, snippet: body.substring(0,500) })
-    });
-    const data = await resp.json();
-    const el = document.getElementById('result');
-    el.style.display = 'block';
-    if (data.success && !data.skipped) {
-      el.className = 'success';
-      el.innerHTML = '✅ Bid added successfully!<br>ID: ' + data.bid.id + '<br>Name: ' + data.bid.name + '<br>Sol No: ' + (data.bid.solNo||'N/A') + '<br>Due: ' + (data.bid.due||'N/A');
-      document.getElementById('emailContent').value = '';
-      document.getElementById('subject').value = '';
-    } else if (data.skipped) {
-      el.className = 'error';
-      el.innerHTML = '⚠️ Skipped: ' + data.reason;
-    } else {
-      el.className = 'error';
-      el.innerHTML = '❌ Error: ' + JSON.stringify(data);
-    }
-  } catch(e) {
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('result').className = 'error';
-    document.getElementById('result').innerHTML = '❌ Error: ' + e.message;
-  }
-  btn.textContent = '➕ Add to FedBids Tab';
-  btn.disabled = false;
+async function go(){
+  const sub=document.getElementById('sub').value;
+  const txt=document.getElementById('txt').value;
+  if(!txt.trim()){alert('Paste email first');return;}
+  const btn=document.querySelector('button');
+  btn.textContent='Adding...';btn.disabled=true;
+  const resp=await fetch('/api/bids/fedbids-ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:sub,body:txt,text:txt,snippet:txt.substring(0,500)})});
+  const d=await resp.json();
+  const r=document.getElementById('r');r.style.display='block';
+  if(d.success&&!d.skipped){r.className='ok';r.innerHTML='✅ Added! ID:'+d.bid.id+'<br>Name:'+d.bid.name+'<br>Sol:'+d.bid.solNo+'<br>Due:'+d.bid.due;}
+  else if(d.skipped){r.className='er';r.innerHTML='⚠️ Skipped: '+d.reason;}
+  else{r.className='er';r.innerHTML='❌ Error: '+JSON.stringify(d);}
+  btn.textContent='➕ Add to FedBids Tab';btn.disabled=false;
 }
-</script>
-</body>
-</html>`);
+</script></body></html>`);
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -413,7 +376,6 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
     const allText = subject + ' ' + emailBody;
     console.log('[FedBids] Subject:', subject.substring(0,80));
-    console.log('[FedBids] Body length:', emailBody.length);
 
     // Extract BidSpeed pk link
     const pkMatch = allText.match(/pk=([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
@@ -425,8 +387,8 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     const solNo = solMatch ? solMatch[1] : '';
 
-    // Get bid name from subject
-    const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid ' + (solNo || new Date().toISOString().split('T')[0]));
+    // Bid name from subject
+    const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid ' + (solNo || Date.now()));
 
     // Duplicate check
     if (solNo) {
@@ -434,14 +396,14 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate', solNo });
     }
 
-    // Extract valid due date (must be 2026-2030)
+    // Extract valid due date (2026-2030 only)
     let due = '';
-    const dPatterns = [
+    const dPats = [
       /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4})/i,
-      /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
-      /(?:response|due|deadline|closing)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? [0-9]{4})/i,
+      /(?:response|due|deadline)[^:]*:[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+      /(?:response|due|deadline)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? [0-9]{4})/i,
     ];
-    for (const pat of dPatterns) {
+    for (const pat of dPats) {
       const m = allText.match(pat);
       if (m) {
         try {
@@ -449,7 +411,7 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
           if (!isNaN(dt) && dt.getFullYear() >= 2026 && dt.getFullYear() <= 2030) {
             due = dt.toISOString().split('T')[0]; break;
           }
-        } catch(e2){}
+        } catch(e2) {}
       }
     }
 
@@ -463,10 +425,11 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
       status: 'active', region: 'statewide', userState: 'active',
       scrapedAt: new Date().toISOString() });
 
-    console.log('[FedBids] Saved:', id, bidName.substring(0,60));
+    console.log('[FedBids] Saved:', id, bidName.substring(0,50));
     res.json({ success:true, bid:{ id, name:bidName, solNo, due, url:bidUrl } });
   } catch(e) { console.error('[FedBids Error]', e.message); res.status(500).json({error:e.message}); }
 });
+
 
 app.get('/api/clean-ebn', async (req, res) => {
   try {
