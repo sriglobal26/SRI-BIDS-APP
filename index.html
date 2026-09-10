@@ -757,8 +757,7 @@ let bidState={};
 function classifyBid(b){
   // FedBids — only show approved 5 bids, mark all others as deleted
   if((b.source||'').toLowerCase()==='fedbids'){
-    const APPROVED = ['fedbid-001','fedbid-006'];
-    if(!APPROVED.includes(b.id)) return 'deleted'; // not approved — hide it
+    // Show ALL FedBids — no approved list restriction
     if(b.due && /^20[2-9][0-9]-\d{2}-\d{2}$/.test(b.due)){
       const due = new Date(b.due + 'T23:59:59');
       if(due < new Date()) return 'deleted';
