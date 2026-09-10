@@ -346,38 +346,69 @@ app.post('/api/bids/fedbids-ingest', async (req, res) => {
     const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
     const allText = subject + ' ' + emailBody;
     console.log('[FedBids] Subject:', subject.substring(0,80));
+    console.log('[FedBids] Body len:', emailBody.length);
+
+    // Extract BidSpeed pk link
     const pkMatch = allText.match(/pk=([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
     const bidUrl = pkMatch
-      ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk='+pkMatch[1]
+      ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk=' + pkMatch[1]
       : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
+
+    // Extract solicitation number
     const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     const solNo = solMatch ? solMatch[1] : '';
-    const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid '+(solNo||Date.now()));
+
+    // ALWAYS generate a valid non-null ID
+    const ts = String(Date.now()).slice(-10);
+    const solClean = solNo.replace(/[^a-zA-Z0-9]/g, '');
+    const id = 'fedbid-' + (solClean.length >= 3 ? solClean : ts);
+    console.log('[FedBids] ID:', id, 'solNo:', solNo);
+
+    // Bid name
+    const bidName = (subject && subject.length > 5) ? subject.trim() : ('FedBid ' + (solNo || ts));
+
+    // Duplicate check
     if (solNo) {
       const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
       if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate', solNo });
     }
+    const dup2 = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
+    if (dup2.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate ID', id });
+
+    // Extract valid due date
     let due = '';
     const dPats = [
       /(?:response|due|deadline|closing)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/20[2-9][0-9])/i,
       /(?:response|due|deadline)[^:]*:[^0-9]*(20[2-9][0-9]-[0-9]{2}-[0-9]{2})/i,
+      /(?:response|due|deadline)[^:]*:\s*([A-Za-z]+ [0-9]{1,2},? 20[2-9][0-9])/i,
     ];
     for (const pat of dPats) {
       const m = allText.match(pat);
-      if (m) { try { const dt=new Date(m[1]); if(!isNaN(dt)&&dt.getFullYear()>=2026){due=dt.toISOString().split('T')[0];break;} }catch(e2){} }
+      if (m) {
+        try {
+          const dt = new Date(m[1]);
+          if (!isNaN(dt) && dt.getFullYear() >= 2026) { due = dt.toISOString().split('T')[0]; break; }
+        } catch(e2) {}
+      }
     }
-    const id = 'fedbid-'+(solNo||String(Date.now())).replace(/[^a-zA-Z0-9]/g,'').slice(-10);
-    await saveBid({ id, name:bidName.substring(0,200), agency:'Federal Agency', city:'Nationwide',
-      posted:new Date().toISOString().split('T')[0], due, solicitationNo:solNo, responseDate:due,
-      setAside:'See Solicitation', scope:emailBody.substring(0,500), url:bidUrl,
-      source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active',
-      scrapedAt:new Date().toISOString() });
-    console.log('[FedBids] Saved:', id, bidName.substring(0,50));
+
+    await saveBid({ id, name: bidName.substring(0,200),
+      agency: 'Federal Agency', city: 'Nationwide',
+      posted: new Date().toISOString().split('T')[0],
+      due, solicitationNo: solNo, responseDate: due,
+      setAside: 'See Solicitation', scope: emailBody.substring(0,500),
+      url: bidUrl, source: 'FedBids', value: 'TBD',
+      status: 'active', region: 'statewide', userState: 'active',
+      scrapedAt: new Date().toISOString() });
+
+    console.log('[FedBids] ✅ Saved:', id, bidName.substring(0,50));
     res.json({ success:true, bid:{ id, name:bidName, solNo, due, url:bidUrl } });
-  } catch(e) { console.error('[FedBids Error]',e.message); res.status(500).json({error:e.message}); }
+  } catch(e) {
+    console.error('[FedBids Error]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Clean expired/fake EBN bids and reseed real ones
 app.get('/api/clean-ebn', async (req, res) => {
   try {
     const del1 = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND (id LIKE 'ebn-auto-%' OR id LIKE 'ebn-178%' OR (data->>'name') LIKE '20__-%-%')");
