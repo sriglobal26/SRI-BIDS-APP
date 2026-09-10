@@ -34,9 +34,8 @@ app.use(express.static(__dirname));
 // ─── BID ARRAYS ────────────────────────────────────────────────
 
 const EBN_BIDS = [
-  { id:'ebn-883613', name:'Texas Facilities Commission — RFQ Engineering Site Services for New Public Health Laboratory (883613)', agency:'Texas Facilities Commission (TFC)', city:'Austin, TX', posted:'2026-08-25', due:'2026-09-23', scope:'RFQ Addendum 1, Q&A — Engineering Site Services for New Public Health Laboratory. Civil Engineering — all services. Bid No: 0010042. 1711 San Jacinto Blvd, Austin TX 78701.', url:'https://www.envirobidnet.com/subscriber_view_bid/883613', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/subscriber_view_bid/882894', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
-  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services for Opportunity Home San Antonio. 3 bid specifications available.', url:'https://www.envirobidnet.com/subscriber_view_bid/884038', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'Addenda 1-2, Due Date Extended. North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
+  { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services for Opportunity Home San Antonio. 3 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas' },
 ];
 
 const H2BID_BIDS = [
@@ -146,84 +145,10 @@ async function seedAllBids() {
 
 // ─── AUTO FETCH ──────────────────────────────────────────────
 async function autoFetchNewBids() {
-  console.log('[AutoFetch] Skipped — bids added via Make.com and manual updates');
-}
-
-async function fetchFedBidsFromIMAP() {
-  console.log('[IMAP] Reading fedbids@srigl.com via IMAP...');
-  // Use built-in node modules only — no external IMAP library needed
-  const tls = require('tls');
-  return new Promise((resolve, reject) => {
-    const socket = tls.connect({ host: 'mail.srigl.com', port: 993, rejectUnauthorized: false }, async () => {
-      let buffer = '';
-      let step = 0;
-      let emails = [];
-
-      const send = (cmd) => { socket.write(cmd + '\r\n'); };
-
-      socket.on('data', async (data) => {
-        buffer += data.toString();
-        const lines = buffer.split('\r\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (step === 0 && line.includes('OK') && line.includes('ready')) {
-            step = 1;
-            send('A1 LOGIN fedbids@srigl.com Sriglobal26*');
-          } else if (step === 1 && line.includes('A1 OK')) {
-            step = 2;
-            send('A2 SELECT INBOX');
-          } else if (step === 2 && line.includes('A2 OK')) {
-            step = 3;
-            send('A3 SEARCH FROM "system@fedbidspeed.com"');
-          } else if (step === 3 && line.startsWith('* SEARCH')) {
-            const ids = line.replace('* SEARCH', '').trim().split(' ').filter(Boolean);
-            console.log('[IMAP] Found', ids.length, 'BidSpeed emails');
-            if (ids.length === 0) { send('A4 LOGOUT'); return; }
-            step = 4;
-            send('A4 FETCH ' + ids.join(',') + ' (BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])');
-          } else if (step === 4 && line.includes('A4 OK')) {
-            send('A5 LOGOUT');
-            socket.end();
-            // Process collected emails
-            let added = 0;
-            for (const email of emails) {
-              try {
-                const subject = (email.match(/Subject: (.+)/i)||[])[1]||'';
-                const body = email;
-                const pkMatch = body.match(/pk=[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
-                const bidUrl = pkMatch
-                  ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&' + pkMatch[0]
-                  : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-                const solMatch = body.match(/([A-Z]{1,6}-?\d{2,6}-[A-Z]{1,2}-?\d{4,6})/);
-                const solNo = solMatch ? solMatch[1] : '';
-                if (solNo) {
-                  const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
-                  if (dup.rows.length > 0) continue;
-                }
-                const id = 'fedbid-' + (solNo||Date.now()).toString().replace(/[^a-zA-Z0-9]/g,'').slice(-10);
-                await saveBid({ id, name: subject.trim()||'FedBid Opportunity',
-                  agency:'Federal Agency', city:'Nationwide',
-                  posted: new Date().toISOString().split('T')[0], due:'',
-                  solicitationNo: solNo, scope: body.substring(0,300),
-                  url: bidUrl, source:'FedBids', value:'TBD',
-                  status:'active', region:'statewide', userState:'active',
-                  scrapedAt: new Date().toISOString() });
-                added++;
-              } catch(e2) { console.error('[IMAP parse]', e2.message); }
-            }
-            console.log('[IMAP] Added', added, 'new FedBids');
-            resolve(added);
-          } else if (step === 4) {
-            emails.push(line);
-          }
-        }
-      });
-      socket.on('error', e => { console.error('[IMAP socket]', e.message); reject(e); });
-    });
-    socket.on('error', e => { console.error('[IMAP connect]', e.message); reject(e); });
-    setTimeout(() => { socket.destroy(); resolve(0); }, 30000);
-  });
+  // Bids come automatically from BidSpeed via Make.com email ingest
+  // Make.com watches fedbids@srigl.com for emails from system@fedbidspeed.com
+  // and posts to /api/bids/fedbids-ingest
+  console.log('[BidSpeed] Bids auto-added via Make.com email pipeline');
 }
 
 
@@ -412,78 +337,112 @@ app.post('/api/bids/ebn-ingest', async (req, res) => {
   } catch(e) { console.error('[EBN Error]',e.message); res.status(500).json({error:e.message}); }
 });
 
-// Test endpoint — shows exactly what Make.com sends
-app.post('/api/test-ingest', (req, res) => {
-  console.log('[TEST] Body received:', JSON.stringify(req.body).substring(0,500));
-  res.json({ received: req.body, keys: Object.keys(req.body) });
-});
-
 app.post('/api/bids/fedbids-ingest', async (req, res) => {
   try {
-    const b = req.body || {};
-    const subject = b.subject || b.Subject || b.name || b.title || '';
-    const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
+    const body = req.body;
+    const subject = body.subject || body.Subject || body.name || body.title || 'FedBid Opportunity';
+    const emailBody = body.body || body.Body || body.text || body.Text || body.snippet || body.Snippet || body.content || '';
     const allText = subject + ' ' + emailBody;
-    console.log('[FedBids Ingest] Subject:', subject.substring(0,80));
 
-    // Extract BidSpeed pk link from email
-    const pkMatch = allText.match(/pk=[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i);
-    const bidUrl = pkMatch
-      ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&' + pkMatch[0]
-      : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-
-    // Extract solicitation number
-    const solMatch = allText.match(/[A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6}/);
-    const solNo = solMatch ? solMatch[0] : '';
-
-    // Duplicate check
-    if (solNo) {
-      const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1", [solNo]);
-      if (dup.rows.length > 0) return res.json({ success:true, skipped:true, reason:'Duplicate' });
+    // ── RELEVANCE FILTER — only save E&I/SCADA/water/wastewater bids ──
+    const EI_KEYWORDS = [
+      'scada','instrumentation','electrical','controls','control system',
+      'water treatment','wastewater','wwtp','lift station','pump station',
+      'mep','plc','hmi','telemetry','monitoring','sensors','metering',
+      'wwtf','water plant','sewer','stormwater','pipeline','treatment plant',
+      'e&i','e & i','engineer','engineering services'
+    ];
+    const relevantText = (subject + ' ' + emailBody).toLowerCase();
+    const isRelevant = EI_KEYWORDS.some(kw => relevantText.includes(kw));
+    if (!isRelevant) {
+      console.log('[FedBids Ingest] Skipped — not E&I relevant:', subject.substring(0,80));
+      return res.json({ success: true, skipped: true, reason: 'Not E&I relevant', subject });
     }
 
-    // Extract due date
+    // ── STRICT DUPLICATE CHECK ──
+    // Check by solicitation number OR exact name match
+    const solMatch = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    const solNo = solMatch ? solMatch[1] : '';
+    const dupCheck = await pool.query(
+      `SELECT id FROM bids WHERE data->>'source'='FedBids' AND (
+        (data->>'solicitationNo'=$1 AND $1 != '') OR
+        LOWER(data->>'name')=LOWER($2)
+      ) LIMIT 1`,
+      [solNo, subject]
+    );
+    if (dupCheck.rows.length > 0) {
+      return res.json({ success: true, skipped: true, reason: 'Duplicate', solNo, name: subject });
+    }
+
+    // ── DATE PARSER ──
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+      january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+    function parseDate(str) {
+      if (!str) return '';
+      str = str.trim();
+      let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return str;
+      m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m) { const yr = m[3].length===2?'20'+m[3]:m[3]; return yr+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      m = str.match(/([a-zA-Z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
+      if (m) { const mo=MONTHS[m[1].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+      m = str.match(/(\d{1,2})\s+([a-zA-Z]+)\.?\s+(\d{4})/i);
+      if (m) { const mo=MONTHS[m[2].toLowerCase().slice(0,3)]; if(mo) return m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'); }
+      return '';
+    }
+
+    // Parse due date
     let due = '';
-    const dateMatch = allText.match(/(?:response|due|deadline)[^:]*:?\s*([\w]+ [0-9]{1,2},? [0-9]{4}|[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
-    if (dateMatch) {
-      try { const d = new Date(dateMatch[1]); if(!isNaN(d)) due = d.toISOString().split('T')[0]; } catch(e){}
+    if (body.due) due = parseDate(body.due);
+    if (!due) {
+      const duePat = allText.match(/(?:due|deadline|response|closing)\s*(?:date)?[:\s]+([^\n<]{4,30})/i);
+      if (duePat) due = parseDate(duePat[1].trim());
+    }
+    if (!due) {
+      const dates = allText.match(/(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})/gi);
+      if (dates) { const parsed = dates.map(d=>parseDate(d)).filter(Boolean).sort(); due = parsed[parsed.length-1]||''; }
     }
 
-    const id = 'fedbid-' + (solNo||String(Date.now())).replace(/[^a-zA-Z0-9]/g,'').slice(-10);
-    await saveBid({ id, name: subject||'FedBid Opportunity',
-      agency:'Federal Agency', city:'Nationwide',
+    // Extract BidSpeed direct link from email body (contains pk= parameter)
+    // BidSpeed URL format: secure.fedbidspeed.com/Handler.ashx?...&pk=<uuid>&...
+    const allUrls = (emailBody.match(/https?:\/\/[^\s<>"]+/g) || []);
+    const bidspeedLink = allUrls.find(u => u.includes('fedbidspeed.com') && u.includes('pk='));
+    const rfqUrl = bidspeedLink
+      ? bidspeedLink  // Use exact BidSpeed bid link from email
+      : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home'; // Fallback to Federal page
+
+    const bid = {
+      id: 'fedbid-' + Date.now(),
+      name: subject,
+      agency: body.agency || body.from || 'FedBidSpeed',
+      city: body.city || 'Texas',
       posted: new Date().toISOString().split('T')[0],
-      due, solicitationNo: solNo, responseDate: due,
-      setAside:'See Solicitation', scope: emailBody.substring(0,500),
-      url: bidUrl, source:'FedBids', value:'TBD',
-      status:'active', region:'statewide', userState:'active',
-      scrapedAt: new Date().toISOString() });
-
-    console.log('[FedBids Ingest] Saved:', id, subject.substring(0,50));
-    res.json({ success:true, bid:{ id, name:subject, solNo, due, url:bidUrl } });
-  } catch(e) { console.error('[FedBids Ingest Error]', e.message); res.status(500).json({error:e.message}); }
-});
-
-
-app.get('/api/clean-ebn', async (req, res) => {
-  try {
-    // Delete fake auto-generated bids (timestamp IDs, wrong names)
-    const del1 = await pool.query(
-      "DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND (id LIKE 'ebn-auto-%' OR id LIKE 'ebn-178%' OR data->>'name' LIKE '2026-%')"
+      due: due || 'Check Link',
+      solicitationNo: solNo || '',
+      location: body.location || body.city || 'Texas',
+      responseDate: due || '',
+      setAside: body.setAside || 'See Solicitation',
+      scope: (emailBody||subject).substring(0,500),
+      url: rfqUrl,
+      source: 'FedBids',
+      value: body.value || 'TBD',
+      status: 'active',
+      region: 'texas',
+      userState: 'active',
+      scrapedAt: new Date().toISOString()
+    };
+    await pool.query(
+      'INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING',
+      [bid.id, JSON.stringify(bid)]
     );
-    // Delete expired EBN bids
-    const del2 = await pool.query(
-      "DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND data->>'due' != '' AND (data->>'due')::date < CURRENT_DATE"
-    );
-    // Reseed fresh EBN bids
-    for (const b of EBN_BIDS) {
-      await saveBid({ ...b, region: detectRegion(b.city), scrapedAt: new Date().toISOString() });
-    }
-    res.json({ success:true, deletedFake: del1.rowCount, deletedExpired: del2.rowCount, reseeded: EBN_BIDS.length });
+    res.json({ success: true, bid: { id: bid.id, name: bid.name, due } });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/clean-ebn-old', async (req, res) => {
+// Fix ALL FedBids URLs in DB to use BidSpeed
+// Fix ALL FedBids URLs in DB to use SAM.gov search with sol number
+// Clean expired EBN bids from database
+app.get('/api/clean-ebn', async (req, res) => {
   try {
     // Delete all EBN bids from DB so fresh ones from server.js get seeded
     const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
@@ -493,130 +452,6 @@ app.get('/api/clean-ebn-old', async (req, res) => {
     }
     res.json({ success: true, deleted: del.rowCount, reseeded: EBN_BIDS.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// Nuclear clean — delete ALL EBN bids and reseed only real ones
-app.get('/api/nuke-ebn', async (req, res) => {
-  try {
-    // Delete ALL EBN bids from DB
-    const del = await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet'");
-    // Reseed only the 2 real verified EBN bids
-    const realEBN = [
-      { id:'ebn-882894', name:'City of Liberty Hill — North Fork WWTP Improvements (882894)', agency:'City of Liberty Hill', city:'Liberty Hill, TX', posted:'2026-09-04', due:'2026-10-15', scope:'North Fork Wastewater Treatment Plant — new primary and secondary headworks, MBR treatment process. Electrical, instrumentation, controls, SCADA. 6 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt: new Date().toISOString() },
-      { id:'ebn-884038', name:'Opportunity Home San Antonio — RFQ Environmental Engineering Services (884038)', agency:'Opportunity Home San Antonio', city:'San Antonio, TX', posted:'2026-09-04', due:'2026-09-17', scope:'RFQ Addenda 1-2 Environmental Engineering Services. 3 bid specifications available.', url:'https://www.envirobidnet.com/bid-center/', source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active', scrapedAt: new Date().toISOString() },
-    ];
-    for (const b of realEBN) {
-      await pool.query('INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET data=$2', [b.id, JSON.stringify(b)]);
-    }
-    res.json({ success:true, deleted: del.rowCount, reseeded: realEBN.length, message: 'Deleted '+del.rowCount+' EBN bids, reseeded 2 real bids' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// Manual trigger — fetch all BidSpeed emails from IMAP right now
-// Fetch ALL EBN emails from sam@srigl.com directly
-app.get('/api/fetch-ebn-now', async (req, res) => {
-  try {
-    res.json({ success: true, message: 'Fetching EBN emails from sam@srigl.com...' });
-    await fetchEBNFromIMAP();
-  } catch(e) { console.error('[EBN IMAP]', e.message); }
-});
-
-async function fetchEBNFromIMAP() {
-  const tls = require('tls');
-  return new Promise((resolve, reject) => {
-    const socket = tls.connect({ host: 'mail.srigl.com', port: 993, rejectUnauthorized: false }, async () => {
-      let buffer = '';
-      let step = 0;
-      let emails = [];
-
-      const send = (cmd) => socket.write(cmd + '\r\n');
-
-      socket.on('data', async (data) => {
-        buffer += data.toString();
-        const lines = buffer.split('\r\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (step === 0 && line.includes('OK') && line.includes('ready')) {
-            step = 1;
-            send('B1 LOGIN sam@srigl.com Sriglobal26*');
-          } else if (step === 1 && line.includes('B1 OK')) {
-            step = 2;
-            send('B2 SELECT INBOX');
-          } else if (step === 2 && line.includes('B2 OK')) {
-            step = 3;
-            send('B3 SEARCH FROM "no-reply@envirobidnet.com"');
-          } else if (step === 3 && line.startsWith('* SEARCH')) {
-            const ids = line.replace('* SEARCH', '').trim().split(' ').filter(Boolean);
-            console.log('[EBN IMAP] Found', ids.length, 'EBN emails');
-            if (ids.length === 0) { send('B4 LOGOUT'); return; }
-            step = 4;
-            // Fetch last 50 emails max
-            const fetchIds = ids.slice(-50).join(',');
-            send('B4 FETCH ' + fetchIds + ' (BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])');
-          } else if (step === 4 && line.includes('B4 OK')) {
-            send('B5 LOGOUT');
-            socket.end();
-            let added = 0;
-            for (const email of emails) {
-              try {
-                const subject = (email.match(/Subject: (.+)/i)||[])[1]||'';
-                // Extract bid number from URL in email
-                const urlMatch = email.match(/subscriber_view_bid[\/](\d{6,15})/i);
-                const bidNum = urlMatch ? urlMatch[1] : '';
-                if (!bidNum) continue;
-                const id = 'ebn-' + bidNum;
-                // Skip duplicates
-                const dup = await pool.query("SELECT id FROM bids WHERE id=$1", [id]);
-                if (dup.rows.length > 0) continue;
-                // Extract due date
-                const dateMatch = email.match(/(?:Expires?|Due)[:\s]+(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
-                let due = '';
-                if (dateMatch) {
-                  const raw = dateMatch[1];
-                  if (raw.includes('/')) {
-                    const p = raw.split('/');
-                    due = (p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');
-                  } else due = raw;
-                }
-                // Skip expired
-                if (due && new Date(due) < new Date()) continue;
-                // Extract agency from subject
-                const agencyMatch = subject.match(/^([^:—]+)[:\—]/);
-                const agency = agencyMatch ? agencyMatch[1].trim() : 'EnviroBidNet';
-                await saveBid({ id,
-                  name: subject.trim() || 'EBN Bid ' + bidNum,
-                  agency, city: 'Texas',
-                  posted: new Date().toISOString().split('T')[0],
-                  due, scope: email.substring(0,400),
-                  url: 'https://www.envirobidnet.com/subscriber_view_bid/' + bidNum,
-                  source: 'EnviroBidNet', value: 'TBD',
-                  status: 'active', region: 'texas',
-                  userState: 'active', scrapedAt: new Date().toISOString()
-                });
-                added++;
-                console.log('[EBN IMAP] Added:', id, subject.substring(0,50));
-              } catch(e2) { console.error('[EBN parse]', e2.message); }
-            }
-            console.log('[EBN IMAP] Done — added', added, 'new EBN bids');
-            resolve(added);
-          } else if (step === 4) {
-            emails.push(line);
-          }
-        }
-      });
-      socket.on('error', e => { console.error('[EBN socket]', e.message); reject(e); });
-    });
-    socket.on('error', e => { console.error('[EBN connect]', e.message); reject(e); });
-    setTimeout(() => { socket.destroy(); resolve(0); }, 30000);
-  });
-}
-
-app.get('/api/fetch-fedbids-now', async (req, res) => {
-  try {
-    res.json({ success: true, message: 'Fetching BidSpeed emails from fedbids@srigl.com...' });
-    await fetchFedBidsFromIMAP();
-  } catch(e) { console.error('[Manual Fetch]', e.message); }
 });
 
 app.get('/api/fix-fedbids-urls', async (req, res) => {
@@ -738,7 +573,7 @@ app.delete('/api/bids/:id', async (req, res) => {
 });
 
 // ─── CRON ────────────────────────────────────────────────────
-cron.schedule('0 */4 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
+cron.schedule('0 */2 * * *', async () => { try { await autoFetchNewBids(); } catch(e){ console.error('[Cron]',e.message); } }); // every 2 hours
 cron.schedule('0 */2 * * *', async () => { try { await autoExpireAndClean(); } catch(e){ console.error('[Cron]',e.message); } }); // expire + clean every 2 hours
 
 // ─── START ───────────────────────────────────────────────────
