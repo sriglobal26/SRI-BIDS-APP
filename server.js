@@ -172,6 +172,75 @@ async function initDB() {
 
 // ─── ROUTES ──────────────────────────────────────────────────
 
+// Email paste page — paste BidSpeed email content to add bid
+app.get('/paste-bid', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html>
+<head><title>SRI — Paste BidSpeed Email</title>
+<style>
+  body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;background:#0a0f1e;color:#fff}
+  h2{color:#00e5ff}
+  textarea{width:100%;height:300px;background:#1a2332;color:#fff;border:1px solid #00e5ff;padding:12px;font-size:14px;border-radius:8px;margin:10px 0}
+  button{background:#00e5ff;color:#000;border:none;padding:14px 30px;font-size:16px;font-weight:bold;border-radius:8px;cursor:pointer;width:100%}
+  button:hover{background:#00b8cc}
+  #result{margin-top:20px;padding:16px;border-radius:8px;display:none}
+  .success{background:#1a3a1a;border:1px solid #00ff88;color:#00ff88}
+  .error{background:#3a1a1a;border:1px solid #ff4444;color:#ff4444}
+  label{color:#aaa;font-size:13px}
+  input{width:100%;background:#1a2332;color:#fff;border:1px solid #444;padding:10px;border-radius:6px;font-size:14px;margin:6px 0 16px}
+</style>
+</head>
+<body>
+<h2>⚡ SRI Global — Add BidSpeed Email</h2>
+<p style="color:#aaa">Paste the full BidSpeed email content below. The bid will be automatically extracted and added to your FedBids tab.</p>
+<label>Email Subject (optional):</label>
+<input type="text" id="subject" placeholder="e.g. NAVFAC SCADA Engineering Services N4008524R2674">
+<label>Paste Full Email Content:</label>
+<textarea id="emailContent" placeholder="Paste the full BidSpeed email text here..."></textarea>
+<button onclick="submitBid()">➕ Add to FedBids Tab</button>
+<div id="result"></div>
+<script>
+async function submitBid() {
+  const subject = document.getElementById('subject').value;
+  const body = document.getElementById('emailContent').value;
+  if (!body.trim()) { alert('Please paste email content first'); return; }
+  const btn = document.querySelector('button');
+  btn.textContent = 'Adding...';
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/bids/fedbids-ingest', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ subject, body, text: body, snippet: body.substring(0,500) })
+    });
+    const data = await resp.json();
+    const el = document.getElementById('result');
+    el.style.display = 'block';
+    if (data.success && !data.skipped) {
+      el.className = 'success';
+      el.innerHTML = '✅ Bid added successfully!<br>ID: ' + data.bid.id + '<br>Name: ' + data.bid.name + '<br>Sol No: ' + (data.bid.solNo||'N/A') + '<br>Due: ' + (data.bid.due||'N/A');
+      document.getElementById('emailContent').value = '';
+      document.getElementById('subject').value = '';
+    } else if (data.skipped) {
+      el.className = 'error';
+      el.innerHTML = '⚠️ Skipped: ' + data.reason;
+    } else {
+      el.className = 'error';
+      el.innerHTML = '❌ Error: ' + JSON.stringify(data);
+    }
+  } catch(e) {
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').className = 'error';
+    document.getElementById('result').innerHTML = '❌ Error: ' + e.message;
+  }
+  btn.textContent = '➕ Add to FedBids Tab';
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>`);
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // NUCLEAR OPTION: Delete ALL FedBids instantly and reseed 5 clean
