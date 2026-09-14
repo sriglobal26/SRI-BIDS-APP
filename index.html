@@ -1983,11 +1983,9 @@ function addBidManual(){
 }
 
 // ── SCRAPE NOW BUTTON ──────────────────────────────────────
-async async function runScrapeNow(){
-  const btn = document.getElementById('btn-scrape');
-  if(!btn) return;
-  btn.textContent = '⏳ Refreshing...';
-  btn.disabled = true;
+async async async function runScrapeNow(){
+  const btn = document.getElementById('btn-scrape') || document.querySelector('[onclick*="runScrapeNow"]') || document.querySelector('[onclick*="refreshBids"]');
+  if(btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
   try {
     const res = await fetch('/api/bids');
     const data = await res.json();
