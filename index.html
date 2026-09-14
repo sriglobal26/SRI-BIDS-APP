@@ -1986,9 +1986,18 @@ async async async function runScrapeNow(){
   fetch('/api/bids')
     .then(r=>r.json())
     .then(data=>{
-      BIDS = data.bids||[];
+      const APPROVED_FEDBIDS = ['fedbid-001','fedbid-006'];
+      BIDS = (data.bids||[]).filter(b=>
+        (b.source||'').toLowerCase()!=='fedbids' || APPROVED_FEDBIDS.includes(b.id)
+      );
       bidState={};
-      BIDS.forEach(b=>{ bidState[b.id]=b.userState||classifyBid(b); });
+      BIDS.forEach(b=>{
+        const autoState = classifyBid(b);
+        if(b.userState==='selected') bidState[b.id]='selected';
+        else if(autoState==='deleted') bidState[b.id]='deleted';
+        else if(b.userState==='deleted') bidState[b.id]='deleted';
+        else bidState[b.id]='active';
+      });
       applyF();
       renderFedBids();
       if(btn){ btn.textContent='🔄 Refresh Bids'; btn.disabled=false; }
@@ -1998,29 +2007,6 @@ async async async function runScrapeNow(){
       console.error('[Refresh]',e);
       if(btn){ btn.textContent='🔄 Refresh Bids'; btn.disabled=false; }
     });
-}
-  try {
-    const res = await fetch('/api/bids');
-    const data = await res.json();
-    BIDS = (data.bids||[]);
-    bidState = {};
-    BIDS.forEach(b=>{
-      const autoState = classifyBid(b);
-      if(b.userState==='selected') bidState[b.id]='selected';
-      else if(autoState==='deleted') bidState[b.id]='deleted';
-      else if(b.userState==='deleted') bidState[b.id]='deleted';
-      else bidState[b.id]='active';
-    });
-    if(typeof renderAll==='function') renderAll();
-    btn.textContent = '🔄 Refresh';
-    btn.disabled = false;
-    if(typeof showToast==='function') showToast('✅ Bids updated!');
-  } catch(e){
-    btn.textContent = '🔄 Refresh';
-    btn.disabled = false;
-    if(typeof showToast==='function') showToast('❌ Refresh failed');
-    console.error('Refresh error:', e.message);
-  }
 }
 
 // ── TOAST NOTIFICATION ─────────────────────────────────────
