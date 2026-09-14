@@ -1984,8 +1984,24 @@ function addBidManual(){
 
 // ── SCRAPE NOW BUTTON ──────────────────────────────────────
 async async async function runScrapeNow(){
-  const btn = document.getElementById('btn-scrape') || document.querySelector('[onclick*="runScrapeNow"]') || document.querySelector('[onclick*="refreshBids"]');
-  if(btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
+  const btn = document.querySelector('[onclick*="runScrapeNow"]');
+  if(btn){ btn.textContent='⏳ Refreshing...'; btn.disabled=true; }
+  fetch('/api/bids')
+    .then(r=>r.json())
+    .then(data=>{
+      BIDS = data.bids||[];
+      bidState={};
+      BIDS.forEach(b=>{ bidState[b.id]=b.userState||classifyBid(b); });
+      applyF();
+      renderFedBids();
+      if(btn){ btn.textContent='🔄 Refresh Bids'; btn.disabled=false; }
+      console.log('[Refresh] Loaded',BIDS.length,'bids');
+    })
+    .catch(e=>{
+      console.error('[Refresh]',e);
+      if(btn){ btn.textContent='🔄 Refresh Bids'; btn.disabled=false; }
+    });
+}
   try {
     const res = await fetch('/api/bids');
     const data = await res.json();
