@@ -322,7 +322,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
 </div>
 
 <div style="background:rgba(0,0,0,0.2);padding:4px 16px;display:flex;justify-content:flex-end;gap:8px;align-items:center">
-  <button id="btn-scrape" onclick="runScrapeNow()" style="font-size:10px;padding:4px 14px;background:var(--yellow);color:var(--navy);border:none;border-radius:3px;cursor:pointer;font-family:var(--mono);font-weight:600">🔄 Refresh Bids</button>
+  <button id="btn-scrape" type="button" onclick="event.preventDefault();runScrapeNow()" style="font-size:10px;padding:4px 14px;background:var(--yellow);color:var(--navy);border:none;border-radius:3px;cursor:pointer;font-family:var(--mono);font-weight:600">🔄 Refresh Bids</button>
 </div>
 
 <div class="tab-nav">
