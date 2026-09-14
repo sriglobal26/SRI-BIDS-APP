@@ -1410,6 +1410,24 @@ function searchPrimes(q){
   renderPrimes();
 }
 
+function refreshBids() {
+  const btn = document.querySelector('[onclick="refreshBids()"]');
+  if (btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
+  fetch('/api/bids')
+    .then(r => r.json())
+    .then(data => {
+      BIDS = data.bids || [];
+      applyF();
+      renderFedBids();
+      if (btn) { btn.textContent = '🔄 Refresh Bids'; btn.disabled = false; }
+      console.log('[Refresh] Loaded', BIDS.length, 'bids');
+    })
+    .catch(e => {
+      console.error('[Refresh Error]', e);
+      if (btn) { btn.textContent = '🔄 Refresh Bids'; btn.disabled = false; }
+    });
+}
+
 function renderPrimes(){
   const filtered = primeSearchQ
     ? PRIMES.filter(p=> p.name.toLowerCase().includes(primeSearchQ)
