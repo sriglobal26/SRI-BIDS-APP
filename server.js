@@ -237,27 +237,91 @@ app.post('/api/bids/ebn-ingest', async (req, res) => {
   try {
     const b = req.body || {};
     const subject = b.subject || b.Subject || '';
-    const emailBody = b.body || b.text || b.snippet || '';
+    const emailBody = b.body || b.Body || b.text || b.Text || b.snippet || b.Snippet || b.content || '';
     const combined = subject + ' ' + emailBody;
-    const urlMatch = combined.match(/subscriber_view_bid[/]([0-9]{6,15})/i);
+
+    // Extract FULL direct URL from email (includes session token)
+    // EBN email contains: https://www.envirobidnet.com/subscriber_view_bid/884913?...
+    const fullUrlMatch = combined.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/[^\s"<>]+/i);
+    const directUrl = fullUrlMatch ? fullUrlMatch[0].trim() : '';
+
+    // Extract bid number from URL or text
+    const urlMatch = combined.match(/subscriber_view_bid\/(\d{5,15})/i);
     const bidNum = b.bidNum || (urlMatch && urlMatch[1]) || '';
-    if (!bidNum) return res.json({ success:true, skipped:true, reason:'No bid number' });
-    const id = 'ebn-' + bidNum;
+
+    console.log('[EBN] Subject:', subject.substring(0,80));
+    console.log('[EBN] Direct URL:', directUrl.substring(0,100));
+    console.log('[EBN] Bid number:', bidNum);
+
+    if (!bidNum && !directUrl) {
+      return res.json({ success:true, skipped:true, reason:'No bid number or URL found' });
+    }
+
+    const id = 'ebn-' + (bidNum || Date.now());
+
+    // Duplicate check
     const dup = await pool.query('SELECT id FROM bids WHERE id=$1', [id]);
-    if (dup.rows.length > 0) return res.json({ success:true, skipped:true, id });
-    const dateM = combined.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+    if (dup.rows.length > 0) {
+      // Update URL if we now have a better one
+      if (directUrl) {
+        const existing = await pool.query('SELECT data FROM bids WHERE id=$1', [id]);
+        if (existing.rows.length > 0) {
+          const bid = existing.rows[0].data;
+          bid.url = directUrl;
+          await pool.query('UPDATE bids SET data=$1 WHERE id=$2', [JSON.stringify(bid), id]);
+          console.log('[EBN] Updated URL for:', id);
+        }
+      }
+      return res.json({ success:true, skipped:true, reason:'Already exists', id });
+    }
+
+    // Extract due date
+    const dateM = combined.match(/(?:Expires?|Due|Deadline)[:\s]+(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
     let due = '';
-    if (dateM) { try { const dt=new Date(dateM[1]); if(!isNaN(dt)) due=dt.toISOString().split('T')[0]; }catch(e2){} }
-    await saveBid({ id, name:subject||'EBN Bid '+bidNum, agency:'EnviroBidNet', city:'Texas',
-      posted:new Date().toISOString().split('T')[0], due, scope:emailBody.substring(0,400),
-      url:'https://www.envirobidnet.com/subscriber_view_bid/'+bidNum,
-      source:'EnviroBidNet', value:'TBD', status:'active', region:'texas', userState:'active',
-      scrapedAt:new Date().toISOString() });
-    res.json({ success:true, bid:{ id, name:subject, due } });
-  } catch(e) { res.status(500).json({error:e.message}); }
+    if (dateM) {
+      try {
+        const raw = dateM[1];
+        if (raw.includes('/')) {
+          const p = raw.split('/');
+          due = (p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');
+        } else due = raw;
+        // Validate date
+        const dt = new Date(due);
+        if (isNaN(dt) || dt.getFullYear() < 2026) due = '';
+      } catch(e2) { due = ''; }
+    }
+
+    // Skip expired
+    if (due && new Date(due) < new Date()) {
+      return res.json({ success:true, skipped:true, reason:'Expired', due });
+    }
+
+    // Extract agency from subject
+    const agencyMatch = subject.match(/^([^:—\-]+)[:\—\-]/);
+    const agency = agencyMatch ? agencyMatch[1].trim() : 'EnviroBidNet';
+
+    // Use direct URL from email if available, else fallback
+    const url = directUrl || (bidNum ? 'https://www.envirobidnet.com/subscriber_view_bid/'+bidNum : 'https://www.envirobidnet.com');
+
+    await saveBid({ id,
+      name: subject.trim() || 'EBN Bid ' + bidNum,
+      agency, city: 'Texas',
+      posted: new Date().toISOString().split('T')[0],
+      due, scope: emailBody.substring(0,500),
+      url,
+      source:'EnviroBidNet', value:'TBD',
+      status:'active', region:'texas', userState:'active',
+      scrapedAt: new Date().toISOString()
+    });
+
+    console.log('[EBN] ✅ Saved:', id, 'URL:', url.substring(0,60));
+    res.json({ success:true, bid:{ id, name:subject, due, url } });
+  } catch(e) {
+    console.error('[EBN Error]', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// ── DEDUPE FEDBIDS
 app.get('/api/dedupe-fedbids', async (req, res) => {
   try {
     const del = await pool.query("DELETE FROM bids WHERE data->>'source'='FedBids' AND id NOT LIKE 'fedbid-00%'");
