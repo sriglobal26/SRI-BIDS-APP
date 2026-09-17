@@ -897,10 +897,7 @@ async function fetchBids(){
     const res = await fetch('/api/bids');
     const data = await res.json();
     // Strip non-approved FedBids from memory — never show duplicates
-    const APPROVED_FEDBIDS = ['fedbid-001','fedbid-006'];
-    BIDS = (data.bids||[]).filter(b =>
-      (b.source||'').toLowerCase() !== 'fedbids' || APPROVED_FEDBIDS.includes(b.id)
-    );
+    BIDS = (data.bids||[]);
     bidState = {};
     BIDS.forEach(b=>{
       // Always check if expired first — expired bids go to deleted even if userState is 'active'
@@ -1996,10 +1993,7 @@ async async async function runScrapeNow(){
   fetch('/api/bids')
     .then(r=>r.json())
     .then(data=>{
-      const APPROVED_FEDBIDS = ['fedbid-001','fedbid-006'];
-      BIDS = (data.bids||[]).filter(b=>
-        (b.source||'').toLowerCase()!=='fedbids' || APPROVED_FEDBIDS.includes(b.id)
-      );
+      BIDS = (data.bids||[]);
       bidState={};
       BIDS.forEach(b=>{
         const autoState = classifyBid(b);
