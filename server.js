@@ -11,8 +11,16 @@ app.use(express.static(__dirname));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {rejectUnauthorized:false},
-  max:5, idleTimeoutMillis:30000, connectionTimeoutMillis:10000
+  ssl: process.env.DATABASE_URL ? {rejectUnauthorized:false} : false,
+  max: 3,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 30000,
+  allowExitOnIdle: false
+});
+
+// Retry DB connection on failure
+pool.on('error', (err) => {
+  console.error('[DB Pool Error]', err.message);
 });
 
 process.on('uncaughtException', e => console.error('[Crash]',e.message));
@@ -126,16 +134,25 @@ async function seedAllBids() {
   console.log('[Seed] Seeded',all.length,'bids');
 }
 
-async function initDB() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS bids (
-    id TEXT PRIMARY KEY,
-    data JSONB NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-  )`).catch(e=>console.error('[DB Create]',e.message));
-  const cnt = await pool.query('SELECT COUNT(*) FROM bids').catch(()=>({rows:[{count:'0'}]}));
-  if(parseInt(cnt.rows[0].count)===0) await seedAllBids();
-  console.log('[DB] Ready. Bids:',cnt.rows[0].count);
+async function initDB(retries=5) {
+  for(let i=0; i<retries; i++) {
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS bids (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`);
+      const cnt = await pool.query('SELECT COUNT(*) FROM bids');
+      if(parseInt(cnt.rows[0].count)===0) await seedAllBids();
+      console.log('[DB] Ready. Bids:', cnt.rows[0].count);
+      return;
+    } catch(e) {
+      console.error(`[DB] Attempt ${i+1} failed:`, e.message);
+      if(i < retries-1) await new Promise(r=>setTimeout(r, 3000));
+    }
+  }
+  console.error('[DB] Failed to connect after', retries, 'attempts');
 }
 
 // Health check
