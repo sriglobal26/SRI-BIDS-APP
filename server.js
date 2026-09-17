@@ -4,14 +4,23 @@ const { Pool } = require('pg');
 const cron = require('node-cron');
 const path = require('path');
 
+// Check required env vars
+if (!process.env.DATABASE_URL) {
+  console.error('[FATAL] DATABASE_URL not set — exiting');
+  process.exit(1);
+}
+if (!process.env.PORT) {
+  console.warn('[WARN] PORT not set — using 3000');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json({limit:'10mb'}));
 app.use(express.static(__dirname));
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? {rejectUnauthorized:false} : false,
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_PRIVATE_URL,
+  ssl: {rejectUnauthorized:false},
   max: 3,
   idleTimeoutMillis: 60000,
   connectionTimeoutMillis: 30000,
