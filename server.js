@@ -289,6 +289,13 @@ app.get('/api/fix-fedbids-urls', async (req,res)=>{
   } catch(e){res.status(500).json({error:e.message});}
 });
 
+// Keep-alive ping every 5 minutes to prevent Railway from sleeping
+cron.schedule('*/5 * * * *', async ()=>{
+  try {
+    await pool.query('SELECT 1');
+  } catch(e){ console.error('[KeepAlive]',e.message); }
+});
+
 // Auto expire old bids
 cron.schedule('0 */4 * * *', async ()=>{
   try {
