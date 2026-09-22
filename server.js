@@ -165,7 +165,10 @@ async function initDB(retries=5) {
 }
 
 // Health check
-app.get('/health',(req,res)=>res.json({status:'ok',time:new Date().toISOString()}));
+// Health check - responds instantly, no DB check
+app.get('/health', (req, res) => {
+  res.status(200).json({status:'ok', time:new Date().toISOString()});
+});
 
 // Serve app
 app.get('/',(req,res)=>res.sendFile(path.join(__dirname,'index.html')));
