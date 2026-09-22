@@ -4,14 +4,9 @@ const { Pool } = require('pg');
 const cron = require('node-cron');
 const path = require('path');
 
-// Check required env vars
-if (!process.env.DATABASE_URL) {
-  console.error('[FATAL] DATABASE_URL not set — exiting');
-  process.exit(1);
-}
-if (!process.env.PORT) {
-  console.warn('[WARN] PORT not set — using 3000');
-}
+// Log startup info
+console.log('[SRI Bids] Starting...', new Date().toISOString());
+console.log('[SRI Bids] DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
