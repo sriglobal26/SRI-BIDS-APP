@@ -158,9 +158,69 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
 
 app.get('/api/reset', async (req,res) => {
   try {
+    // Non-destructive: upsert the known static bids without deleting anything else.
+    // This refreshes/repairs the 33 baked-in bids without wiping out bids that were
+    // added live via email ingestion (e.g. EnviroBidNet/FedBids alerts) and aren't
+    // part of this hardcoded list.
+    for(const b of SEED_BIDS) await saveBid({...b,scrapedAt:new Date().toISOString()});
+    res.json({success:true,seeded:SEED_BIDS.length});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+// Full wipe + reseed — only the static 33, deletes everything else including
+// any live-ingested bids. Use only when you intentionally want a clean slate.
+app.get('/api/hard-reset', async (req,res) => {
+  try {
     await pool.query('DELETE FROM bids');
     for(const b of SEED_BIDS) await saveBid({...b,scrapedAt:new Date().toISOString()});
     res.json({success:true,seeded:SEED_BIDS.length});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+// Manual bid add — used by the "Add Bid" modal in the UI
+app.post('/api/bids', async (req,res) => {
+  try {
+    const b = req.body||{};
+    if(!b.name) return res.status(400).json({error:'name required'});
+    const id = b.id || ('manual-'+Date.now());
+    await saveBid({...b, id, source:b.source||'Manual', status:b.status||'active',
+      userState:'active', scrapedAt:new Date().toISOString()});
+    res.json({success:true, id});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+// Paste-an-EnviroBidNet-email add — used by the "Paste EnviroBidNet Email" modal.
+// Scans the pasted text for every subscriber_view_bid/<number> link it can find
+// (an alert email often lists several bids) and adds each one not already saved.
+app.post('/api/email-bids', async (req,res) => {
+  try {
+    const b = req.body||{};
+    const text = (b.text||b.html||'').toString();
+    const matches = [...text.matchAll(/subscriber_view_bid\/([0-9]{5,15})/gi)];
+    const seen = new Set();
+    let created = 0;
+    for(const m of matches){
+      const bidNum = m[1];
+      if(seen.has(bidNum)) continue;
+      seen.add(bidNum);
+      const id = 'ebn-'+bidNum;
+      const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
+      if(dup.rows.length>0) continue;
+      const windowText = text.slice(Math.max(0, m.index-500), m.index+500);
+      const dateM = windowText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
+      let due='';
+      if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
+      if(due && new Date(due) < new Date()) continue;
+      const fullUrlM = windowText.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/[^\s"<>]+/i);
+      const nameGuess = (windowText.split('\n').map(l=>l.trim()).find(l=>l.length>10) || ('EBN Bid '+bidNum)).slice(0,200);
+      await saveBid({id, name:nameGuess, agency:'EnviroBidNet', city:'Texas',
+        posted:new Date().toISOString().split('T')[0], due, scope:windowText.slice(0,400),
+        url: fullUrlM ? fullUrlM[0] : 'https://www.envirobidnet.com',
+        source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
+        userState:'active', scrapedAt:new Date().toISOString()});
+      created++;
+    }
+    res.json({success:true, created});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
