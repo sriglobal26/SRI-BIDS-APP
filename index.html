@@ -873,7 +873,7 @@ function getDirectUrl(b) {
     // Fallback — copy bid number and open bid center search
     const bidNum = b.id.replace('ebn-','');
     if(bidNum) navigator.clipboard && navigator.clipboard.writeText(bidNum).catch(()=>{});
-    return 'https://www.envirobidnet.com/bid_search_results.cfm';
+    return 'https://www.envirobidnet.com';
   }
   // FedBids — use direct BidSpeed pk link if available, else Federal page
   if((b.source||'').toLowerCase()==='fedbids'){
