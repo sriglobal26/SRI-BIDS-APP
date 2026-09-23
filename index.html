@@ -884,8 +884,9 @@ function getDirectUrl(b) {
     // Fallback — BidSpeed Federal opportunities page
     return 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
   }
-  // All other sources — use DIRECT_BID_URLS first, then stored b.url
-  const fallbackU = DIRECT_BID_URLS[b.id] || b.url || '';
+  // All other sources — trust each bid's own stored URL first (it's kept in sync with the bid data);
+  // DIRECT_BID_URLS is only a fallback for legacy ids with no url of their own
+  const fallbackU = b.url || DIRECT_BID_URLS[b.id] || '';
   return fallbackU;
 }
 
