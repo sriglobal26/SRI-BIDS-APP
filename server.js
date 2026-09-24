@@ -142,49 +142,70 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
     const b = req.body||{};
     lastEbnPayload = {receivedAt:new Date().toISOString(), body:b};
     const subject = b.subject||b.Subject||'';
-    const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||'';
+    const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||b.html||b.Html||'';
     const combined = subject+' '+emailBody;
 
-    // Try several known/likely link formats for a bid number, in order of confidence
-    let bidNum = b.bidNum || '';
-    let fullUrl = '';
-    const patterns = [
-      /subscriber_view_bid\/([0-9]{5,15})/i,
-      /view_bid\/([0-9]{5,15})/i,
-      /[?&](?:bid_?id|bidid|id)=([0-9]{5,15})\b/i,
-      /envirobidnet\.com\/[a-z_\-]*\/([0-9]{5,15})(?:[\/?"'\s<]|$)/i,
-      /\bbid\s*(?:#|number|no\.?)\s*:?\s*([0-9]{5,15})\b/i
-    ];
-    for(const p of patterns){
-      const m = combined.match(p);
-      if(m){ bidNum = m[1]; break; }
-    }
-    // Capture any envirobidnet.com link present, regardless of whether we parsed a number from it
-    const urlM = combined.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/[^\s"'<>]+/i);
-    if(urlM) fullUrl = urlM[0];
+    // EnviroBidNet alert emails are a DIGEST: one email lists MANY bids, each with its
+    // own https://envirobidnet.com/subscriber_view_bid/<id> link. Find every one, not just the first.
+    const linkPattern = /subscriber_view_bid\/([0-9]{5,15})/gi;
+    const idsFound = [...combined.matchAll(linkPattern)].map(m => m[1]);
+    const uniqueIds = [...new Set(idsFound)];
 
-    // If we still have no bid number but this is clearly an EnviroBidNet email,
-    // don't silently drop it — build a stable id from the subject so it still shows up.
-    if(!bidNum){
-      const looksLikeEBN = /envirobidnet/i.test(combined) || /envirobidnet/i.test(b.from||b.From||'');
-      if(!looksLikeEBN) return res.json({success:true,skipped:true,reason:'Not an EnviroBidNet email'});
-      bidNum = crypto.createHash('md5').update(subject||emailBody.slice(0,200)).digest('hex').slice(0,10);
-      console.log('[EBN] No bid number pattern matched — using subject-hash fallback id. Subject:', subject);
+    let created = 0, skipped = 0;
+    const results = [];
+
+    if(uniqueIds.length > 0){
+      for(const bidNum of uniqueIds){
+        const id = 'ebn-'+bidNum;
+        const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
+        if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
+
+        // Look at the text right around this specific bid's link to get its own
+        // description and expiration date, not a neighboring row's.
+        const idx = combined.indexOf('subscriber_view_bid/'+bidNum);
+        const windowText = combined.slice(Math.max(0, idx-600), idx+200);
+        // The "Expires:" date for a row appears AFTER its own link in EnviroBidNet's
+        // layout — searching backward risks grabbing the previous row's date instead.
+        const forwardText = combined.slice(idx, idx+250);
+
+        const dateM = forwardText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
+        let due='';
+        if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
+        if(due && new Date(due) < new Date()){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
+
+        // Best-effort name: the bid number is usually immediately followed/preceded by its
+        // description in the row; strip tags/whitespace and take a reasonable chunk.
+        const stripped = windowText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        const bidNumIdx = stripped.indexOf(bidNum);
+        let nameGuess = bidNumIdx >= 0 ? stripped.slice(bidNumIdx + bidNum.length, bidNumIdx + bidNum.length + 200).trim() : '';
+        if(!nameGuess) nameGuess = 'EBN Bid '+bidNum;
+
+        const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
+        await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
+          posted:new Date().toISOString().split('T')[0], due, scope:stripped.slice(0,400),
+          url:fullUrl, source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
+          userState:'active', scrapedAt:new Date().toISOString()});
+        created++;
+        results.push({id,due,created:true});
+      }
+      console.log('[EBN] Digest processed:', created, 'added,', skipped, 'skipped. Subject:', subject);
+      return res.json({success:true, created, skipped, results});
     }
 
+    // Fallback: no subscriber_view_bid links found at all. Don't silently drop a
+    // genuine EnviroBidNet email — save it under a subject-hash id so it's still visible.
+    const looksLikeEBN = /envirobidnet/i.test(combined) || /envirobidnet/i.test(b.from||b.From||'');
+    if(!looksLikeEBN) return res.json({success:true,skipped:true,reason:'Not an EnviroBidNet email'});
+    const bidNum = crypto.createHash('md5').update(subject||emailBody.slice(0,200)).digest('hex').slice(0,10);
     const id = 'ebn-'+bidNum;
     const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
     if(dup.rows.length>0) return res.json({success:true,skipped:true,reason:'Duplicate'});
-    const dateM = combined.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
-    let due='';
-    if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
-    if(due&&new Date(due)<new Date()) return res.json({success:true,skipped:true,reason:'Expired'});
+    console.log('[EBN] No subscriber_view_bid links found — using subject-hash fallback. Subject:', subject);
     await saveBid({id,name:subject||'EBN Bid '+bidNum,agency:'EnviroBidNet',city:'Texas',
-      posted:new Date().toISOString().split('T')[0],due,scope:emailBody.substring(0,400),
-      url:fullUrl||'https://www.envirobidnet.com',source:'EnviroBidNet',
+      posted:new Date().toISOString().split('T')[0],due:'',scope:emailBody.substring(0,400),
+      url:'https://www.envirobidnet.com',source:'EnviroBidNet',
       value:'TBD',status:'active',region:'texas',userState:'active',scrapedAt:new Date().toISOString()});
-    console.log('[EBN] Added bid', id, '-', subject);
-    res.json({success:true,bid:{id,due}});
+    res.json({success:true,created:1,fallback:true});
   } catch(e) { console.error('[EBN] ingest error:', e.message); res.status(500).json({error:e.message}); }
 });
 
