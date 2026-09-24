@@ -252,29 +252,34 @@ app.post('/api/email-bids', async (req,res) => {
     const text = (b.text||b.html||'').toString();
     const matches = [...text.matchAll(/subscriber_view_bid\/([0-9]{5,15})/gi)];
     const seen = new Set();
-    let created = 0;
+    let created = 0, skipped = 0;
+    const results = [];
     for(const m of matches){
       const bidNum = m[1];
       if(seen.has(bidNum)) continue;
       seen.add(bidNum);
       const id = 'ebn-'+bidNum;
       const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-      if(dup.rows.length>0) continue;
-      const windowText = text.slice(Math.max(0, m.index-500), m.index+500);
-      const dateM = windowText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
+      if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
+      const windowText = text.slice(Math.max(0, m.index-600), m.index);
+      const forwardText = text.slice(m.index, m.index+250);
+      const dateM = forwardText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
       let due='';
       if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
-      if(due && new Date(due) < new Date()) continue;
-      const fullUrlM = windowText.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/[^\s"<>]+/i);
-      const nameGuess = (windowText.split('\n').map(l=>l.trim()).find(l=>l.length>10) || ('EBN Bid '+bidNum)).slice(0,200);
-      await saveBid({id, name:nameGuess, agency:'EnviroBidNet', city:'Texas',
-        posted:new Date().toISOString().split('T')[0], due, scope:windowText.slice(0,400),
-        url: fullUrlM ? fullUrlM[0] : 'https://www.envirobidnet.com',
-        source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
+      if(due && new Date(due) < new Date()){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
+      const stripped = windowText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      const bidNumIdx = stripped.indexOf(bidNum);
+      let nameGuess = bidNumIdx >= 0 ? stripped.slice(bidNumIdx + bidNum.length).trim() : stripped.slice(-200);
+      if(!nameGuess) nameGuess = 'EBN Bid '+bidNum;
+      const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
+      await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
+        posted:new Date().toISOString().split('T')[0], due, scope:nameGuess.slice(0,400),
+        url: fullUrl, source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
         userState:'active', scrapedAt:new Date().toISOString()});
       created++;
+      results.push({id,due,created:true});
     }
-    res.json({success:true, created});
+    res.json({success:true, created, skipped, results});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
