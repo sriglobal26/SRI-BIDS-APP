@@ -1,6 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +75,11 @@ async function initDB() {
 }
 
 app.get('/health', (req,res) => res.json({status:'ok'}));
+
+// Debug: shows the last raw payload received by ebn-ingest, so we can see
+// exactly what Make.com is sending and confirm the parser is matching it correctly
+let lastEbnPayload = null;
+app.get('/api/debug/last-ebn', (req,res) => res.json(lastEbnPayload || {message:'No EBN ingest received yet since last deploy'}));
 app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
 
 app.get('/api/bids', async (req,res) => {
@@ -134,27 +140,54 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
 app.post('/api/bids/ebn-ingest', async (req,res) => {
   try {
     const b = req.body||{};
+    lastEbnPayload = {receivedAt:new Date().toISOString(), body:b};
     const subject = b.subject||b.Subject||'';
     const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||'';
     const combined = subject+' '+emailBody;
-    const urlM = combined.match(/subscriber_view_bid\/([0-9]{5,15})/i);
-    const bidNum = b.bidNum||(urlM&&urlM[1])||'';
-    if(!bidNum) return res.json({success:true,skipped:true,reason:'No bid number'});
+
+    // Try several known/likely link formats for a bid number, in order of confidence
+    let bidNum = b.bidNum || '';
+    let fullUrl = '';
+    const patterns = [
+      /subscriber_view_bid\/([0-9]{5,15})/i,
+      /view_bid\/([0-9]{5,15})/i,
+      /[?&](?:bid_?id|bidid|id)=([0-9]{5,15})\b/i,
+      /envirobidnet\.com\/[a-z_\-]*\/([0-9]{5,15})(?:[\/?"'\s<]|$)/i,
+      /\bbid\s*(?:#|number|no\.?)\s*:?\s*([0-9]{5,15})\b/i
+    ];
+    for(const p of patterns){
+      const m = combined.match(p);
+      if(m){ bidNum = m[1]; break; }
+    }
+    // Capture any envirobidnet.com link present, regardless of whether we parsed a number from it
+    const urlM = combined.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/[^\s"'<>]+/i);
+    if(urlM) fullUrl = urlM[0];
+
+    // If we still have no bid number but this is clearly an EnviroBidNet email,
+    // don't silently drop it — build a stable id from the subject so it still shows up.
+    if(!bidNum){
+      const looksLikeEBN = /envirobidnet/i.test(combined) || /envirobidnet/i.test(b.from||b.From||'');
+      if(!looksLikeEBN) return res.json({success:true,skipped:true,reason:'Not an EnviroBidNet email'});
+      bidNum = crypto.createHash('md5').update(subject||emailBody.slice(0,200)).digest('hex').slice(0,10);
+      console.log('[EBN] No bid number pattern matched — using subject-hash fallback id. Subject:', subject);
+    }
+
     const id = 'ebn-'+bidNum;
     const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-    if(dup.rows.length>0) return res.json({success:true,skipped:true});
+    if(dup.rows.length>0) return res.json({success:true,skipped:true,reason:'Duplicate'});
     const dateM = combined.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
     let due='';
     if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
     if(due&&new Date(due)<new Date()) return res.json({success:true,skipped:true,reason:'Expired'});
-    const fullM = combined.match(/https?:\/\/(?:www\.)?envirobidnet\.com\/subscriber_view_bid\/[^\s"<>]+/i);
     await saveBid({id,name:subject||'EBN Bid '+bidNum,agency:'EnviroBidNet',city:'Texas',
       posted:new Date().toISOString().split('T')[0],due,scope:emailBody.substring(0,400),
-      url:fullM?fullM[0]:'https://www.envirobidnet.com',source:'EnviroBidNet',
+      url:fullUrl||'https://www.envirobidnet.com',source:'EnviroBidNet',
       value:'TBD',status:'active',region:'texas',userState:'active',scrapedAt:new Date().toISOString()});
+    console.log('[EBN] Added bid', id, '-', subject);
     res.json({success:true,bid:{id,due}});
-  } catch(e) { res.status(500).json({error:e.message}); }
+  } catch(e) { console.error('[EBN] ingest error:', e.message); res.status(500).json({error:e.message}); }
 });
+
 
 app.get('/api/reset', async (req,res) => {
   try {
