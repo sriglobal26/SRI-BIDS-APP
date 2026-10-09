@@ -332,6 +332,7 @@ footer p{font-family:var(--mono);font-size:10px;color:var(--gray)}footer strong{
   <button class="tab-btn" onclick="switchTab('selected',this)">Selected <span class="tbadge p" id="badge-sel">0</span></button>
   <button class="tab-btn" onclick="switchTab('deleted',this)">Deleted <span class="tbadge gr" id="badge-del">0</span></button>
   <button class="tab-btn" onclick="switchTab('primes',this)">Prime Contractors</button>
+  <button class="tab-btn" onclick="switchTab('fedcontacts',this)" style="color:#4cc9f0">Federal Contacts</button>
   <button class="tab-btn" onclick="switchTab('agencies',this)">Agencies</button>
   <button class="tab-btn" onclick="switchTab('platforms',this)">Platforms</button>
 </div>
@@ -610,6 +611,43 @@ Best regards,
   </div>
   <div class="sec" id="primes-count-label">All Firms</div>
   <div class="prg" id="primes-grid"></div>
+</div>
+
+<!-- ══ TAB: FEDERAL CONTACTS ══ -->
+<div class="tab-pane" id="tab-fedcontacts">
+  <div class="ph">
+    <div>
+      <div class="badge" id="fc-badge">// Federal Contacts Directory</div>
+      <h1>Federal <span>Contacts</span></h1>
+      <p class="subtitle">Federal buyers, small business specialists and prime contacts for federal opportunities</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input class="si" style="max-width:220px;min-width:180px" type="text" placeholder="Search contacts…" oninput="fcSearch(this.value)" id="fc-search">
+    </div>
+  </div>
+
+  <style>
+    .fc-sub{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:10px 20px;border-radius:3px;cursor:pointer;background:transparent;color:var(--gray);border:1px solid rgba(255,255,255,.2);transition:all .2s}
+    .fc-sub:hover{color:var(--white)}
+    .fc-sub.on{background:var(--cyan);color:#06101f;border-color:var(--cyan);font-weight:700}
+  </style>
+  <div style="display:flex;gap:8px;margin:4px 0 14px 0;flex-wrap:wrap">
+    <button id="fc-sub-large" class="fc-sub on" onclick="fcShow('large')">Large Biz <span id="fc-count-large" style="opacity:.7">0</span></button>
+    <button id="fc-sub-small" class="fc-sub" onclick="fcShow('small')">Small Biz <span id="fc-count-small" style="opacity:.7">0</span></button>
+  </div>
+
+  <div class="sec" id="fc-label">Large Biz</div>
+
+  <div id="fc-form" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <input class="si" style="max-width:170px" type="text" placeholder="Company / Agency" id="fc-company">
+    <input class="si" style="max-width:160px" type="text" placeholder="Contact name" id="fc-name">
+    <input class="si" style="max-width:150px" type="text" placeholder="Title / Role" id="fc-title">
+    <input class="si" style="max-width:190px" type="text" placeholder="Email" id="fc-email">
+    <input class="si" style="max-width:140px" type="text" placeholder="Phone" id="fc-phone">
+    <button class="pb co" style="padding:9px 16px;font-size:10px" onclick="fcAdd()">+ Add Contact</button>
+  </div>
+
+  <div id="fc-list"></div>
 </div>
 
 <!-- ══ TAB: AGENCIES ══ -->
@@ -2225,5 +2263,97 @@ document.getElementById('m-bid-detail').addEventListener('click', function(e) {
 });
 </script>
 
+<script>
+// ═════════════════════════════════════
+// FEDERAL CONTACTS TAB (Large Biz / Small Biz)
+// ═════════════════════════════════════
+var FC_KEY = 'sri_federal_contacts_v1';
+var fcSub = 'large';
+var fcQuery = '';
+var fcData = { large: [], small: [] };
+
+function fcLoad(){
+  try {
+    var raw = localStorage.getItem(FC_KEY);
+    if(raw){
+      var p = JSON.parse(raw);
+      fcData = { large: Array.isArray(p.large) ? p.large : [], small: Array.isArray(p.small) ? p.small : [] };
+    }
+  } catch(e){}
+}
+function fcSave(){
+  try { localStorage.setItem(FC_KEY, JSON.stringify(fcData)); } catch(e){}
+}
+function fcEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function fcShow(sub){
+  fcSub = sub;
+  document.getElementById('fc-sub-large').classList.toggle('on', sub === 'large');
+  document.getElementById('fc-sub-small').classList.toggle('on', sub === 'small');
+  document.getElementById('fc-label').textContent = sub === 'large' ? 'Large Biz' : 'Small Biz';
+  fcRender();
+}
+function fcSearch(v){ fcQuery = (v || '').toLowerCase(); fcRender(); }
+function fcAdd(){
+  var g = function(id){ return document.getElementById(id).value.trim(); };
+  var c = { company: g('fc-company'), name: g('fc-name'), title: g('fc-title'), email: g('fc-email'), phone: g('fc-phone') };
+  if(!c.company && !c.name){ alert('Enter at least a company or a contact name.'); return; }
+  fcData[fcSub].push(c);
+  fcSave();
+  ['fc-company','fc-name','fc-title','fc-email','fc-phone'].forEach(function(id){ document.getElementById(id).value = ''; });
+  fcRender();
+}
+function fcDel(i){
+  if(!confirm('Remove this contact?')) return;
+  fcData[fcSub].splice(i, 1);
+  fcSave();
+  fcRender();
+}
+function fcRender(){
+  document.getElementById('fc-count-large').textContent = fcData.large.length;
+  document.getElementById('fc-count-small').textContent = fcData.small.length;
+  var rows = fcData[fcSub].map(function(c, i){ return { c: c, i: i }; }).filter(function(r){
+    return !fcQuery || [r.c.company, r.c.name, r.c.title, r.c.email, r.c.phone].join(' ').toLowerCase().indexOf(fcQuery) !== -1;
+  });
+  var box = document.getElementById('fc-list');
+  if(!rows.length){
+    box.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--gray);padding:18px 0">' +
+      (fcData[fcSub].length ? 'No contacts match your search.' : 'No ' + (fcSub === 'large' ? 'Large Biz' : 'Small Biz') + ' contacts yet. Add the first one above.') + '</div>';
+    return;
+  }
+  var th = 'text-align:left;padding:8px 10px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--gray);border-bottom:1px solid rgba(255,255,255,.12)';
+  var td = 'padding:9px 10px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.06);vertical-align:top';
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>' +
+    '<th style="' + th + '">Company / Agency</th><th style="' + th + '">Contact</th><th style="' + th + '">Title</th>' +
+    '<th style="' + th + '">Email</th><th style="' + th + '">Phone</th><th style="' + th + '"></th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var c = r.c;
+    html += '<tr>' +
+      '<td style="' + td + ';font-weight:600">' + fcEsc(c.company) + '</td>' +
+      '<td style="' + td + '">' + fcEsc(c.name) + '</td>' +
+      '<td style="' + td + '">' + fcEsc(c.title) + '</td>' +
+      '<td style="' + td + '">' + (c.email ? '<a href="mailto:' + fcEsc(c.email) + '" style="color:var(--cyan)">' + fcEsc(c.email) + '</a>' : '') + '</td>' +
+      '<td style="' + td + '">' + fcEsc(c.phone) + '</td>' +
+      '<td style="' + td + '"><button class="ab del" onclick="fcDel(' + r.i + ')">✕</button></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  box.innerHTML = html;
+}
+(function(){
+  fcLoad();
+  fcRender();
+  // Hook into the existing tab switcher so the list refreshes when the tab opens
+  var _orig = window.switchTab;
+  if(typeof _orig === 'function'){
+    window.switchTab = function(id, btn){
+      _orig(id, btn);
+      if(id === 'fedcontacts'){ fcShow(fcSub); }
+    };
+  }
+})();
+</script>
 </body>
 </html>
