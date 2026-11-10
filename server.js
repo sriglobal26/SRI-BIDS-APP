@@ -1,49 +1,20 @@
-Claude
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Server · JS
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const crypto = require('crypto');
- 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json({limit:'5mb'}));
 app.use(express.urlencoded({extended:true,limit:'5mb'}));
 app.use(express.static(path.join(__dirname)));
- 
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {rejectUnauthorized:false},
   max:3, idleTimeoutMillis:30000, connectionTimeoutMillis:15000
 });
- 
+
 const SEED_BIDS = [
       { id:'fedbid-007', name:'USIBWC — SCADA Lifecycle Support Services (W912BV-26-R-0012)', agency:'US International Boundary and Water Commission', city:'El Paso, TX', posted:'2026-08-01', due:'2026-09-30', solicitationNo:'W912BV-26-R-0012', responseDate:'2026-09-30', setAside:'Small Business', scope:'SCADA Lifecycle Support for water infrastructure. Instrumentation, controls, PLC/HMI maintenance and upgrades along US-Mexico border.', url:'https://sam.gov/opp/86f857e87eaa41e5aed1eebce062e685/view', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active', category:'SCADA' },
       { id:'fedbid-008', name:'NAVFAC SW — Wastewater Treatment Plant E&I Upgrades (N6247326R0012)', agency:'Naval Facilities Engineering Systems Command Southwest', city:'San Diego, CA / Nationwide', posted:'2026-08-20', due:'2026-10-15', solicitationNo:'N6247326R0012', responseDate:'2026-10-15', setAside:'Small Business', scope:'Electrical and instrumentation upgrades to WWTP. Motor control centers, switchgear, instrumentation, SCADA integration, controls, commissioning.', url:'https://sam.gov/search?index=opp&q=N6247326R0012&is_active=true', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active', category:'Electrical' },
@@ -80,7 +51,7 @@ const SEED_BIDS = [
   { id:'seed-7', name:'SAWS — Walden Height Booster Station Improvements & W Grosenbacher Rd Pressure Reducing Valve (PS-00188-YR)', agency:'San Antonio Water System (SAWS)', city:'San Antonio, TX', posted:'2026-08-01', due:'2026-09-30', scope:'Improvements to Walden Height Booster Station including electrical, instrumentation, controls, and pressure reducing valve improvements on W Grosenbacher Rd. Pumping station electrical and controls upgrade scope.', url:'https://apps.saws.org/business_center/ContractSol/', source:'Manual', value:'TBD', status:'active', region:'texas' },
   { id:'seed-6', posted:'2026-08-01', name:'SAWS — San Antonio Water System E&I Engineering Services', agency:'San Antonio Water System', city:'San Antonio, TX', due:'Check link', scope:'Electrical & Instrumentation engineering services for water and wastewater infrastructure', value:'TBD', status:'active', region:'statewide', url:'https://www.saws.org/business-center/purchasing/', source:'Manual' },
 ];
- 
+
 async function saveBid(bid) {
   const id = bid.id || ('bid-'+Date.now());
   bid.id = id;
@@ -89,7 +60,7 @@ async function saveBid(bid) {
     [id, JSON.stringify(bid)]
   );
 }
- 
+
 async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS bids(
     id TEXT PRIMARY KEY, data JSONB NOT NULL,
@@ -103,29 +74,29 @@ async function initDB() {
     console.log('[DB] Ready. Bids:', cnt.rows[0].count);
   }
 }
- 
+
 app.get('/health', (req,res) => res.json({status:'ok'}));
- 
+
 // Debug: shows the last raw payload received by ebn-ingest, so we can see
 // exactly what Make.com is sending and confirm the parser is matching it correctly
 let lastEbnPayload = null;
 app.get('/api/debug/last-ebn', (req,res) => res.json(lastEbnPayload || {message:'No EBN ingest received yet since last deploy'}));
 app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
- 
+
 app.get('/api/bids', async (req,res) => {
   try {
     const r = await pool.query('SELECT data FROM bids ORDER BY created_at ASC');
     res.json({bids: r.rows.map(r=>r.data)});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.delete('/api/bids/:id', async (req,res) => {
   try {
     await pool.query('DELETE FROM bids WHERE id=$1',[req.params.id]);
     res.json({success:true});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.post('/api/bids/:id/state', async (req,res) => {
   try {
     const r = await pool.query('SELECT data FROM bids WHERE id=$1',[req.params.id]);
@@ -136,7 +107,7 @@ app.post('/api/bids/:id/state', async (req,res) => {
     res.json({success:true});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.post('/api/bids/fedbids-ingest', async (req,res) => {
   try {
     const b = req.body||{};
@@ -166,7 +137,7 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
     res.json({success:true,bid:{id,solNo,due}});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.post('/api/bids/ebn-ingest', async (req,res) => {
   try {
     const b = req.body||{};
@@ -174,22 +145,22 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
     const subject = b.subject||b.Subject||'';
     const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||b.html||b.Html||'';
     const combined = subject+' '+emailBody;
- 
+
     // EnviroBidNet alert emails are a DIGEST: one email lists MANY bids, each with its
     // own https://envirobidnet.com/subscriber_view_bid/<id> link. Find every one, not just the first.
     const linkPattern = /subscriber_view_bid\/([0-9]{5,15})/gi;
     const idsFound = [...combined.matchAll(linkPattern)].map(m => m[1]);
     const uniqueIds = [...new Set(idsFound)];
- 
+
     let created = 0, skipped = 0;
     const results = [];
- 
+
     if(uniqueIds.length > 0){
       for(const bidNum of uniqueIds){
         const id = 'ebn-'+bidNum;
         const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
         if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
- 
+
         // Look at the text right around this specific bid's link to get its own
         // description and expiration date, not a neighboring row's.
         const idx = combined.indexOf('subscriber_view_bid/'+bidNum);
@@ -197,19 +168,19 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
         // The "Expires:" date for a row appears AFTER its own link in EnviroBidNet's
         // layout — searching backward risks grabbing the previous row's date instead.
         const forwardText = combined.slice(idx, idx+250);
- 
+
         const dateM = forwardText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
         let due='';
         if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
         if(due && new Date(due) < new Date()){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
- 
+
         // Best-effort name: the bid number is usually immediately followed/preceded by its
         // description in the row; strip tags/whitespace and take a reasonable chunk.
         const stripped = windowText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
         const bidNumIdx = stripped.indexOf(bidNum);
         let nameGuess = bidNumIdx >= 0 ? stripped.slice(bidNumIdx + bidNum.length, bidNumIdx + bidNum.length + 200).trim() : '';
         if(!nameGuess) nameGuess = 'EBN Bid '+bidNum;
- 
+
         const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
         await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
           posted:new Date().toISOString().split('T')[0], due, scope:stripped.slice(0,400),
@@ -221,7 +192,7 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
       console.log('[EBN] Digest processed:', created, 'added,', skipped, 'skipped. Subject:', subject);
       return res.json({success:true, created, skipped, results});
     }
- 
+
     // Fallback: no subscriber_view_bid links found at all. Don't silently drop a
     // genuine EnviroBidNet email — save it under a subject-hash id so it's still visible.
     const looksLikeEBN = /envirobidnet/i.test(combined) || /envirobidnet/i.test(b.from||b.From||'');
@@ -238,8 +209,8 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
     res.json({success:true,created:1,fallback:true});
   } catch(e) { console.error('[EBN] ingest error:', e.message); res.status(500).json({error:e.message}); }
 });
- 
- 
+
+
 app.get('/api/reset', async (req,res) => {
   try {
     // Non-destructive: upsert the known static bids without deleting anything else.
@@ -250,7 +221,7 @@ app.get('/api/reset', async (req,res) => {
     res.json({success:true,seeded:SEED_BIDS.length});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 // Full wipe + reseed — only the static 33, deletes everything else including
 // any live-ingested bids. Use only when you intentionally want a clean slate.
 app.get('/api/hard-reset', async (req,res) => {
@@ -260,7 +231,7 @@ app.get('/api/hard-reset', async (req,res) => {
     res.json({success:true,seeded:SEED_BIDS.length});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 // Manual bid add — used by the "Add Bid" modal in the UI
 app.post('/api/bids', async (req,res) => {
   try {
@@ -272,7 +243,7 @@ app.post('/api/bids', async (req,res) => {
     res.json({success:true, id});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 // Paste-an-EnviroBidNet-email add — used by the "Paste EnviroBidNet Email" modal.
 // Scans the pasted text for every subscriber_view_bid/<number> link it can find
 // (an alert email often lists several bids) and adds each one not already saved.
@@ -312,14 +283,14 @@ app.post('/api/email-bids', async (req,res) => {
     res.json({success:true, created, skipped, results});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.get('/api/clean-ebn', async (req,res) => {
   try {
     await pool.query("DELETE FROM bids WHERE data->>'source'='EnviroBidNet' AND data->>'due'!='' AND (data->>'due')::date < CURRENT_DATE");
     res.json({success:true});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 app.get('/api/dedupe-fedbids', async (req,res) => {
   try {
     // Only remove TRUE duplicates (same solicitation number, keep the oldest).
@@ -332,12 +303,11 @@ app.get('/api/dedupe-fedbids', async (req,res) => {
     res.json({success:true});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
- 
+
 process.on('uncaughtException', e => console.error('[Crash]',e.message));
 process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
- 
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[SRI Bids] Running on port', PORT);
   setTimeout(() => initDB().catch(e => console.error('[DB]',e.message)), 2000);
 });
-Claude finished the response
