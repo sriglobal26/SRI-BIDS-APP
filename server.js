@@ -304,6 +304,29 @@ app.get('/api/dedupe-fedbids', async (req,res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// Remove duplicate bids (any source). Same solicitation number, or same name + due date,
+// counts as a duplicate; the OLDEST copy is kept.
+// Preview first:  /api/dedupe-bids        (shows what would be removed, deletes nothing)
+// Then delete:    /api/dedupe-bids?confirm=1
+app.get('/api/dedupe-bids', async (req,res) => {
+  try {
+    const norm = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const r = await pool.query('SELECT id,data FROM bids ORDER BY created_at ASC, id ASC');
+    const seen = new Map();
+    const dups = [];
+    for(const row of r.rows){
+      const d = row.data || {};
+      const sol = norm(d.solicitationNo);
+      const key = sol ? 'sol:'+sol : 'name:'+norm(d.name)+'|'+norm(d.due);
+      if(seen.has(key)) dups.push({id:row.id, name:d.name, source:d.source, duplicateOf:seen.get(key)});
+      else seen.set(key, row.id);
+    }
+    const confirmed = req.query.confirm === '1';
+    if(confirmed){ for(const x of dups) await pool.query('DELETE FROM bids WHERE id=$1',[x.id]); }
+    res.json({success:true, confirmed, duplicatesFound:dups.length, duplicates:dups});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 process.on('uncaughtException', e => console.error('[Crash]',e.message));
 process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
 
