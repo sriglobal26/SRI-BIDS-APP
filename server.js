@@ -86,7 +86,17 @@ app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
 app.get('/api/bids', async (req,res) => {
   try {
     const r = await pool.query('SELECT data FROM bids ORDER BY created_at ASC');
-    res.json({bids: r.rows.map(r=>r.data)});
+    // Expired bids are always reported as Deleted, so every version of the page shows them
+    // under Deleted (TWDB / pre-bid bids never expire; Selected bids stay Selected).
+    const now = Date.now();
+    const bids = r.rows.map(row => {
+      const d = row.data || {};
+      if(d.userState === 'selected' || d.source === 'TWDB' || d.status === 'prebid') return d;
+      const due = parseDueServer(d.due);
+      if(due && due.getTime() < now && d.userState !== 'deleted') return {...d, userState:'deleted'};
+      return d;
+    });
+    res.json({bids});
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
@@ -103,6 +113,28 @@ app.post('/api/bids/:id/state', async (req,res) => {
     if(!r.rows.length) return res.status(404).json({error:'not found'});
     const bid = r.rows[0].data;
     bid.userState = req.body.state;
+    if(req.body.state === 'deleted') bid.deletedAt = new Date().toISOString();
+    else delete bid.deletedAt;
+    await pool.query('UPDATE bids SET data=$1 WHERE id=$2',[JSON.stringify(bid),req.params.id]);
+    res.json({success:true});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+// The page calls PATCH /api/bids/:id when you click Select / Delete / Restore or edit a link.
+// Saves those changes so they survive a refresh, and records the day a bid was deleted
+// (the 14-day auto-purge counts from that day).
+app.patch('/api/bids/:id', async (req,res) => {
+  try {
+    const r = await pool.query('SELECT data FROM bids WHERE id=$1',[req.params.id]);
+    if(!r.rows.length) return res.status(404).json({error:'not found'});
+    const bid = r.rows[0].data;
+    const b = req.body || {};
+    if(typeof b.userState === 'string' && ['active','selected','deleted'].includes(b.userState)){
+      bid.userState = b.userState;
+      if(b.userState === 'deleted') bid.deletedAt = new Date().toISOString();
+      else delete bid.deletedAt;
+    }
+    if(typeof b.url === 'string') bid.url = b.url;
     await pool.query('UPDATE bids SET data=$1 WHERE id=$2',[JSON.stringify(bid),req.params.id]);
     res.json({success:true});
   } catch(e) { res.status(500).json({error:e.message}); }
@@ -327,10 +359,75 @@ app.get('/api/dedupe-bids', async (req,res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// ── Auto-purge: a bid that has been in Deleted for more than 14 days is removed for good ──
+// A bid is "in Deleted" when (a) its due date has passed (TWDB / pre-bid bids never expire), or
+// (b) it was deleted by hand. For (a) the 14 days count from the due date; for (b) from the day it
+// was deleted. Selected bids are never purged.
+const PURGE_AFTER_DAYS = 14;
+function parseDueServer(due){
+  if(!due) return null;
+  const v = String(due).trim();
+  let m = v.match(/^(20[2-9]\d)-(\d{2})-(\d{2})/);
+  if(m) return new Date(m[1]+'-'+m[2]+'-'+m[3]+'T23:59:59');
+  m = v.match(/^(\d{1,2})\/(\d{1,2})\/(20[2-9]\d)$/);
+  if(m) return new Date(m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0')+'T23:59:59');
+  if(/[A-Za-z]{3,}\s+\d{1,2},?\s+20[2-9]\d/.test(v)){
+    const dt = new Date(v);
+    if(!isNaN(dt)){ dt.setHours(23,59,59,0); return dt; }
+  }
+  return null;
+}
+async function purgeDeleted(dryRun){
+  const now = Date.now();
+  const cutoff = now - PURGE_AFTER_DAYS*24*60*60*1000;
+  const r = await pool.query('SELECT id,data FROM bids');
+  const removed = [];
+  let stamped = 0;
+  for(const row of r.rows){
+    const d = row.data || {};
+    if(d.userState === 'selected') continue;
+    const neverExpires = d.source === 'TWDB' || d.status === 'prebid';
+    const dueDate = parseDueServer(d.due);
+    const expired = !neverExpires && !!dueDate && dueDate.getTime() < now;
+    let since = null;
+    if(d.userState === 'deleted'){
+      if(d.deletedAt) since = Date.parse(d.deletedAt);
+      else if(expired) since = dueDate.getTime();
+      else {
+        // deleted by hand before dates were recorded: start the 14 days from now
+        stamped++;
+        if(!dryRun){ d.deletedAt = new Date().toISOString(); await saveBid(d); }
+        continue;
+      }
+    } else if(expired){
+      since = dueDate.getTime();
+    }
+    if(since !== null && !isNaN(since) && since < cutoff){
+      removed.push({id:row.id, name:d.name, source:d.source, due:d.due});
+      if(!dryRun) await pool.query('DELETE FROM bids WHERE id=$1',[row.id]);
+    }
+  }
+  return {removed, stamped};
+}
+// Preview:  /api/purge-deleted            (shows what would be removed, deletes nothing)
+// Delete:   /api/purge-deleted?confirm=1
+app.get('/api/purge-deleted', async (req,res) => {
+  try {
+    const confirmed = req.query.confirm === '1';
+    const out = await purgeDeleted(!confirmed);
+    res.json({success:true, confirmed, afterDays:PURGE_AFTER_DAYS, wouldRemoveOrRemoved:out.removed.length, bids:out.removed});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 process.on('uncaughtException', e => console.error('[Crash]',e.message));
 process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[SRI Bids] Running on port', PORT);
   setTimeout(() => initDB().catch(e => console.error('[DB]',e.message)), 2000);
+  const runPurge = () => purgeDeleted(false)
+    .then(o => { if(o.removed.length) console.log('[Purge] Removed', o.removed.length, 'bids deleted for more than', PURGE_AFTER_DAYS, 'days'); })
+    .catch(e => console.error('[Purge]', e.message));
+  setTimeout(runPurge, 20000);
+  setInterval(runPurge, 6*60*60*1000);
 });
