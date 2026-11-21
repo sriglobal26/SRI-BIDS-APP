@@ -186,12 +186,20 @@ function ebnParse(text, bidNum){
   const link = text.indexOf('subscriber_view_bid/'+bidNum);
   let due = '';
   if(link >= 0){
-    const after = text.slice(link, link+900).replace(/<[^>]+>/g,' ');
-    const dm = after.match(/Expires?\W{0,40}(20[2-9]\d-\d{2}-\d{2})/i) || after.match(/(20[2-9]\d-\d{2}-\d{2})/);
-    if(dm) due = dm[1];
+    // Look from this bid's link up to the NEXT bid's link (or 6000 chars). Tags are removed first,
+    // because the real email has long inline styles between the link and the date.
+    const rest = text.slice(link);
+    const nx = rest.search(new RegExp('subscriber_view_bid/(?!'+bidNum+'(?![0-9]))[0-9]'));
+    const win = rest.slice(0, nx > 0 ? nx : 6000).slice(0, 6000);
+    const after = win.replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ')
+      .replace(/&nbsp;/gi,' ').replace(/&#\d+;/g,' ').replace(/\s+/g,' ');
+    const rx = /(20[2-9]\d)\s*-\s*(\d{2})\s*-\s*(\d{2})/;
+    const lab = after.match(/Expires?\W{0,40}(20[2-9]\d)\s*-\s*(\d{2})\s*-\s*(\d{2})/i);
+    const any = lab || after.match(rx);
+    if(any) due = any[1]+'-'+any[2]+'-'+any[3];
   }
-  const before = link >= 0 ? text.slice(Math.max(0,link-700), link) : text.slice(0,700);
-  const plain = before.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  const before = link >= 0 ? text.slice(Math.max(0,link-2500), link) : text.slice(0,700);
+  const plain = before.replace(/<[^>]*$/,' ').replace(/^[^<]*>/,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
   const pos = plain.lastIndexOf(bidNum);
   const name = ebnCleanName(pos >= 0 ? plain.slice(pos+bidNum.length) : plain.slice(-200), 'EBN Bid '+bidNum);
   return {name, due};
