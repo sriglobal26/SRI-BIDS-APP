@@ -186,7 +186,8 @@ function ebnParse(text, bidNum){
   const link = text.indexOf('subscriber_view_bid/'+bidNum);
   let due = '';
   if(link >= 0){
-    const dm = text.slice(link, link+600).match(/(20[2-9]\d-\d{2}-\d{2})/);
+    const after = text.slice(link, link+900).replace(/<[^>]+>/g,' ');
+    const dm = after.match(/Expires?\W{0,40}(20[2-9]\d-\d{2}-\d{2})/i) || after.match(/(20[2-9]\d-\d{2}-\d{2})/);
     if(dm) due = dm[1];
   }
   const before = link >= 0 ? text.slice(Math.max(0,link-700), link) : text.slice(0,700);
@@ -234,6 +235,48 @@ app.get('/api/fix-ebn', async (req,res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// Adds a bid, or - if it is already saved WITHOUT a due date - fills in its due date and name.
+async function ebnUpsert(text, bidNum){
+  const id = 'ebn-'+bidNum;
+  const parsed = ebnParse(text, bidNum);
+  const ex = await pool.query('SELECT data FROM bids WHERE id=$1',[id]);
+  if(ex.rows.length){
+    const d = ex.rows[0].data || {};
+    if(!d.due && parsed.due){
+      d.due = parsed.due; d.name = parsed.name; d.scope = parsed.name;
+      await saveBid(d);
+      return {id, updated:true, due:parsed.due};
+    }
+    return {id, skipped:true, reason:'Duplicate'};
+  }
+  if(ebnExpired(parsed.due)) return {id, skipped:true, reason:'Expired'};
+  await saveBid({id, name:parsed.name.slice(0,200), agency:'EnviroBidNet', city:'Texas',
+    posted:new Date().toISOString().split('T')[0], due:parsed.due, scope:parsed.name.slice(0,400),
+    url:'https://envirobidnet.com/subscriber_view_bid/'+bidNum, source:'EnviroBidNet', value:'TBD',
+    status:'active', region:'texas', userState:'active', scrapedAt:new Date().toISOString()});
+  return {id, due:parsed.due, created:true};
+}
+
+// Removes test/placeholder bids left behind by Make mapping mistakes (names like "Subject").
+async function cleanJunkBids(dryRun){
+  const r = await pool.query('SELECT id,data FROM bids');
+  const junk = r.rows.filter(row => {
+    const n = String((row.data||{}).name||'').trim();
+    return /^(\[?\s*\d*\.?\s*subject\s*\]?|fedbid|text content|\[?\s*\d*\.?\s*text content\s*\]?)$/i.test(n) && row.data.userState !== 'selected';
+  }).map(row => ({id:row.id, name:row.data.name}));
+  if(!dryRun) for(const j of junk) await pool.query('DELETE FROM bids WHERE id=$1',[j.id]);
+  return junk;
+}
+
+// Preview: /api/clean-junk      Delete: /api/clean-junk?confirm=1
+app.get('/api/clean-junk', async (req,res) => {
+  try {
+    const confirmed = req.query.confirm === '1';
+    const junk = await cleanJunkBids(!confirmed);
+    res.json({success:true, confirmed, count:junk.length, bids:junk});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 app.post('/api/bids/ebn-ingest', async (req,res) => {
   try {
     const b = req.body||{};
@@ -253,23 +296,9 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
 
     if(uniqueIds.length > 0){
       for(const bidNum of uniqueIds){
-        const id = 'ebn-'+bidNum;
-        const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-        if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
-
-        const parsed = ebnParse(combined, bidNum);
-        const due = parsed.due;
-        if(ebnExpired(due)){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
-        const nameGuess = parsed.name;
-        const stripped = nameGuess;
-
-        const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
-        await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
-          posted:new Date().toISOString().split('T')[0], due, scope:stripped.slice(0,400),
-          url:fullUrl, source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
-          userState:'active', scrapedAt:new Date().toISOString()});
-        created++;
-        results.push({id,due,created:true});
+        const r = await ebnUpsert(combined, bidNum);
+        if(r.created || r.updated) created++; else skipped++;
+        results.push(r);
       }
       console.log('[EBN] Digest processed:', created, 'added,', skipped, 'skipped. Subject:', subject);
       return res.json({success:true, created, skipped, results});
@@ -341,20 +370,9 @@ app.post('/api/email-bids', async (req,res) => {
       const bidNum = m[1];
       if(seen.has(bidNum)) continue;
       seen.add(bidNum);
-      const id = 'ebn-'+bidNum;
-      const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-      if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
-      const parsed = ebnParse(text, bidNum);
-      const due = parsed.due;
-      if(ebnExpired(due)){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
-      const nameGuess = parsed.name;
-      const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
-      await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
-        posted:new Date().toISOString().split('T')[0], due, scope:nameGuess.slice(0,400),
-        url: fullUrl, source:'EnviroBidNet', value:'TBD', status:'active', region:'texas',
-        userState:'active', scrapedAt:new Date().toISOString()});
-      created++;
-      results.push({id,due,created:true});
+      const r = await ebnUpsert(text, bidNum);
+      if(r.created || r.updated) created++; else skipped++;
+      results.push(r);
     }
     res.json({success:true, created, skipped, results});
   } catch(e) { res.status(500).json({error:e.message}); }
@@ -471,6 +489,8 @@ app.listen(PORT, '0.0.0.0', () => {
   setTimeout(() => initDB().catch(e => console.error('[DB]',e.message)), 2000);
   const runPurge = async () => {
     try {
+      const junk = await cleanJunkBids(false);
+      if(junk.length) console.log('[Clean] Removed', junk.length, 'placeholder bids');
       const fixed = await fixEbnBids(false);
       if(fixed.length) console.log('[EBN] Repaired', fixed.length, 'bids with missing due dates');
       const o = await purgeDeleted(false);
