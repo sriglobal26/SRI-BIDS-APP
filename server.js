@@ -170,6 +170,70 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// ── EnviroBidNet email parsing ──
+// The alert email is a table: Bid ID | description (+ link) | Expiration date | VIEW BID.
+// Works on the HTML email and on plain text copied from it.
+function ebnCleanName(v, fallback){
+  const t = String(v||'').replace(/<[^>]+>/g,' ').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ')
+    .replace(/https?:\/\/\S+/g,' ').replace(/\(\s*\d+\s*bids?[^)]*\)/gi,' ').replace(/\b20[2-9]\d-\d{2}-\d{2}\b/g,' ')
+    .replace(/\s+/g,' ').trim().slice(0,200);
+  return t || fallback;
+}
+function ebnParse(text, bidNum){
+  const row = new RegExp('<td[^>]*>\\s*'+bidNum+'\\s*</td>\\s*<td[^>]*>([\\s\\S]*?)</td>\\s*<td[^>]*>\\s*(20[2-9]\\d-\\d{2}-\\d{2})\\s*</td>','i');
+  const m = text.match(row);
+  if(m) return {name:ebnCleanName(m[1],'EBN Bid '+bidNum), due:m[2]};
+  const link = text.indexOf('subscriber_view_bid/'+bidNum);
+  let due = '';
+  if(link >= 0){
+    const dm = text.slice(link, link+600).match(/(20[2-9]\d-\d{2}-\d{2})/);
+    if(dm) due = dm[1];
+  }
+  const before = link >= 0 ? text.slice(Math.max(0,link-700), link) : text.slice(0,700);
+  const plain = before.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  const pos = plain.lastIndexOf(bidNum);
+  const name = ebnCleanName(pos >= 0 ? plain.slice(pos+bidNum.length) : plain.slice(-200), 'EBN Bid '+bidNum);
+  return {name, due};
+}
+function ebnExpired(due){ return !!due && new Date(due+'T23:59:59') < new Date(); }
+
+// Repairs EnviroBidNet bids that were saved without a due date (the date ended up inside the
+// name text). Fills in the due date and cleans the name. Safe to run again; only touches bids
+// with an empty due date.
+async function fixEbnBids(dryRun){
+  const r = await pool.query("SELECT id,data FROM bids WHERE data->>'source'='EnviroBidNet'");
+  const changed = [];
+  for(const row of r.rows){
+    const d = row.data || {};
+    if(d.due) continue;
+    const num = String(row.id).replace(/^ebn-/,'');
+    const text = (d.name||'')+' '+(d.scope||'');
+    let due = '';
+    const exact = text.match(new RegExp('subscriber_view_bid/'+num+'\\s+(20[2-9]\\d-\\d{2}-\\d{2})'));
+    if(exact) due = exact[1];
+    else {
+      const at = text.lastIndexOf('subscriber_view_bid/'+num);
+      const dm = at >= 0 ? text.slice(at).match(/(20[2-9]\d-\d{2}-\d{2})/) : null;
+      if(dm) due = dm[1];
+    }
+    if(!due) continue;
+    const nm = d.name || '';
+    const p = nm.indexOf(num);
+    const name = ebnCleanName(p >= 0 ? nm.slice(p+num.length) : nm, 'EBN Bid '+num);
+    changed.push({id:row.id, name, due});
+    if(!dryRun){ d.due = due; d.name = name; d.scope = name; await saveBid(d); }
+  }
+  return changed;
+}
+// Preview: /api/fix-ebn      Apply: /api/fix-ebn?confirm=1
+app.get('/api/fix-ebn', async (req,res) => {
+  try {
+    const confirmed = req.query.confirm === '1';
+    const changed = await fixEbnBids(!confirmed);
+    res.json({success:true, confirmed, count:changed.length, bids:changed.slice(0,50)});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 app.post('/api/bids/ebn-ingest', async (req,res) => {
   try {
     const b = req.body||{};
@@ -193,25 +257,11 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
         const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
         if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
 
-        // Look at the text right around this specific bid's link to get its own
-        // description and expiration date, not a neighboring row's.
-        const idx = combined.indexOf('subscriber_view_bid/'+bidNum);
-        const windowText = combined.slice(Math.max(0, idx-600), idx+200);
-        // The "Expires:" date for a row appears AFTER its own link in EnviroBidNet's
-        // layout — searching backward risks grabbing the previous row's date instead.
-        const forwardText = combined.slice(idx, idx+250);
-
-        const dateM = forwardText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
-        let due='';
-        if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
-        if(due && new Date(due) < new Date()){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
-
-        // Best-effort name: the bid number is usually immediately followed/preceded by its
-        // description in the row; strip tags/whitespace and take a reasonable chunk.
-        const stripped = windowText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-        const bidNumIdx = stripped.indexOf(bidNum);
-        let nameGuess = bidNumIdx >= 0 ? stripped.slice(bidNumIdx + bidNum.length, bidNumIdx + bidNum.length + 200).trim() : '';
-        if(!nameGuess) nameGuess = 'EBN Bid '+bidNum;
+        const parsed = ebnParse(combined, bidNum);
+        const due = parsed.due;
+        if(ebnExpired(due)){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
+        const nameGuess = parsed.name;
+        const stripped = nameGuess;
 
         const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
         await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
@@ -294,16 +344,10 @@ app.post('/api/email-bids', async (req,res) => {
       const id = 'ebn-'+bidNum;
       const dup = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
       if(dup.rows.length>0){ skipped++; results.push({id,skipped:true,reason:'Duplicate'}); continue; }
-      const windowText = text.slice(Math.max(0, m.index-600), m.index);
-      const forwardText = text.slice(m.index, m.index+250);
-      const dateM = forwardText.match(/Expires?[:\s]+(\d{4}-\d{2}-\d{2})/i);
-      let due='';
-      if(dateM){try{const dt=new Date(dateM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
-      if(due && new Date(due) < new Date()){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
-      const stripped = windowText.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      const bidNumIdx = stripped.indexOf(bidNum);
-      let nameGuess = bidNumIdx >= 0 ? stripped.slice(bidNumIdx + bidNum.length).trim() : stripped.slice(-200);
-      if(!nameGuess) nameGuess = 'EBN Bid '+bidNum;
+      const parsed = ebnParse(text, bidNum);
+      const due = parsed.due;
+      if(ebnExpired(due)){ skipped++; results.push({id,skipped:true,reason:'Expired'}); continue; }
+      const nameGuess = parsed.name;
       const fullUrl = 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
       await saveBid({id, name:nameGuess.slice(0,200), agency:'EnviroBidNet', city:'Texas',
         posted:new Date().toISOString().split('T')[0], due, scope:nameGuess.slice(0,400),
@@ -425,9 +469,14 @@ process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[SRI Bids] Running on port', PORT);
   setTimeout(() => initDB().catch(e => console.error('[DB]',e.message)), 2000);
-  const runPurge = () => purgeDeleted(false)
-    .then(o => { if(o.removed.length) console.log('[Purge] Removed', o.removed.length, 'bids deleted for more than', PURGE_AFTER_DAYS, 'days'); })
-    .catch(e => console.error('[Purge]', e.message));
+  const runPurge = async () => {
+    try {
+      const fixed = await fixEbnBids(false);
+      if(fixed.length) console.log('[EBN] Repaired', fixed.length, 'bids with missing due dates');
+      const o = await purgeDeleted(false);
+      if(o.removed.length) console.log('[Purge] Removed', o.removed.length, 'bids deleted for more than', PURGE_AFTER_DAYS, 'days');
+    } catch(e) { console.error('[Purge]', e.message); }
+  };
   setTimeout(runPurge, 20000);
   setInterval(runPurge, 6*60*60*1000);
 });
