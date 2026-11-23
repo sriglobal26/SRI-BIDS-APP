@@ -290,7 +290,9 @@ app.post('/api/bids/ebn-ingest', async (req,res) => {
     const b = req.body||{};
     lastEbnPayload = {receivedAt:new Date().toISOString(), body:b};
     const subject = b.subject||b.Subject||'';
-    const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||b.html||b.Html||'';
+    // Use EVERY text field Make sends (plain text AND html): the plain-text part of an
+    // EnviroBidNet email has only the links, the Expires dates are in the html part.
+    const emailBody = [b.body,b.Body,b.text,b.Text,b.snippet,b.html,b.Html,b.htmlContent].filter(x=>typeof x==='string'&&x).join('\n');
     const combined = subject+' '+emailBody;
 
     // EnviroBidNet alert emails are a DIGEST: one email lists MANY bids, each with its
@@ -369,7 +371,7 @@ app.post('/api/bids', async (req,res) => {
 app.post('/api/email-bids', async (req,res) => {
   try {
     const b = req.body||{};
-    const text = (b.text||b.html||'').toString();
+    const text = [b.text,b.html,b.body].filter(x=>typeof x==='string'&&x).join('\n');
     const matches = [...text.matchAll(/subscriber_view_bid\/([0-9]{5,15})/gi)];
     const seen = new Set();
     let created = 0, skipped = 0;
