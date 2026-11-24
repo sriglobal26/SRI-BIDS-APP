@@ -168,24 +168,38 @@ let lastEbnPayload = null;
 app.get('/api/debug/last-ebn', (req,res) => res.json(lastEbnPayload || {message:'No EBN ingest received yet since last deploy'}));
 app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
 
+// ── Duplicate detection (shared by /api/bids and /api/dedupe-bids) ──
+// Two bids are the same when, within one source, they have the same solicitation / bid number
+// or the same name (ignoring "(123456)"
+// bid numbers and punctuation). Preferred copy: selected > has a due date > oldest.
+const dupNz = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function dupKey(id, d){
+  const src = d.source || '';
+  const sol = dupNz(d.solicitationNo);
+  if(sol) return src+'|sol:'+sol;
+  const name = dupNz(String(d.name||'').replace(/\(\s*[#\w-]*\d[#\w-]*\s*\)/g,' '));
+  return name.length >= 12 ? src+'|name:'+name : src+'|id:'+id;
+}
+function dupRank(d){ return (d.userState==='selected' ? 2 : 0) + (d.due ? 1 : 0); }
+function pickKeepers(rows){
+  const keep = new Map();
+  for(const row of rows){
+    const d = row.data || {};
+    const k = dupKey(row.id, d);
+    const cur = keep.get(k);
+    if(!cur || dupRank(d) > dupRank(cur.data||{})) keep.set(k,row);
+  }
+  return new Set([...keep.values()].map(x=>x.id));
+}
+
 app.get('/api/bids', async (req,res) => {
   try {
     const r = await pool.query('SELECT id, data FROM bids ORDER BY created_at ASC, id ASC');
     // Expired bids are always reported as Deleted, so every version of the page shows them
     // under Deleted (TWDB / pre-bid bids never expire; Selected bids stay Selected).
     const now = Date.now();
-    // Never show duplicates: same solicitation number (or same name + due date) = one bid.
-    // The copy the user selected wins; otherwise the oldest copy is kept. Nothing is deleted here.
-    const nz = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    const keep = new Map();
-    for(const row of r.rows){
-      const d = row.data || {};
-      const sol = nz(d.solicitationNo);
-      const key = (d.source||'')+'|'+(sol ? 'sol:'+sol : 'name:'+nz(d.name)+'|'+nz(d.due));
-      const cur = keep.get(key);
-      if(!cur || (d.userState==='selected' && cur.data.userState!=='selected')) keep.set(key,row);
-    }
-    const keepIds = new Set([...keep.values()].map(x=>x.id));
+    // Never show duplicates (see dupKey). Nothing is deleted here.
+    const keepIds = pickKeepers(r.rows);
     const bids = r.rows.filter(row=>keepIds.has(row.id)).map(row => {
       const d = row.data || {};
       if(d.userState === 'selected' || d.source === 'TWDB' || d.status === 'prebid') return d;
@@ -532,17 +546,10 @@ app.get('/api/dedupe-fedbids', async (req,res) => {
 // Then delete:    /api/dedupe-bids?confirm=1
 app.get('/api/dedupe-bids', async (req,res) => {
   try {
-    const norm = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
     const r = await pool.query('SELECT id,data FROM bids ORDER BY created_at ASC, id ASC');
-    const seen = new Map();
-    const dups = [];
-    for(const row of r.rows){
-      const d = row.data || {};
-      const sol = norm(d.solicitationNo);
-      const key = sol ? 'sol:'+sol : 'name:'+norm(d.name)+'|'+norm(d.due);
-      if(seen.has(key)) dups.push({id:row.id, name:d.name, source:d.source, duplicateOf:seen.get(key)});
-      else seen.set(key, row.id);
-    }
+    const keepIds = pickKeepers(r.rows);
+    const byKey = new Map(r.rows.filter(x=>keepIds.has(x.id)).map(x=>[dupKey(x.id,x.data||{}),x.id]));
+    const dups = r.rows.filter(x=>!keepIds.has(x.id)).map(x=>({id:x.id, name:(x.data||{}).name, source:(x.data||{}).source, duplicateOf:byKey.get(dupKey(x.id,x.data||{}))}));
     const confirmed = req.query.confirm === '1';
     if(confirmed){ for(const x of dups) await pool.query('DELETE FROM bids WHERE id=$1',[x.id]); }
     res.json({success:true, confirmed, duplicatesFound:dups.length, duplicates:dups});
