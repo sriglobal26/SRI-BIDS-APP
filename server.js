@@ -234,7 +234,9 @@ async function fedbidsIngestOne(b) {
       ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk='+pkM[1]
       : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
     const solM = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
-    const solNo = solM ? solM[1] : '';
+    // Fallback for solicitation numbers written without dashes, e.g. 140SS127R0012 or W912BV26R0012
+    const solAlt = solM ? null : allText.match(/\b((?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{10,18})\b/);
+    const solNo = solM ? solM[1] : (solAlt ? solAlt[1] : '');
     const id = 'fedbid-'+(solNo.replace(/[^a-zA-Z0-9]/g,'')||String(Date.now()).slice(-10));
     if(solNo) {
       const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1",[solNo]);
