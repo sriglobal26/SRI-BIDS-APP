@@ -1913,9 +1913,9 @@ function rowFed(b){
 }
 
 function renderFedBids(){
-  // ONLY show the 5 approved FedBids — ignore everything else
-  const APPROVED_IDS = ['fedbid-001','fedbid-006'];
-  const fedBids = BIDS.filter(b => APPROVED_IDS.includes(b.id));
+  // Show every open FedBid (source FedBids) - bids that arrive from BidSpeed emails included.
+  // Expired / deleted ones are hidden here and listed in the Deleted tab like other sources.
+  const fedBids = BIDS.filter(b => (b.source||'').toLowerCase()==='fedbids' && bidState[b.id]==='active');
   const tbody = document.getElementById('fedbids-body');
   const mt = document.getElementById('fedbids-mt');
   const cnt = document.getElementById('fedbids-result-count');
