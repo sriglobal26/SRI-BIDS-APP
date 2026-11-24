@@ -9,11 +9,16 @@ app.use(express.json({limit:'5mb'}));
 app.use(express.urlencoded({extended:true,limit:'5mb'}));
 app.use(express.static(path.join(__dirname)));
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {rejectUnauthorized:false},
-  max:3, idleTimeoutMillis:30000, connectionTimeoutMillis:15000
-});
+if(!process.env.DATABASE_URL) console.error('[DB] WARNING: DATABASE_URL is not set - link the Postgres service to this service in Railway (Variables tab).');
+let usingSsl = true;
+function makePool(ssl){
+  return new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: ssl ? {rejectUnauthorized:false} : false,
+    max:3, idleTimeoutMillis:30000, connectionTimeoutMillis:15000
+  });
+}
+let pool = makePool(true);
 
 const SEED_BIDS = [
       { id:'fedbid-007', name:'USIBWC — SCADA Lifecycle Support Services (W912BV-26-R-0012)', agency:'US International Boundary and Water Commission', city:'El Paso, TX', posted:'2026-08-01', due:'2026-09-30', solicitationNo:'W912BV-26-R-0012', responseDate:'2026-09-30', setAside:'Small Business', scope:'SCADA Lifecycle Support for water infrastructure. Instrumentation, controls, PLC/HMI maintenance and upgrades along US-Mexico border.', url:'https://sam.gov/opp/86f857e87eaa41e5aed1eebce062e685/view', source:'FedBids', value:'TBD', status:'active', region:'statewide', userState:'active', category:'SCADA' },
@@ -59,6 +64,38 @@ async function saveBid(bid) {
     'INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO UPDATE SET data=$2',
     [id, JSON.stringify(bid)]
   );
+}
+
+// The tables are created/seeded once, but if the database is not reachable yet at startup
+// (Railway starts the web service before Postgres is ready) the old code gave up forever and
+// the app showed no bids. Now every /api request waits for the DB, and startup retries until it works.
+let dbReady = false, dbInit = null;
+function ensureDB() {
+  if(dbReady) return Promise.resolve();
+  if(!dbInit) {
+    dbInit = initDB().then(() => { dbReady = true; }).finally(() => { dbInit = null; });
+  }
+  return dbInit;
+}
+app.use('/api', async (req,res,next) => {
+  try { await ensureDB(); next(); }
+  catch(e) { res.status(503).json({error:'Database not ready: '+e.message}); }
+});
+async function initDBWithRetry(attempt) {
+  try {
+    await ensureDB();
+    console.log('[DB] Connected and ready');
+  } catch(e) {
+    console.error('[DB] init failed (attempt '+attempt+'):', e.message);
+    // Some databases (e.g. Railway private network) do not support SSL - fall back once.
+    if(usingSsl && /does not support SSL|SSL/i.test(e.message) && !/self.signed|certificate/i.test(e.message)) {
+      usingSsl = false;
+      try { await pool.end(); } catch(_) {}
+      pool = makePool(false);
+      console.log('[DB] Retrying without SSL');
+    }
+    setTimeout(() => initDBWithRetry(attempt+1), Math.min(30000, 3000*attempt));
+  }
 }
 
 async function initDB() {
@@ -496,7 +533,7 @@ process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[SRI Bids] Running on port', PORT);
-  setTimeout(() => initDB().catch(e => console.error('[DB]',e.message)), 2000);
+  setTimeout(() => initDBWithRetry(1), 2000);
   const runPurge = async () => {
     try {
       const junk = await cleanJunkBids(false);
