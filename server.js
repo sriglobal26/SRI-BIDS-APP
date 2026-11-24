@@ -55,6 +55,10 @@ const SEED_BIDS = [
   { id:'seed-5', posted:'2026-08-01', name:'City of Strawn — WTP SCADA & Electrical Engineering (Post-Funding)', agency:'City of Strawn (TWDB HB500)', city:'Strawn, TX', due:'Post-Funding', scope:'SCADA design, alternate power, electrical design for microfilter replacement', value:'~$1,085,000', status:'prebid', region:'statewide', url:'https://www.twdb.texas.gov/financial/programs/WSIG/index.asp', source:'TWDB' },
   { id:'seed-7', name:'SAWS — Walden Height Booster Station Improvements & W Grosenbacher Rd Pressure Reducing Valve (PS-00188-YR)', agency:'San Antonio Water System (SAWS)', city:'San Antonio, TX', posted:'2026-08-01', due:'2026-09-30', scope:'Improvements to Walden Height Booster Station including electrical, instrumentation, controls, and pressure reducing valve improvements on W Grosenbacher Rd. Pumping station electrical and controls upgrade scope.', url:'https://apps.saws.org/business_center/ContractSol/', source:'Manual', value:'TBD', status:'active', region:'texas' },
   { id:'seed-6', posted:'2026-08-01', name:'SAWS — San Antonio Water System E&I Engineering Services', agency:'San Antonio Water System', city:'San Antonio, TX', due:'Check link', scope:'Electrical & Instrumentation engineering services for water and wastewater infrastructure', value:'TBD', status:'active', region:'statewide', url:'https://www.saws.org/business-center/purchasing/', source:'Manual' },
+  // ── Added Nov 24 2026 — open bids found on the source sites (confirm scope/dates on the link before bidding) ──
+  { id:'h2bid-920310', name:'Irrigation Pump Station No. 1 and No. 2 Reuse System (H2bid #920310)', agency:'H2bid listing — Texas (owner shown on H2bid)', city:'Texas', posted:'2026-11-24', due:'2026-12-11', scope:'Texas pump station / reuse system project listed on H2bid (ID 920310), closing 12/11/2026. Open the link, search the ID for owner, scope and documents — check for electrical and instrumentation scope.', url:'https://h2bid.com/Bids/BidsSearchPreview?keyword=Irrigation%20Pump%20Station%20Reuse', source:'H2bid', value:'TBD', status:'active', region:'statewide' },
+  { id:'h2bid-houston-rfq-2026-0010', name:'City of Houston — Pre-Qualification Pool for Professional Engineering Services (RFQ-2026-0010)', agency:'City of Houston Public Works', city:'Houston, TX', posted:'2026-11-24', due:'2026-12-03', scope:'Houston Public Works pre-qualification pool for professional engineering services, E-Bid due 12/3/2026. Getting into the pool is how firms get Houston WWTP / water E&I task orders. Confirm requirements on BeaconBid.', url:'https://www.beaconbid.com/solicitations/city-of-houston/open', source:'H2bid', value:'Pool', status:'active', region:'houston' },
+  { id:'civcast-20W09161', name:'City of Bay City — North Water Treatment Plant (ID 20W09161)', agency:'City of Bay City, TX', city:'Bay City, TX', posted:'2026-11-24', due:'2026-12-16', scope:'Construction of the North Water Treatment Plant: site work, well and well pump, two ground storage tanks, booster pump station and related work. Competitive sealed proposals; pre-bid was 11/18/2026; bid opening 12/16/2026 at City Hall. Look for electrical / instrumentation subcontract scope.', url:'https://app.civcast.com/bid-opportunities/projects/6aea16db251dba42419c9995', source:'CivCast', value:'TBD', status:'active', region:'statewide' },
 ];
 
 async function saveBid(bid) {
@@ -98,6 +102,25 @@ async function initDBWithRetry(attempt) {
   }
 }
 
+// Adds any bid from SEED_BIDS that is not in the database yet and has not expired.
+// Never overwrites an existing row (so Selected / Deleted choices are kept) and never
+// re-adds expired seeds (so purged bids do not keep coming back).
+function seedStillOpen(b) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b.due||''));
+  if(!m) return true;
+  return new Date(m[1]+'-'+m[2]+'-'+m[3]+'T23:59:59') >= new Date();
+}
+async function seedMissing() {
+  let added = 0;
+  for(const b of SEED_BIDS) {
+    if(!seedStillOpen(b)) continue;
+    const bid = {...b, scrapedAt:new Date().toISOString()};
+    const r = await pool.query('INSERT INTO bids(id,data) VALUES($1,$2) ON CONFLICT(id) DO NOTHING', [b.id, JSON.stringify(bid)]);
+    added += r.rowCount || 0;
+  }
+  if(added) console.log('[DB] Added', added, 'new seed bids');
+}
+
 async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS bids(
     id TEXT PRIMARY KEY, data JSONB NOT NULL,
@@ -109,6 +132,7 @@ async function initDB() {
     console.log('[DB] Seeded', SEED_BIDS.length, 'bids');
   } else {
     console.log('[DB] Ready. Bids:', cnt.rows[0].count);
+    await seedMissing();
   }
 }
 
