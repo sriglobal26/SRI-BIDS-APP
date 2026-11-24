@@ -1999,7 +1999,7 @@ async function extractAndAddBids(){
       }, 2000);
     } else {
       result.style.color='var(--yellow)';
-      result.textContent='⚠️ No bid links found. Copy full email including links.';
+      result.textContent='⚠️ No new bids found (already added, or links missing). Copy the full email including links.';
     }
   } catch(e){
     result.style.color='var(--red)';
@@ -2018,7 +2018,7 @@ function addBidManual(){
 
 <!-- ══ MODAL: Paste EnviroBidNet Email ══ -->
 <div class="mbg" id="m-paste-email"><div class="modal" style="max-width:600px">
-  <div class="mhd"><div><div class="mtit">📧 Paste EnviroBidNet Email</div><div class="msub">Copy full email → paste → bids added automatically</div></div><button class="mcl" onclick="closeM('m-paste-email')">✕</button></div>
+  <div class="mhd"><div><div class="mtit">📧 Paste Bid Email (EnviroBidNet or BidSpeed)</div><div class="msub">Copy full email → paste → bids added automatically</div></div><button class="mcl" onclick="closeM('m-paste-email')">✕</button></div>
   <div class="mbd">
     <div style="background:rgba(0,200,212,.06);border:1px solid rgba(0,200,212,.2);border-radius:4px;padding:12px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:#A8D8E8;line-height:1.9">
       <strong style="color:var(--cyan)">Steps:</strong><br>

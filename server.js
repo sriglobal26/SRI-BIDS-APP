@@ -225,9 +225,7 @@ app.patch('/api/bids/:id', async (req,res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
-app.post('/api/bids/fedbids-ingest', async (req,res) => {
-  try {
-    const b = req.body||{};
+async function fedbidsIngestOne(b) {
     const subject = b.subject||b.Subject||b.name||'';
     const emailBody = b.body||b.Body||b.text||b.Text||b.snippet||b.content||'';
     const allText = subject+' '+emailBody;
@@ -240,10 +238,10 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
     const id = 'fedbid-'+(solNo.replace(/[^a-zA-Z0-9]/g,'')||String(Date.now()).slice(-10));
     if(solNo) {
       const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1",[solNo]);
-      if(dup.rows.length>0) return res.json({success:true,skipped:true});
+      if(dup.rows.length>0) return {success:true,skipped:true};
     }
     const dup2 = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-    if(dup2.rows.length>0) return res.json({success:true,skipped:true});
+    if(dup2.rows.length>0) return {success:true,skipped:true};
     // Find the response/due date. Accepts "Response Date: 12/30/2026", "due 12/30/2026",
     // "closing 2026-12-30" and "Response due Dec 30, 2026" (with or without the colon).
     let due='';
@@ -260,7 +258,12 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
       city:'Nationwide',posted:new Date().toISOString().split('T')[0],due,solicitationNo:solNo,
       scope:emailBody.substring(0,400),url,source:'FedBids',value:'TBD',
       status:'active',region:'statewide',userState:'active',scrapedAt:new Date().toISOString()});
-    res.json({success:true,bid:{id,solNo,due}});
+  return {success:true,bid:{id,solNo,due}};
+}
+
+app.post('/api/bids/fedbids-ingest', async (req,res) => {
+  try {
+    res.json(await fedbidsIngestOne(req.body||{}));
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
@@ -467,6 +470,13 @@ app.post('/api/email-bids', async (req,res) => {
     const b = req.body||{};
     const text = [b.text,b.html,b.body].filter(x=>typeof x==='string'&&x).join('\n');
     const matches = [...text.matchAll(/subscriber_view_bid\/([0-9]{5,15})/gi)];
+    // No EnviroBidNet links but it looks like a BidSpeed (FedBids) email -> save it as a FedBid
+    if(!matches.length && /fedbid|bidspeed/i.test(text)) {
+      const lines = text.split(/\r?\n/).map(x=>x.replace(/<[^>]+>/g,' ').trim()).filter(Boolean);
+      const subject = (typeof b.subject==='string' && !/^EnviroBidNet/i.test(b.subject) && b.subject) || lines.find(l=>!/^(from|to|sent|date|cc)\s*:/i.test(l)) || 'FedBid';
+      const r = await fedbidsIngestOne({subject, body:text});
+      return res.json({success:true, created:r.skipped?0:1, skipped:r.skipped?1:0, results:[r]});
+    }
     const seen = new Set();
     let created = 0, skipped = 0;
     const results = [];
