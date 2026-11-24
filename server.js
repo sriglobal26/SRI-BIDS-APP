@@ -220,9 +220,18 @@ app.post('/api/bids/fedbids-ingest', async (req,res) => {
     }
     const dup2 = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
     if(dup2.rows.length>0) return res.json({success:true,skipped:true});
+    // Find the response/due date. Accepts "Response Date: 12/30/2026", "due 12/30/2026",
+    // "closing 2026-12-30" and "Response due Dec 30, 2026" (with or without the colon).
     let due='';
-    const dM = allText.match(/(?:response|due)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/20[2-9][0-9])/i);
-    if(dM){try{const dt=new Date(dM[1]);if(!isNaN(dt))due=dt.toISOString().split('T')[0];}catch(e2){}}
+    const DATE_RX = '([0-9]{1,2}\\/[0-9]{1,2}\\/20[2-9][0-9]|20[2-9][0-9]-[0-9]{2}-[0-9]{2}|[A-Za-z]{3,9}\\.? [0-9]{1,2},? 20[2-9][0-9])';
+    const dM = allText.match(new RegExp('(?:response|due|closing|close|deadline|offers? due)[^0-9A-Za-z]{0,3}(?:[A-Za-z ]{0,25}[^0-9A-Za-z]{0,6})?'+DATE_RX,'i'))
+            || allText.match(/(?:response|due)[^:]*:[^0-9]*([0-9]{1,2}\/[0-9]{1,2}\/20[2-9][0-9])/i);
+    if(dM){
+      const raw = dM[1];
+      const us = /^(\d{1,2})\/(\d{1,2})\/(20\d\d)$/.exec(raw);
+      if(us) due = us[3]+'-'+us[1].padStart(2,'0')+'-'+us[2].padStart(2,'0');
+      else { const dt = new Date(raw+(/^20\d\d-/.test(raw)?'T12:00:00':' 12:00:00')); if(!isNaN(dt)) due = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+    }
     await saveBid({id,name:(subject||'FedBid').substring(0,200),agency:'Federal Agency',
       city:'Nationwide',posted:new Date().toISOString().split('T')[0],due,solicitationNo:solNo,
       scope:emailBody.substring(0,400),url,source:'FedBids',value:'TBD',
