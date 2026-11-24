@@ -73,7 +73,7 @@ async function saveBid(bid) {
 // The tables are created/seeded once, but if the database is not reachable yet at startup
 // (Railway starts the web service before Postgres is ready) the old code gave up forever and
 // the app showed no bids. Now every /api request waits for the DB, and startup retries until it works.
-let dbReady = false, dbInit = null;
+let dbReady = false, dbInit = null, lastDbError = null;
 function ensureDB() {
   if(dbReady) return Promise.resolve();
   if(!dbInit) {
@@ -90,6 +90,7 @@ async function initDBWithRetry(attempt) {
     await ensureDB();
     console.log('[DB] Connected and ready');
   } catch(e) {
+    lastDbError = e.message;
     console.error('[DB] init failed (attempt '+attempt+'):', e.message);
     // Some databases (e.g. Railway private network) do not support SSL - fall back once.
     if(usingSsl && /does not support SSL|SSL/i.test(e.message) && !/self.signed|certificate/i.test(e.message)) {
@@ -137,6 +138,29 @@ async function initDB() {
 }
 
 app.get('/health', (req,res) => res.json({status:'ok'}));
+
+// Open /status in the browser to see why bids are (or are not) showing.
+// Works even when the database is down, so it can say what is wrong.
+app.get('/status', async (req,res) => {
+  const out = { server:'ok', time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
+  try {
+    const r = await pool.query('SELECT data FROM bids');
+    const now = Date.now();
+    out.totalInDatabase = r.rows.length;
+    out.bySource = {};
+    for(const row of r.rows) {
+      const d = row.data || {};
+      const src = d.source || 'unknown';
+      const o = out.bySource[src] || (out.bySource[src] = {open:0, expiredOrDeleted:0});
+      const due = parseDueServer(d.due);
+      const expired = !(d.userState==='selected' || d.source==='TWDB' || d.status==='prebid') && due && due.getTime() < now;
+      if(expired || d.userState==='deleted') o.expiredOrDeleted++; else o.open++;
+    }
+    out.openBids = Object.values(out.bySource).reduce((a,o)=>a+o.open,0);
+    out.note = out.openBids===0 ? 'Database is connected but every bid is expired or deleted. New bids arrive via Make.com (FedBids, EnviroBidNet) or the +Add Bid button.' : 'Database is connected and has open bids. TWDB bids only show after clicking the TWDB button.';
+  } catch(e) { out.databaseError = e.message; }
+  res.json(out);
+});
 
 // Debug: shows the last raw payload received by ebn-ingest, so we can see
 // exactly what Make.com is sending and confirm the parser is matching it correctly

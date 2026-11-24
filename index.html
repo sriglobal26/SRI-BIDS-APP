@@ -950,6 +950,7 @@ async function fetchBids(){
   try {
     const res = await fetch('/api/bids');
     const data = await res.json();
+    if(!res.ok || data.error){ showLoadBanner('Could not load bids: '+(data.error||('server returned '+res.status))+'. Open /status to see what is wrong.', true); }
     // Strip non-approved FedBids from memory — never show duplicates
     BIDS = (data.bids||[]);
     bidState = {};
@@ -962,7 +963,20 @@ async function fetchBids(){
       else bidState[b.id] = 'active';
     });
     if(typeof renderAll === 'function') renderAll();
-  } catch(e){ console.error('fetchBids error:', e.message); }
+    const openCount = Object.values(bidState).filter(s=>s==='active').length;
+    if(res.ok && !data.error){
+      if(!BIDS.length) showLoadBanner('The database has no bids yet. Open /status to check it, or add one with + Add Bid.', true);
+      else if(!openCount) showLoadBanner('All '+BIDS.length+' saved bids are expired or deleted - check the Deleted tab. New bids appear when FedBids / EnviroBidNet emails arrive.', false);
+      else showLoadBanner('', false);
+    }
+  } catch(e){ console.error('fetchBids error:', e.message); showLoadBanner('Could not reach the server: '+e.message+'. Try refreshing in a minute, or open /status.', true); }
+}
+function showLoadBanner(msg, isError){
+  let el = document.getElementById('load-banner');
+  if(!msg){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id='load-banner'; el.style.cssText='position:sticky;top:0;z-index:9999;padding:8px 14px;font:12px/1.4 sans-serif;text-align:center'; document.body.insertBefore(el, document.body.firstChild); }
+  el.style.background = isError ? '#7f1d1d' : '#78350f'; el.style.color = '#fff';
+  el.textContent = msg;
 }
 fetchBids();
 
