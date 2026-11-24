@@ -170,11 +170,23 @@ app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
 
 app.get('/api/bids', async (req,res) => {
   try {
-    const r = await pool.query('SELECT data FROM bids ORDER BY created_at ASC');
+    const r = await pool.query('SELECT id, data FROM bids ORDER BY created_at ASC, id ASC');
     // Expired bids are always reported as Deleted, so every version of the page shows them
     // under Deleted (TWDB / pre-bid bids never expire; Selected bids stay Selected).
     const now = Date.now();
-    const bids = r.rows.map(row => {
+    // Never show duplicates: same solicitation number (or same name + due date) = one bid.
+    // The copy the user selected wins; otherwise the oldest copy is kept. Nothing is deleted here.
+    const nz = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const keep = new Map();
+    for(const row of r.rows){
+      const d = row.data || {};
+      const sol = nz(d.solicitationNo);
+      const key = (d.source||'')+'|'+(sol ? 'sol:'+sol : 'name:'+nz(d.name)+'|'+nz(d.due));
+      const cur = keep.get(key);
+      if(!cur || (d.userState==='selected' && cur.data.userState!=='selected')) keep.set(key,row);
+    }
+    const keepIds = new Set([...keep.values()].map(x=>x.id));
+    const bids = r.rows.filter(row=>keepIds.has(row.id)).map(row => {
       const d = row.data || {};
       if(d.userState === 'selected' || d.source === 'TWDB' || d.status === 'prebid') return d;
       const due = parseDueServer(d.due);
