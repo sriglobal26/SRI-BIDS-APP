@@ -142,7 +142,7 @@ app.get('/health', (req,res) => res.json({status:'ok'}));
 // Open /status in the browser to see why bids are (or are not) showing.
 // Works even when the database is down, so it can say what is wrong.
 app.get('/status', async (req,res) => {
-  const out = { server:'ok', time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
+  const out = { server:'ok', version:(process.env.RAILWAY_GIT_COMMIT_SHA||'unknown').slice(0,7), time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
   try {
     const r = await pool.query('SELECT data FROM bids');
     const now = Date.now();
