@@ -171,7 +171,7 @@ app.get('/', (req,res) => res.sendFile(path.join(__dirname,'index.html')));
 // ── Duplicate detection (shared by /api/bids and /api/dedupe-bids) ──
 // Two bids are the same when, within one source, they have the same solicitation / bid number
 // or the same name (ignoring "(123456)"
-// bid numbers and punctuation). Preferred copy: selected > has a due date > oldest.
+// bid numbers and punctuation). Preferred copy: see dupBetter.
 const dupNz = v => String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 function dupKey(id, d){
   const src = d.source || '';
@@ -180,14 +180,26 @@ function dupKey(id, d){
   const name = dupNz(String(d.name||'').replace(/\(\s*[#\w-]*\d[#\w-]*\s*\)/g,' '));
   return name.length >= 12 ? src+'|name:'+name : src+'|id:'+id;
 }
-function dupRank(d){ return (d.userState==='selected' ? 2 : 0) + (d.due ? 1 : 0); }
+// Higher = better copy to show: selected, then still open (not expired), then has a due date,
+// then the LATEST due date (an extension), then the oldest copy (first one seen).
+function dupBetter(x, y){
+  const sc = d => (d.userState==='selected' ? 4 : 0) + (isOpenDue(d) ? 2 : 0) + (d.due ? 1 : 0);
+  const a = sc(x), b = sc(y);
+  if(a !== b) return a > b;
+  return String(x.due||'') > String(y.due||'');
+}
+function isOpenDue(d){
+  if(d.source === 'TWDB' || d.status === 'prebid') return true;
+  const due = parseDueServer(d.due);
+  return !due || due.getTime() >= Date.now();
+}
 function pickKeepers(rows){
   const keep = new Map();
   for(const row of rows){
     const d = row.data || {};
     const k = dupKey(row.id, d);
     const cur = keep.get(k);
-    if(!cur || dupRank(d) > dupRank(cur.data||{})) keep.set(k,row);
+    if(!cur || dupBetter(d, cur.data||{})) keep.set(k,row);
   }
   return new Set([...keep.values()].map(x=>x.id));
 }
@@ -259,7 +271,7 @@ async function fedbidsIngestOne(b) {
     const url = pkM
       ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk='+pkM[1]
       : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-    const solM = allText.match(/([A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    const solM = allText.match(/\b([A-Z]{1,6}[0-9]{0,4}[A-Z]{0,3}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     // Fallback for solicitation numbers written without dashes, e.g. 140SS127R0012 or W912BV26R0012
     const solAlt = solM ? null : allText.match(/\b((?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{10,18})\b/);
     const solNo = solM ? solM[1] : (solAlt ? solAlt[1] : '');
