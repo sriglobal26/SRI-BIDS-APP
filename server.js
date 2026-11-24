@@ -271,17 +271,11 @@ async function fedbidsIngestOne(b) {
     const url = pkM
       ? 'https://secure.fedbidspeed.com/Handler.ashx?act=nvgt&req=nav&mop=opportunity!main&pk='+pkM[1]
       : 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
-    const solM = allText.match(/\b([A-Z]{1,6}[0-9]{0,4}[A-Z]{0,3}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
+    const solM = allText.match(/\b([A-Z][A-Z0-9]{3,9}-?[0-9]{2}-[A-Z]{1,2}-?[0-9]{4,6}|[A-Z]{1,6}-?[0-9]{2,6}-[A-Z]{1,2}-?[0-9]{4,6})/);
     // Fallback for solicitation numbers written without dashes, e.g. 140SS127R0012 or W912BV26R0012
     const solAlt = solM ? null : allText.match(/\b((?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{10,18})\b/);
     const solNo = solM ? solM[1] : (solAlt ? solAlt[1] : '');
     const id = 'fedbid-'+(solNo.replace(/[^a-zA-Z0-9]/g,'')||String(Date.now()).slice(-10));
-    if(solNo) {
-      const dup = await pool.query("SELECT id FROM bids WHERE data->>'solicitationNo'=$1",[solNo]);
-      if(dup.rows.length>0) return {success:true,skipped:true};
-    }
-    const dup2 = await pool.query('SELECT id FROM bids WHERE id=$1',[id]);
-    if(dup2.rows.length>0) return {success:true,skipped:true};
     // Find the response/due date. Accepts "Response Date: 12/30/2026", "due 12/30/2026",
     // "closing 2026-12-30" and "Response due Dec 30, 2026" (with or without the colon).
     let due='';
@@ -293,6 +287,19 @@ async function fedbidsIngestOne(b) {
       const us = /^(\d{1,2})\/(\d{1,2})\/(20\d\d)$/.exec(raw);
       if(us) due = us[3]+'-'+us[1].padStart(2,'0')+'-'+us[2].padStart(2,'0');
       else { const dt = new Date(raw+(/^20\d\d-/.test(raw)?'T12:00:00':' 12:00:00')); if(!isNaN(dt)) due = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+    }
+    // Already have this bid? Skip it, unless the new email carries a LATER due date (extension) -
+    // then update the saved bid so it shows as open again.
+    const sameNo = solNo ? await pool.query("SELECT id,data FROM bids WHERE data->>'solicitationNo'=$1 OR id=$2",[solNo,id])
+                         : await pool.query('SELECT id,data FROM bids WHERE id=$1',[id]);
+    if(sameNo.rows.length>0){
+      const ex = sameNo.rows[0].data || {};
+      if(due && due > String(ex.due||'') && ex.userState !== 'selected'){
+        ex.due = due; ex.userState = 'active'; ex.scrapedAt = new Date().toISOString();
+        await saveBid(ex);
+        return {success:true,updated:true,bid:{id:ex.id,solNo,due}};
+      }
+      return {success:true,skipped:true};
     }
     await saveBid({id,name:(subject||'FedBid').substring(0,200),agency:'Federal Agency',
       city:'Nationwide',posted:new Date().toISOString().split('T')[0],due,solicitationNo:solNo,
