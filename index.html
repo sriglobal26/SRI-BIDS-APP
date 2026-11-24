@@ -807,34 +807,37 @@ const NON_DESIGN_KEYWORDS = []; // disabled - show all bids
 const EXEMPT_SOURCES = ['twdb','manual','bidnet tx','tra','saws','houston public works','envirobidnet','h2bid','civcast','ebn'];
 let bidState={};
 
+// Turn a bid's due date into a Date (end of that day). Understands 2026-11-20, 11/20/2026,
+// "Nov 20, 2026", "November 20 2026", and ISO strings with a time. Returns null when the
+// value is not a real date (e.g. "Check link", "Post-Funding"), so those bids never expire.
+function parseDueDate(due){
+  if(!due) return null;
+  const s = String(due).trim();
+  let m = s.match(/^(20[2-9]\d)-(\d{2})-(\d{2})/);
+  if(m) return new Date(m[1]+'-'+m[2]+'-'+m[3]+'T23:59:59');
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(20[2-9]\d)$/);
+  if(m) return new Date(m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0')+'T23:59:59');
+  if(/[A-Za-z]{3,}\s+\d{1,2},?\s+20[2-9]\d/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d)){ d.setHours(23,59,59,0); return d; }
+  }
+  return null;
+}
+
 function classifyBid(b){
-  // FedBids — only show approved 5 bids, mark all others as deleted
+  // FedBids — hide only once the due date has passed
   if((b.source||'').toLowerCase()==='fedbids'){
-    // Show ALL FedBids — only hide if past due date
-    if(b.due && /^20[2-9][0-9]-\d{2}-\d{2}$/.test(b.due)){
-      if(new Date(b.due+'T23:59:59') < new Date()) return 'deleted';
-    }
+    const d = parseDueDate(b.due);
+    if(d && d < new Date()) return 'deleted';
     return 'active';
   }
   // TWDB/prebid — never expire
   if(b.source==='TWDB' || b.status==='prebid') return 'active';
   // If already marked deleted by server, keep in deleted
   if(b.userState === 'deleted') return 'deleted';
-  // Auto-move to deleted if due date passed
-  // Handle both YYYY-MM-DD and MM/DD/YYYY formats
-  if(b.due) {
-    let dueDate = null;
-    if(/^\d{4}-\d{2}-\d{2}$/.test(b.due)) {
-      dueDate = new Date(b.due + 'T23:59:59'); // end of due date
-    } else if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(b.due)) {
-      const parts = b.due.split('/');
-      dueDate = new Date(parts[2] + '-' + parts[0].padStart(2,'0') + '-' + parts[1].padStart(2,'0') + 'T23:59:59');
-    }
-    if(dueDate) {
-      const now = new Date();
-      if(dueDate < now) return 'deleted';
-    }
-  }
+  // Due date passed -> Deleted
+  const d = parseDueDate(b.due);
+  if(d && d < new Date()) return 'deleted';
   return 'active';
 }
 
@@ -1876,8 +1879,8 @@ function rowFed(b){
   // FedBids — use getDirectUrl same as EBN
   const fedUrl = getDirectUrl(b);
   const urlCell = '<td class="tu">'
-    + '<button onclick="window.open(\'' + fedUrl + '\',\'_blank\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
-    + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128712; Details</button>'
+    + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
+    + '<button onclick="openBidLink(\'' + b.id + '\')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128279; Bid Link</button>'
     + '</td>';
   return '<tr>'
     + '<td class="tn">' + (b._sno||'') + '</td>'
@@ -2175,6 +2178,7 @@ setTimeout(async ()=>{
 let currentBidDetail = null;
 
 function showBidDetail(b) {
+  if(!b) return;
   if(typeof b === 'string') {
     try { b = JSON.parse(b.split('&quot;').join('"')); } catch(e) { return; }
   }
