@@ -588,7 +588,7 @@ Best regards,
     <span id="fedbids-result-count" style="font-family:var(--mono);font-size:10px;color:#a78bfa;white-space:nowrap"></span>
   </div>
   <div class="tw"><table><thead><tr><th>S.No</th><th>Bid ID</th><th>Project / Bid Name</th><th>Agency</th><th>City / Region</th><th>E&I Scope</th><th>RFQ Link</th><th>Posted Date</th><th>Due / Target</th><th>Est. Value</th><th>Status</th><th>Action</th></tr></thead><tbody id="fedbids-body"></tbody></table></div>
-  <div class="empty" id="fedbids-mt"><div class="empty-ico">📡</div><div class="empty-txt">No FedBids yet — emails from system@fedbidspeed.com will appear here automatically</div></div>
+  <div class="empty" id="fedbids-mt"><div class="empty-ico">📡</div><div class="empty-txt" id="fedbids-mt-txt">No open FedBids yet. Emails from system@fedbidspeed.com appear here when the Make.com scenario sends them.</div><button class="btn1" style="margin-top:10px;font-size:11px;padding:7px 18px;background:var(--green);color:var(--navy)" onclick="openM('m-paste-email')">📧 Paste a BidSpeed email now</button></div>
 </div>
 
 <!-- ══ TAB: PRIMES ══ -->
@@ -1934,6 +1934,13 @@ function renderFedBids(){
 
   tbody.innerHTML = filtered.map((b,i) => { b._sno=i+1; return rowFed(b); }).join('');
   mt.style.display = filtered.length ? 'none' : 'block';
+  const allFed = BIDS.filter(b => (b.source||'').toLowerCase()==='fedbids').length;
+  const mtTxt = document.getElementById('fedbids-mt-txt');
+  if(mtTxt && !filtered.length){
+    mtTxt.textContent = allFed && !fedBids.length
+      ? 'All '+allFed+' saved FedBids are past their due date (see the Deleted tab). New ones appear when BidSpeed emails reach the app.'
+      : (fedBids.length ? 'No FedBids match this filter or search.' : 'No FedBids saved yet. Emails from system@fedbidspeed.com appear here when the Make.com scenario sends them, or paste one below.');
+  }
   cnt.textContent = filtered.length ? filtered.length + ' bid' + (filtered.length>1?'s':'') + ' found' : '';
   if(badge) badge.textContent = fedBids.length;
 }
