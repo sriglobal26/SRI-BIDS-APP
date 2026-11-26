@@ -926,9 +926,9 @@ function getDirectUrl(b) {
     if(b.url && b.url.includes('envirobidnet.com') && b.url !== 'https://www.envirobidnet.com') {
       return b.url;
     }
-    // Fallback — copy bid number and open bid center search
-    const bidNum = b.id.replace('ebn-','');
-    if(bidNum) navigator.clipboard && navigator.clipboard.writeText(bidNum).catch(()=>{});
+    // Fallback — build the direct bid page from the bid number in the id (ebn-882894)
+    const bidNum = String(b.id).replace('ebn-','');
+    if(/^\d+$/.test(bidNum)) return 'https://envirobidnet.com/subscriber_view_bid/'+bidNum;
     return 'https://www.envirobidnet.com';
   }
   // FedBids — use direct BidSpeed pk link if available, else Federal page
@@ -936,7 +936,9 @@ function getDirectUrl(b) {
     // If stored URL has BidSpeed pk= parameter — opens exact bid directly
     if(b.url && b.url.includes('fedbidspeed.com') && b.url.includes('pk=')) return b.url;
     // If stored URL has BidSpeed link (no pk) — still use it
-    if(b.url && b.url.includes('fedbidspeed.com')) return b.url;
+    if(b.url && b.url.includes('fedbidspeed.com') && !b.solicitationNo && !/fbo-home!home$/.test(b.url)) return b.url;
+    // No BidSpeed link saved: open the public SAM.gov listing for this solicitation number
+    if(b.solicitationNo) return 'https://sam.gov/search?index=opp&q='+encodeURIComponent(b.solicitationNo)+'&is_active=true';
     // Fallback — BidSpeed Federal opportunities page
     return 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home';
   }
@@ -1144,8 +1146,8 @@ function row(b,ctx){
   const stNm=ctx==='selected'?'Selected':ctx==='deleted'?'Not Pursuing':(SN[b.status]||'Active');
   // Use onclick with bid ID so URL is always looked up fresh from DIRECT_BID_URLS
   const urlCell = `<td class="tu">
-    <button onclick="showBidDetail(BIDS.find(x=>x.id==='${b.id}'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">↗ View RFQ</button>
-    <button onclick="openBidLink('${b.id}')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">🔗 Bid Link</button>
+    <button onclick="viewRfq('${b.id}')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">↗ View RFQ</button>
+    <button onclick="showBidDetail(BIDS.find(x=>x.id==='${b.id}'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">ℹ Details</button>
   </td>`
   return `<tr data-status="${b.status}" data-region="${b.region}" data-search="${[b.name,b.agency,b.city,b.scope,b.due,b.value,b.status,b.region].join(' ').toLowerCase()}">
     <td class="tn">${b._sno||b.num||""}</td><td style="font-family:var(--mono);font-size:10px;color:var(--cyan);white-space:nowrap">${
@@ -1893,8 +1895,8 @@ function rowFed(b){
   // FedBids — use getDirectUrl same as EBN
   const fedUrl = getDirectUrl(b);
   const urlCell = '<td class="tu">'
-    + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
-    + '<button onclick="openBidLink(\'' + b.id + '\')" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#128279; Bid Link</button>'
+    + '<button onclick="viewRfq(\'' + b.id + '\')" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:10px;font-family:var(--mono);padding:0;display:block;margin-bottom:3px">&#8599; View RFQ</button>'
+    + '<button onclick="showBidDetail(BIDS.find(x=>x.id===\'' + b.id + '\'))" style="color:var(--yellow);background:none;border:none;cursor:pointer;font-size:9px;font-family:var(--mono);padding:0">&#8505; Details</button>'
     + '</td>';
   return '<tr>'
     + '<td class="tn">' + (b._sno||'') + '</td>'
@@ -2237,15 +2239,7 @@ function showBidDetail(b) {
   document.getElementById('bd-scope').textContent = b.scope || 'E&I Engineering — See RFQ link for full details';
 
   // URL row — for FedBids, build from solicitationNo directly
-  let openUrl;
-  if((b.source||'').toLowerCase()==='fedbids'){
-    const sn = b.solicitationNo || '';
-    openUrl = sn
-      ? 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home?search=' + encodeURIComponent(sn)
-      : (DIRECT_BID_URLS[b.id] || b.url || 'https://secure.fedbidspeed.com/Handler.ashx?act=inip&req=nav&mop=fbo-home!home');
-  } else {
-    openUrl = getDirectUrl(b);
-  }
+  const openUrl = getDirectUrl(b);
   const urlEl   = document.getElementById('bd-url');
   const urlRow  = document.getElementById('bd-url-row');
   const openBtn = document.getElementById('bd-open-link');
@@ -2272,6 +2266,16 @@ function handleBidPageOpen(e) {
   const link = document.getElementById('bd-open-link');
   const url = link.href;
   if(url && url !== '#') window.open(url, '_blank');
+}
+function viewRfq(bidId) {
+  // View RFQ opens the real bid page directly. If the bid only has a generic site homepage
+  // (no direct link), fall back to the in-app details window.
+  const b = BIDS.find(x=>x.id===bidId);
+  if(!b) return;
+  const url = getDirectUrl(b);
+  const generic = !url || /^https?:\/\/[^\/]+\/?$/.test(url) || /fbo-home!home$/.test(url) || /\/solicitations\/city-of-houston\/?$/.test(url);
+  if(generic) { showBidDetail(b); return; }
+  window.open(url, '_blank');
 }
 function openBidLink(bidId) {
   const url = getDirectUrl(BIDS.find(b=>b.id===bidId)||{id:bidId});
