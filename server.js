@@ -180,6 +180,8 @@ function dupKey(id, d){
   const sol = dupNz(d.solicitationNo);
   if(sol) return src+'|sol:'+sol;
   const name = dupNz(String(d.name||'').replace(/\(\s*[#\w-]*\d[#\w-]*\s*\)/g,' '));
+  // A name that is only a web address (bad email mapping) says nothing about the bid: never treat as a duplicate
+  if(/^\s*(https?:\/\/|www\.)/i.test(String(d.name||''))) return src+'|id:'+id;
   return name.length >= 12 ? src+'|name:'+name : src+'|id:'+id;
 }
 // Higher = better copy to show: selected, then still open (not expired), then has a due date,
@@ -215,7 +217,12 @@ app.get('/api/bids', async (req,res) => {
     // Never show duplicates (see dupKey). Nothing is deleted here.
     const keepIds = pickKeepers(r.rows);
     const bids = r.rows.filter(row=>keepIds.has(row.id)).map(row => {
-      const d = row.data || {};
+      let d = row.data || {};
+      // Bids saved with only a web address as their name get a readable name (EnviroBidNet: "EnviroBidNet Bid 885138")
+      if(/^\s*(https?:\/\/|www\.)/i.test(String(d.name||''))){
+        const num = String(row.id).replace(/^ebn-/,'');
+        d = {...d, name: (d.source||'Bid')+' Bid '+num+' (open the link for details)'};
+      }
       if(d.userState === 'selected' || d.source === 'TWDB' || d.status === 'prebid') return d;
       const due = parseDueServer(d.due);
       if(due && due.getTime() < now && d.userState !== 'deleted') return {...d, userState:'deleted'};
