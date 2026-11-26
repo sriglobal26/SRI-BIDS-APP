@@ -4,7 +4,7 @@
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 
-const state = { configured:false, lastRun:null, lastError:null, lastFound:0, lastSaved:0, lastSkipped:0 };
+const state = { configured:false, lastRun:null, lastError:null, lastFound:0, lastSaved:0, lastSkipped:0, folder:null, mailboxTotal:null, recentInFolder:null, folders:null };
 
 function hrefs(html){
   const out = [];
@@ -33,7 +33,12 @@ async function pollOnce(ingest){
     await client.connect();
     const lock = await client.getMailboxLock(process.env.IMAP_FOLDER||'INBOX');
     try {
-      const uids = await client.search({ since, from:'fedbidspeed' }, { uid:true });
+      state.folder = process.env.IMAP_FOLDER||'INBOX';
+      state.mailboxTotal = client.mailbox && client.mailbox.exists;
+      const recent = await client.search({ since }, { uid:true });
+      state.recentInFolder = recent.length;
+      // BidSpeed emails: from fedbidspeed, or mention BidSpeed / FedBid in the subject or body
+      const uids = await client.search({ since, or:[{from:'fedbidspeed'},{subject:'bidspeed'},{subject:'fedbid'},{body:'fedbidspeed'}] }, { uid:true });
       found = uids.length;
       for(const uid of uids){
         const msg = await client.fetchOne(uid, { source:true }, { uid:true });
@@ -42,6 +47,7 @@ async function pollOnce(ingest){
         if(r && (r.skipped)) skipped++; else saved++;
       }
     } finally { lock.release(); }
+    try { state.folders = (await client.list()).map(f=>f.path).slice(0,30); } catch(_){}
     await client.logout();
     state.lastError = null;
   } catch(e){
