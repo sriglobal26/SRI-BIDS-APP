@@ -144,14 +144,16 @@ app.get('/health', (req,res) => res.json({status:'ok'}));
 app.get('/status', async (req,res) => {
   const out = { server:'ok', version:(process.env.RAILWAY_GIT_COMMIT_SHA||'unknown').slice(0,7), mailReader:(function(){try{return require('./mailpoll').state}catch(e){return null}})(), time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
   try {
-    const r = await pool.query('SELECT data FROM bids');
+    const r = await pool.query('SELECT id, data FROM bids ORDER BY created_at ASC, id ASC');
     const now = Date.now();
+    const keepIds = pickKeepers(r.rows);
     out.totalInDatabase = r.rows.length;
     out.bySource = {};
     for(const row of r.rows) {
       const d = row.data || {};
       const src = d.source || 'unknown';
-      const o = out.bySource[src] || (out.bySource[src] = {open:0, expiredOrDeleted:0});
+      const o = out.bySource[src] || (out.bySource[src] = {open:0, expiredOrDeleted:0, hiddenDuplicates:0});
+      if(!keepIds.has(row.id)){ o.hiddenDuplicates++; continue; }
       const due = parseDueServer(d.due);
       const expired = !(d.userState==='selected' || d.source==='TWDB' || d.status==='prebid') && due && due.getTime() < now;
       if(expired || d.userState==='deleted') o.expiredOrDeleted++; else o.open++;
