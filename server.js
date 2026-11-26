@@ -142,7 +142,7 @@ app.get('/health', (req,res) => res.json({status:'ok'}));
 // Open /status in the browser to see why bids are (or are not) showing.
 // Works even when the database is down, so it can say what is wrong.
 app.get('/status', async (req,res) => {
-  const out = { server:'ok', version:(process.env.RAILWAY_GIT_COMMIT_SHA||'unknown').slice(0,7), time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
+  const out = { server:'ok', version:(process.env.RAILWAY_GIT_COMMIT_SHA||'unknown').slice(0,7), mailReader:(function(){try{return require('./mailpoll').state}catch(e){return null}})(), time:new Date().toISOString(), hasDatabaseUrl:!!process.env.DATABASE_URL, dbReady, usingSsl, lastDbError };
   try {
     const r = await pool.query('SELECT data FROM bids');
     const now = Date.now();
@@ -638,8 +638,15 @@ app.get('/api/purge-deleted', async (req,res) => {
 process.on('uncaughtException', e => console.error('[Crash]',e.message));
 process.on('unhandledRejection', e => console.error('[Reject]',String(e)));
 
+const mailpoll = require('./mailpoll');
+// Check the mailbox now (needs IMAP_* variables). Open /api/mail-poll to run it and see the result.
+app.get('/api/mail-poll', async (req,res) => {
+  try { res.json(await mailpoll.pollOnce(fedbidsIngestOne)); } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[SRI Bids] Running on port', PORT);
+  mailpoll.start(fedbidsIngestOne);
   setTimeout(() => initDBWithRetry(1), 2000);
   const runPurge = async () => {
     try {

@@ -1,7 +1,7 @@
 {
   "name": "sri-bids-app",
   "version": "20260922_133601",
-  "description": "SRI Global \u2014 Texas Water/WW E&I Bids Dashboard",
+  "description": "SRI Global — Texas Water/WW E&I Bids Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,9 +10,11 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "express": "^4.18.2",
     "axios": "0.27.2",
     "cheerio": "^1.0.0-rc.12",
+    "express": "^4.18.2",
+    "imapflow": "^1.7.8",
+    "mailparser": "^3.15.0",
     "node-cron": "^3.0.3",
     "pg": "^8.11.3"
   }
